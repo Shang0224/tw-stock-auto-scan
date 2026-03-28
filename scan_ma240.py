@@ -41,11 +41,11 @@ def main():
         print(f"警告：找不到 {file_tw50}")
 
     # 3. 讀取 中型 100
-    if os.path.exists(file_mid100):
-        df_mid100 = pd.read_csv(file_mid100, encoding='big5')
-        combined_codes.extend(df_mid100['代號'].astype(str).tolist())
-    else:
-        print(f"警告：找不到 {file_mid100}")
+ #   if os.path.exists(file_mid100):
+  #      df_mid100 = pd.read_csv(file_mid100, encoding='big5')
+   #        combined_codes.extend(df_mid100['代號'].astype(str).tolist())
+   # else:
+    #   print(f"警告：找不到 {file_mid100}")
 
     # 4. 去除重複項（若有股票同時存在於兩個清單）並排序
     unique_codes = sorted(list(set(combined_codes)))
