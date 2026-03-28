@@ -15,11 +15,13 @@ def check_stock(ticker):
 
         # 計算 240MA (年線)
         df['MA240'] = df['Close'].rolling(window=240).mean()
-        
+     
         # 取得最後兩筆資料
         # today 是最後一筆，yesterday 是倒數第二筆
         today = df.iloc[-1]
         yesterday = df.iloc[-2]
+
+        print(f"股票：{ticker} (年線: {today['MA240']})")
         
         # 突破條件：昨日收盤 < 昨日年線 AND 今日收盤 > 今日年線
         is_breakout = (yesterday['Close'] < yesterday['MA240']) and (today['Close'] > today['MA240'])
