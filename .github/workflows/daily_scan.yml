@@ -9,6 +9,8 @@ on:
 jobs:
   daily-scan:
     runs-on: ubuntu-latest
+    permissions:      # 加入這部分
+      contents: write # 顯式要求寫入權限
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
