@@ -3,16 +3,31 @@ import pandas as pd
 import time
 from datetime import datetime, timedelta
 
+def smart_read_csv(file_path):
+    # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
+    encodings = ['utf-8', 'big5', 'utf-8-sig', 'cp950']
+    
+    for enc in encodings:
+        try:
+            df = pd.read_csv(file_path, encoding=enc)
+            print(f"✅ 成功使用 {enc} 編碼讀取檔案！")
+            return df
+        except UnicodeDecodeError:
+            continue
+    
+    print("❌ 找不到匹配的編碼，請檢查檔案格式。")
+    return None
+
 def main():
 
-    print("tst")
+    
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
     
     # 2. 讀取您的 TW50.csv
     try:
         # 假設您的 CSV 欄位是 StockCode
-        stock_list_df = pd.read_csv('data/TW50.csv')
+        stock_list_df = smart_read_csv('data/TW50.csv')
         stock_ids = stock_list_df['代號'].astype(str).tolist()
     except Exception as e:
         print(f"❌ 讀取 CSV 失敗: {e}")
