@@ -1,0 +1,6 @@
+yfinance
+google-genai==1.3.0
+requests
+pandas
+line-bot-sdk
+ta
