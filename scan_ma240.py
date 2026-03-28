@@ -23,12 +23,14 @@ def send_line_message(message):
     """透過 LINE Messaging API 發送訊息"""
     token = os.getenv("LINE_ACCESS_TOKEN")
     user_id = os.getenv("LINE_USER_ID")
+
+    printf(f"USER ID : {user_id}\n")
     
     if not token or not user_id:
         print("錯誤：找不到 LINE 的設定資訊 (Secrets)")
         return
 
-    url = "https://api.line.me/v2/bot/message/push"
+    url = "https://api.line.me/v2/bot/message/push"       
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}"
@@ -37,6 +39,8 @@ def send_line_message(message):
         "to": user_id,
         "messages": [{"type": "text", "text": message}]
     }
+
+    printf("LINEINMNNNE")
     
     res = requests.post(url, headers=headers, json=payload)
     if res.status_code == 200:
@@ -155,12 +159,14 @@ def main():
     else:
         message_text = f"📅 {now_str}\n今日無符合突破 240MA 條件之股票。"
 
-    # 傳出訊息
-    # 確保您的 send_line_message 函數已經設定好 Channel Access Token
-    send_line_message(message_text)
-
     # 原本的 print 輸出也可以保留在 Console 方便除錯
     print(message_text)
+    
+    # 傳出訊息
+    # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
+    send_line_message(message_text)
+
+
 
 
 
