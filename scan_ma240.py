@@ -36,14 +36,14 @@ def main():
     if os.path.exists(file_tw50):
         df_50 = pd.read_csv(file_tw50, encoding='big5')
         # 確保代號是字串，避免遺失前導零（雖然台股目前較少見）
-        combined_codes.extend(df_50['code'].astype(str).tolist())
+        combined_codes.extend(df_50['代號'].astype(str).tolist())
     else:
         print(f"警告：找不到 {file_tw50}")
 
     # 3. 讀取 中型 100
     if os.path.exists(file_mid100, encoding='big5'):
         df_mid100 = pd.read_csv(file_mid100)
-        combined_codes.extend(df_mid100['code'].astype(str).tolist())
+        combined_codes.extend(df_mid100['代號'].astype(str).tolist())
     else:
         print(f"警告：找不到 {file_mid100}")
 
