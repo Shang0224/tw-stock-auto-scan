@@ -35,7 +35,21 @@ def check_stock(ticker):
     except Exception as e:
         print(f"查詢 {ticker} 時發生錯誤: {e}")
     return None
-
+def smart_read_csv(file_path):
+    # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
+    encodings = ['utf-8', 'big5', 'utf-8-sig', 'cp950']
+    
+    for enc in encodings:
+        try:
+            df = pd.read_csv(file_path, encoding=enc)
+            print(f"✅ 成功使用 {enc} 編碼讀取檔案！")
+            return df
+        except UnicodeDecodeError:
+            continue
+    
+    print("❌ 找不到匹配的編碼，請檢查檔案格式。")
+    return None
+    
 def main():
     # 1. 讀取 CSV 檔案 (路徑請根據您的 Repo 調整)
     csv_path = "data/TW50.csv"
@@ -46,7 +60,7 @@ def main():
 
     # 讀取 CSV，假設欄位名稱是 'StockCode'
     # 如果您的 CSV 只有代號，請確認欄位名稱
-    df_list = pd.read_csv(csv_path)
+    df_list = pd.smart_read_csv(csv_path)
     
     # 確保代號格式正確 (加上 .TW)
     raw_codes = df_list['StockCode'].astype(str).tolist()
