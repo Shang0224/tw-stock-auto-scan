@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Analysis Script
-        run: python analyze_ma.py
+        run: python scan_ma240.py
 
       - name: Commit and Push results
         run: |
