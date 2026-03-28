@@ -58,12 +58,12 @@ def main():
         print(f"找不到檔案: {csv_path}")
         return
 
-    # 讀取 CSV，假設欄位名稱是 'StockCode'
+    # 讀取 CSV，假設欄位名稱是 '代號'
     # 如果您的 CSV 只有代號，請確認欄位名稱
     df_list = smart_read_csv(csv_path)
     
     # 確保代號格式正確 (加上 .TW)
-    raw_codes = df_list['StockCode'].astype(str).tolist()
+    raw_codes = df_list['代號'].astype(str).tolist()
     tickers = [f"{c.strip()}.TW" if not c.endswith('.TW') else c for c in raw_codes]
 
     print(f"📅 執行日期: {datetime.now().strftime('%Y-%m-%d')}")
