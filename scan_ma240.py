@@ -27,21 +27,21 @@ def main():
     
     # 2. 讀取您的 TW50.csv
     # 1. 定義檔案名稱
-    file_tw50 = 'data/tw50.csv'
-    file_mid100 = 'data/mid100.csv'
+    file_tw50 = 'data/TW50.csv'
+    file_mid100 = 'data/MID100.csv'
     
     combined_codes = []
 
     # 2. 讀取 台灣 50
     if os.path.exists(file_tw50):
-        df_50 = pd.read_csv(file_tw50)
+        df_50 = pd.read_csv(file_tw50, 'big5')
         # 確保代號是字串，避免遺失前導零（雖然台股目前較少見）
         combined_codes.extend(df_50['code'].astype(str).tolist())
     else:
         print(f"警告：找不到 {file_tw50}")
 
     # 3. 讀取 中型 100
-    if os.path.exists(file_mid100):
+    if os.path.exists(file_mid100, 'big5'):
         df_mid100 = pd.read_csv(file_mid100)
         combined_codes.extend(df_mid100['code'].astype(str).tolist())
     else:
