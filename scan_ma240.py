@@ -56,7 +56,7 @@ def main():
 
     # 2. 讀取 CSV
     try:
-        df_list = pd.read_csv('data/TW50.csv')
+        df_list = pd.read_csv('data/TW50.csv', encoding='big5')
         # 確保欄位名稱正確
         stock_ids = df_list['代號'].astype(str).tolist()
     except Exception as e:
