@@ -2,6 +2,7 @@ from FinMind.data import DataLoader
 import pandas as pd
 import time
 from datetime import datetime, timedelta
+import os
 
 def smart_read_csv(file_path):
     # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
