@@ -142,18 +142,18 @@ def main():
     if breakout_hits:
         report = pd.DataFrame(breakout_hits)
     
-    # 建立訊息標頭
-    message_text = f"📅 掃描完成: {now_str}\n"
-    message_text += "=== 今日突破 240MA 名單 ===\n\n"
+        # 建立訊息標頭
+        message_text = f"📅 掃描完成: {now_str}\n"
+        message_text += "=== 今日突破 240MA 名單 ===\n\n"
     
-    # 逐行加入股票資訊，避免表格過寬
-    for _, row in report.iterrows():
-        # 假設您的 DataFrame 欄位包含 'stock_id', 'stock_name', 'close'
-        stock_info = f"📈 {row['stock_id']} {row.get('stock_name', '')}\n   收盤價: {row['close']}\n"
-        message_text += stock_info + "-" * 15 + "\n"
+        # 逐行加入股票資訊，避免表格過寬
+        for _, row in report.iterrows():
+            # 假設您的 DataFrame 欄位包含 'stock_id', 'stock_name', 'close'
+            stock_info = f"📈 {row['stock_id']} {row.get('stock_name', '')}\n   收盤價: {row['close']}\n"
+            message_text += stock_info + "-" * 15 + "\n"
         
-    # 儲存 CSV（原本的邏輯保留）
-    report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
+        # 儲存 CSV（原本的邏輯保留）
+        report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
 
     else:
         message_text = f"📅 {now_str}\n今日無符合突破 240MA 條件之股票。"
