@@ -60,7 +60,7 @@ def main():
 
     # 讀取 CSV，假設欄位名稱是 'StockCode'
     # 如果您的 CSV 只有代號，請確認欄位名稱
-    df_list = pd.smart_read_csv(csv_path)
+    df_list = smart_read_csv(csv_path)
     
     # 確保代號格式正確 (加上 .TW)
     raw_codes = df_list['StockCode'].astype(str).tolist()
