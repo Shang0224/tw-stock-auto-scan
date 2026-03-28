@@ -19,6 +19,32 @@ def smart_read_csv(file_path):
     print("❌ 找不到匹配的編碼，請檢查檔案格式。")
     return None
 
+def send_line_message(message):
+    """透過 LINE Messaging API 發送訊息"""
+    token = os.getenv("LINE_ACCESS_TOKEN")
+    user_id = os.getenv("LINE_USER_ID")
+    
+    if not token or not user_id:
+        print("錯誤：找不到 LINE 的設定資訊 (Secrets)")
+        return
+
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    payload = {
+        "to": user_id,
+        "messages": [{"type": "text", "text": message}]
+    }
+    
+    res = requests.post(url, headers=headers, json=payload)
+    if res.status_code == 200:
+        print("LINE 報告發送成功！")
+    else:
+        print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
+
+
 def main():
 
     
@@ -110,15 +136,46 @@ def main():
             print(f"❌ 處理 {sid} 時出錯: {e}")
 
     # 4. 輸出報告
-    print(f"\n📅 掃描完成時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+
     if breakout_hits:
         report = pd.DataFrame(breakout_hits)
-        print("\n=== 今日突破 240MA 名單 (原始價) ===")
-        print(report.to_string(index=False))
-        # 儲存 CSV 供後續 OpenClaw 或通知使用
-        report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
+    
+    # 建立訊息標頭
+    message_text = f"📅 掃描完成: {now_str}\n"
+    message_text += "=== 今日突破 240MA 名單 ===\n\n"
+    
+    # 逐行加入股票資訊，避免表格過寬
+    for _, row in report.iterrows():
+        # 假設您的 DataFrame 欄位包含 'stock_id', 'stock_name', 'close'
+        stock_info = f"📈 {row['stock_id']} {row.get('stock_name', '')}\n   收盤價: {row['close']}\n"
+        message_text += stock_info + "-" * 15 + "\n"
+        
+    # 儲存 CSV（原本的邏輯保留）
+    report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
+
     else:
-        print("今日無符合條件之股票。")
+        message_text = f"📅 {now_str}\n今日無符合突破 240MA 條件之股票。"
+
+    # 傳出訊息
+    # 確保您的 send_line_message 函數已經設定好 Channel Access Token
+    send_line_message(message_text)
+
+    # 原本的 print 輸出也可以保留在 Console 方便除錯
+    print(message_text)
+
+
+
+   # print(f"\n📅 掃描完成時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    #if breakout_hits:
+     #   report = pd.DataFrame(breakout_hits)
+      #  print("\n=== 今日突破 240MA 名單 (原始價) ===")
+       # print(report.to_string(index=False))
+        # 儲存 CSV 供後續 OpenClaw 或通知使用
+        #report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
+   # else:
+         #print("今日無符合條件之股票。")
 
 if __name__ == "__main__":
     main()
