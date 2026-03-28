@@ -12,6 +12,16 @@ jobs:
     permissions:      # 加入這部分
       contents: write # 顯式要求寫入權限
     steps:
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas yfinance FinMind  # <--- 確保這裡有加上 FinMind
+
+      - name: Run Scan Script
+        run: python scan_ma240.py
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }} # 如果您有設定 Token
+    
       - name: Checkout code
         uses: actions/checkout@v4
 
