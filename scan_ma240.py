@@ -61,6 +61,8 @@ def main():
             today = df.iloc[-1]
             yesterday = df.iloc[-2]
 
+            print(f"股票：{ticker}  收盤價: {round(today['Close'], 2)}  (年線: {today['MA240']})")
+ 
             # 突破條件：昨日收盤 < 昨日年線 AND 今日收盤 > 今日年線
             if yesterday['close'] < yesterday['MA240'] and today['close'] > today['MA240']:
                 breakout_hits.append({
