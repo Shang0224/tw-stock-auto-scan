@@ -1,42 +1,7 @@
 import pandas as pd
 import yfinance as yf
 from datetime import datetime
-import os
 
-def check_stock(ticker):
-    """判斷單一股票是否突破年線"""
-    try:
-        # 抓取 1.5 年數據確保 240MA 計算準確
-        stock = yf.Ticker(ticker)
-        df = stock.history(period="18mo", auto_adjust=False)
-        
-        if len(df) < 240:
-            return None
-
-        # 計算 240MA (年線)
-        df['MA240'] = df['Close'].rolling(window=240).mean()
-     
-        # 取得最後兩筆資料
-        # today 是最後一筆，yesterday 是倒數第二筆
-        today = df.iloc[-1]
-        yesterday = df.iloc[-2]
-
-        print(f"股票：{ticker}  收盤價: {round(today['Close'], 2)}  (年線: {today['MA240']})")
-        
-        # 突破條件：昨日收盤 < 昨日年線 AND 今日收盤 > 今日年線
-        is_breakout = (yesterday['Close'] < yesterday['MA240']) and (today['Close'] > today['MA240'])
-        
-        if is_breakout:
-            return {
-                "代號": ticker,
-                "收盤價": round(today['Close'], 2),
-                "年線值": round(today['MA240'], 2),
-                "今日漲幅": f"{round((today['Close']/yesterday['Close']-1)*100, 2)}%",
-                "今日成交量": int(today['Volume'])
-            }
-    except Exception as e:
-        print(f"查詢 {ticker} 時發生錯誤: {e}")
-    return None
 def smart_read_csv(file_path):
     # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
     encodings = ['utf-8', 'big5', 'utf-8-sig', 'cp950']
@@ -51,43 +16,74 @@ def smart_read_csv(file_path):
     
     print("❌ 找不到匹配的編碼，請檢查檔案格式。")
     return None
-    
+
 def main():
-    # 1. 讀取 CSV 檔案 (路徑請根據您的 Repo 調整)
+    # 1. 讀取 CSV (請確保檔案在 data 資料夾)
+
     csv_path = "data/TW50.csv"
     
     if not os.path.exists(csv_path):
         print(f"找不到檔案: {csv_path}")
         return
-
-    # 讀取 CSV，假設欄位名稱是 '代號'
-    # 如果您的 CSV 只有代號，請確認欄位名稱
-    df_list = smart_read_csv(csv_path)
     
-    # 確保代號格式正確 (加上 .TW)
-    raw_codes = df_list['代號'].astype(str).tolist()
-    tickers = [f"{c.strip()}.TW" if not c.endswith('.TW') else c for c in raw_codes]
+    try:
+        df_list = smart_read_csv('data/TW50.csv')
+        # 取得代號並加上 .TW
+        tickers = [f"{str(c).strip()}.TW" for c in df_list['代號']]
+    except Exception as e:
+        print(f"讀取 CSV 失敗: {e}")
+        return
 
-    print(f"📅 執行日期: {datetime.now().strftime('%Y-%m-%d')}")
-    print(f"🔍 正在掃描 {len(tickers)} 檔成分股...")
+    print(f"🔍 正在批次下載 {len(tickers)} 檔股票數據...")
 
-    # 2. 執行掃描
-    hits = []
-    for t in tickers:
-        result = check_stock(t)
-        if result:
-            hits.append(result)
-            print(f"🚀 發現突破：{result['代號']} (價格: {result['收盤價']})")
+    # 2. 一次下載所有股票 (2年資料，關閉自動還原)
+    # auto_adjust=False 確保抓到的是跟券商一樣的「原始收盤價」
+    data = yf.download(tickers, period="2y", auto_adjust=False, group_by='ticker')
 
-    # 3. 輸出結果
-    if hits:
-        report_df = pd.DataFrame(hits)
-        print("\n=== 突破 240MA 掃描結果 ===")
-        print(report_df.to_string(index=False))
-        # 儲存結果方便 OpenClaw 讀取通知
-        report_df.to_csv("data/breakout_report.csv", index=False, encoding='utf-8-sig')
+    breakout_list = []
+
+    # 3. 逐一計算並判斷
+    for ticker in tickers:
+        try:
+            # 取得該股的原始收盤價 (Close)
+            df = data[ticker]['Close'].dropna()
+            
+            if len(df) < 240:
+                continue
+
+            # 計算 SMA240
+            sma240 = df.rolling(window=240).mean()
+            
+            today_price = df.iloc[-1]
+            yesterday_price = df.iloc[-2]
+            today_sma = sma240.iloc[-1]
+            yesterday_sma = sma240.iloc[-2]
+
+            print(f"股票：{ticker}  收盤價: {round(today_price, 2)}  (年線: {today_sma})")
+
+            
+            # 突破判斷：昨天在線下，今天在線上
+            if yesterday_price < yesterday_sma and today_price > today_sma:
+                breakout_list.append({
+                    "代號": ticker,
+                    "今日收盤": round(today_price, 2),
+                    "原始年線": round(today_sma, 2),
+                    "偏離率": f"{round(((today_price/today_sma)-1)*100, 2)}%"
+                })
+        except Exception as e:
+            # 有些新上市股票可能沒資料，跳過即可
+            continue
+
+    # 4. 顯示結果
+    print(f"\n📅 掃描日期: {datetime.now().strftime('%Y-%m-%d')}")
+    if breakout_list:
+        result_df = pd.DataFrame(breakout_list)
+        print("✨ 發現以下股票剛突破原始年線：")
+        print(result_df.to_string(index=False))
+        # 存成報告供 OpenClaw 讀取
+        result_df.to_csv('data/breakout_report.csv', index=False, encoding='utf-8-sig')
     else:
-        print("\n今日無符合條件之股票。")
+        print("今日無符合突破條件的股票。")
 
 if __name__ == "__main__":
     main()
