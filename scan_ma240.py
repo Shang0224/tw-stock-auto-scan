@@ -24,7 +24,7 @@ def send_line_message(message):
     token = os.getenv("LINE_ACCESS_TOKEN")
     user_id = os.getenv("LINE_USER_ID")
 
-    print(f"USER ID : {user_id}\n")
+    print(f"USER ID : {user_id}\nMessage {message}")
     
     if not token or not user_id:
         print("錯誤：找不到 LINE 的設定資訊 (Secrets)")
@@ -51,6 +51,8 @@ def send_line_message(message):
 
 def main():
 
+    send_line_message("tessts")
+    
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
