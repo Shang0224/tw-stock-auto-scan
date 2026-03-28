@@ -25,11 +25,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Analysis Script
-        run: python scan_ma240.py
         env:
           LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ vars.LINE_USER_ID }}
-        
+        run: python scan_ma240.py        
 
       - name: Commit and Push results
         run: |
