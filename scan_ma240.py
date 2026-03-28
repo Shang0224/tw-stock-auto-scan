@@ -25,13 +25,32 @@ def main():
     dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
     
     # 2. 讀取您的 TW50.csv
-    try:
-        # 假設您的 CSV 欄位是 StockCode
-        stock_list_df = smart_read_csv('data/TW50.csv')
-        stock_ids = stock_list_df['代號'].astype(str).tolist()
-    except Exception as e:
-        print(f"❌ 讀取 CSV 失敗: {e}")
-        return
+    # 1. 定義檔案名稱
+    file_tw50 = 'data/tw50.csv'
+    file_mid100 = 'data/mid100.csv'
+    
+    combined_codes = []
+
+    # 2. 讀取 台灣 50
+    if os.path.exists(file_tw50):
+        df_50 = pd.read_csv(file_tw50)
+        # 確保代號是字串，避免遺失前導零（雖然台股目前較少見）
+        combined_codes.extend(df_50['code'].astype(str).tolist())
+    else:
+        print(f"警告：找不到 {file_tw50}")
+
+    # 3. 讀取 中型 100
+    if os.path.exists(file_mid100):
+        df_mid100 = pd.read_csv(file_mid100)
+        combined_codes.extend(df_mid100['code'].astype(str).tolist())
+    else:
+        print(f"警告：找不到 {file_mid100}")
+
+    # 4. 去除重複項（若有股票同時存在於兩個清單）並排序
+    unique_codes = sorted(list(set(combined_codes)))
+
+    # 5. 建立為 yfinance 格式的 stock_ids (加上 .TW)
+    stock_ids = [f"{code}.TW" for code in unique_codes]
 
     # 設定時間範圍：抓取過去 360 天（確保有 240 根 K 線）
     start_date = (datetime.now() - timedelta(days=500)).strftime('%Y-%m-%d')
