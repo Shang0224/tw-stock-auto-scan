@@ -41,7 +41,7 @@ def send_line_message(message):
         "messages": [{"type": "text", "text": message}]
     }
 
-    print("LINEINMNNNE")
+    print(f"USER ID : {user_id}\nMessage {message}")
     
     res = requests.post(url, headers=headers, json=payload)
     if res.status_code == 200:
