@@ -8,7 +8,7 @@ def check_stock(ticker):
     try:
         # 抓取 1.5 年數據確保 240MA 計算準確
         stock = yf.Ticker(ticker)
-        df = stock.history(period="18mo")
+        df = stock.history(period="18mo", auto_adjust=False)
         
         if len(df) < 240:
             return None
