@@ -21,7 +21,7 @@ def check_stock(ticker):
         today = df.iloc[-1]
         yesterday = df.iloc[-2]
 
-        print(f"股票：{ticker} "收盤價": {round(today['Close'], 2)} (年線: {today['MA240']})")
+        print(f"股票：{ticker}  收盤價: {round(today['Close'], 2)}  (年線: {today['MA240']})")
         
         # 突破條件：昨日收盤 < 昨日年線 AND 今日收盤 > 今日年線
         is_breakout = (yesterday['Close'] < yesterday['MA240']) and (today['Close'] > today['MA240'])
