@@ -69,7 +69,7 @@ def strategy_near_ma240(sid, dl):
     today = df.iloc[-1]
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
     
-    is_hit = abs(dist_ratio) <= 0.20
+    is_hit = abs(dist_ratio) <= 0.03
     return is_hit, {"年線": f"{round(today['MA240']2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
 
 
@@ -168,7 +168,7 @@ def main():
     
         # 建立訊息標頭
         message_text = f"📅 掃描完成: {now_str}\n"
-        message_text += "=== 今日突破 240MA 名單 ===\n\n"
+        message_text += "=== 靠近年線的名單 ===\n\n"
     
         # 逐行加入股票資訊
         message_text += report.to_string(index=False)
