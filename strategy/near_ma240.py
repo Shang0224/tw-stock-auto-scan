@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import time
 
 
-def strategy_near_ma240(sid, dl):
+def st_near_ma240(sid, dl):
     """
     年線預備股策略：自主決定抓取 500 天資料
     """
