@@ -132,16 +132,20 @@ def scan_stocks(stock_ids, algo_func, dl):
     """
     通用掃描器：只負責傳入代號，不干涉策略細節
     """
+    # 1. 先抓一次全市場基本資訊
+    df_info = dl.taiwan_stock_info()
+    # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
+    stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
+    
     hits = []
     for sid in stock_ids:
         try:
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl)
-
-
-            
+          
             if is_hit:
-                res = {"股票代號": sid}
+                # 從傳進來的字典取得名稱
+                res = {"股票名稱": name_map.get(sid, "未知")}
                 res.update(info)
                 hits.append(res)
                 print(f"✅ 策略命中: {sid}")
