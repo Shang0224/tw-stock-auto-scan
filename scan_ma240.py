@@ -107,9 +107,10 @@ def strategy_near_ma240(sid, dl):
             
         # 2. 進階過濾：短線必須先轉強 (股價已站上月線)
         # 這能過濾掉「一路陰跌且尚未止跌」的股票
-        is_short_term_strong = curr_price > ma20
+        #is_short_term_strong = curr_price > ma20
 
-        if is_in_range and is_short_term_strong:
+        #if is_in_range and is_short_term_strong:
+        if is_in_range:
             # 判斷是在年線之上還是之下
             status = "年線上方強勢整理" if dist_ratio > 0 else "年線下方準備突破"
                 
@@ -132,7 +133,7 @@ def strategy_near_ma240(sid, dl):
     
     #return is_hit, {"年線": f"{round(today['MA240'], 2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
 
-    print(f"strategy_near_ma240: {breakout_hits}")
+    print(f"strategy_near_ma240: {breakout_hits}  is_in_range : {is_in_range}")
     
     return is_in_range, breakout_hits
 
@@ -151,7 +152,7 @@ def scan_stocks(stock_ids, algo_func, dl):
         try:
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl)
-            print(f"info : {info}")
+            print(f"is_hit : {is_hit} info : {info}")
             if is_hit:
                 print(f"股票名稱 : {stock_name_dict.get(sid, '未知')}\n")
                 # 從傳進來的字典取得名稱
