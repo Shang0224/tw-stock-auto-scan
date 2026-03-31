@@ -49,6 +49,50 @@ def send_line_message(message):
     else:
         print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
 
+def strategy_near_ma240(sid, dl):
+    """
+    年線預備股策略：自主決定抓取 500 天資料
+    """
+    import datetime
+    # 策略決定需要的時間長度
+    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.datetime.now() - datetime.timedelta(days=500)).strftime("%Y-%m-%d")
+    
+    # 策略自主抓取資料
+    df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+    
+    if df.empty or len(df) < 240:
+        return False, {}
+
+    # 計算邏輯
+    df['MA240'] = df['close'].rolling(240).mean()
+    today = df.iloc[-1]
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    
+    is_hit = abs(dist_ratio) <= 0.20
+    return is_hit, {"距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
+
+
+def scan_stocks(stock_ids, algo_func, dl):
+    """
+    通用掃描器：只負責傳入代號，不干涉策略細節
+    """
+    hits = []
+    for sid in stock_ids:
+        try:
+            # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
+            is_hit, info = algo_func(sid, dl)
+            
+            if is_hit:
+                res = {"股票代號": sid}
+                res.update(info)
+                hits.append(res)
+                print(f"✅ 策略命中: {sid}")
+            
+            time.sleep(0.5) # 保護 API
+        except Exception as e:
+            print(f"❌ {sid} 處理出錯: {e}")
+    return hits
 
 def main():
 
@@ -96,58 +140,37 @@ def main():
         print(f"❌ 讀取 CSV 失敗: {e}")
         return
 
+    print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
+    
     # 設定時間範圍：抓取過去 360 天（確保有 240 根 K 線）
     start_date = (datetime.now() - timedelta(days=500)).strftime('%Y-%m-%d')
     end_date = datetime.now().strftime('%Y-%m-%d')
 
-    print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
-    breakout_hits = []
+    
+    results = []
 
     # 3. 逐一抓取並計算
-    for sid in stock_ids:
-        try:
-            # 抓取台股日成交資料
-            df = dl.taiwan_stock_daily(
-                stock_id=sid,
-                start_date=start_date,
-                end_date=end_date
-            )
-            
-            if len(df) < 240:
-                print(f"⚠️ {sid} 資料不足 240 筆，跳過。")
-                continue
+    try:
+        # --- D. 執行 scan_stocks 呼叫敘述 ---
+        # 這裡就是你問的「呼叫敘述」
+        results = scan_stocks(
+                              stock_ids=stock_ids, 
+                            algo_func=strategy_near_ma240, 
+                            dl=dl
+        )
 
-            # 計算 SMA240 (原始價格平均)
-            df['MA240'] = df['close'].rolling(window=240).mean()
-            
-            # 取得最新兩筆數據
-            today = df.iloc[-1]
-            yesterday = df.iloc[-2]
-
-            print(f"股票：{sid}  收盤價: {round(today['close'], 2)}  (年線: {today['MA240']})")
- 
-            # 突破條件：昨日收盤 < 昨日年線 AND 今日收盤 > 今日年線
-            if yesterday['close'] < yesterday['MA240'] and today['close'] > today['MA240']:
-                breakout_hits.append({
-                    "股票代號": sid,
-                    "今日收盤": today['close'],
-                    "原始年線": round(today['MA240'], 2),
-                    "成交量": today['Trading_Volume']
-                })
-                print(f"🚀 發現突破：{sid}！")
-            
-            # 💡 免費版 FinMind 建議加入短暫延遲，避免頻率限制
-            time.sleep(0.5)
-
-        except Exception as e:
-            print(f"❌ 處理 {sid} 時出錯: {e}")
+    # --- E. 處理結果 ---
+    print("\n=== 掃描完成，符合條件的標的如下 ===")
+    for item in results:
+        print(item)
+    except Exception as e:
+        print(f"❌ 處理 {sid} 時出錯: {e}")
 
     # 4. 輸出報告
-
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
 
-    if breakout_hits:
-        report = pd.DataFrame(breakout_hits)
+    if results:
+        report = pd.DataFrame(results)
     
         # 建立訊息標頭
         message_text = f"📅 掃描完成: {now_str}\n"
@@ -160,7 +183,7 @@ def main():
         report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
 
     else:
-        message_text = f"📅 {now_str}\n今日無符合突破 240MA 條件之股票。"
+        message_text = f"📅 {now_str}\n今日無符合條件之股票。"
 
     # 原本的 print 輸出也可以保留在 Console 方便除錯
     print(message_text)
