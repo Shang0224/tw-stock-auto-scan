@@ -71,6 +71,8 @@ def strategy_near_ma240(sid, dl):
     
     #is_hit = abs(dist_ratio) <= 0.03
 
+    breakout_hits = []
+    
     try:
         # 抓取台股日成交資料 (建議 start_date 抓 500 天前以利計算與比較)
         df = dl.taiwan_stock_daily(
