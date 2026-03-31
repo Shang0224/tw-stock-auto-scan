@@ -125,6 +125,9 @@ def strategy_near_ma240(sid, dl):
 
     
     #return is_hit, {"年線": f"{round(today['MA240'], 2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
+
+    print(f"strategy_near_ma240: {breakout_hits}")
+    
     return is_in_range, breakout_hits
 
 
