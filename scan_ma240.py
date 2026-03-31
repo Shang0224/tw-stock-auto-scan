@@ -144,7 +144,7 @@ def scan_stocks(stock_ids, algo_func, dl):
             is_hit, info = algo_func(sid, dl)
             print(f"info : {info}")
             if is_hit:
-                print(f"股票名稱" : {stock_name_dict.get(sid, "未知")})
+                print(f"股票名稱 : {stock_name_dict.get(sid, '未知')}\n")
                 # 從傳進來的字典取得名稱
                 res = {"股票名稱": stock_name_dict.get(sid, "未知")}
                 res.update(info)
