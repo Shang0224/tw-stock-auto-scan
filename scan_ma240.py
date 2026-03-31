@@ -115,7 +115,7 @@ def strategy_near_ma240(sid, dl):
                     "狀態": status,
                     "成交量": today['Trading_Volume']
                 })
-                print(f"🎯 發現預備標的：{sid} ({status})，距離比：{round(dist_ratio*100, 2)}%")
+            print(f"🎯 發現預備標的：{sid} ({status})，距離比：{round(dist_ratio*100, 2)}%")
             
             # FinMind 頻率限制
             time.sleep(0.5)
