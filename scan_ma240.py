@@ -79,7 +79,7 @@ def strategy_near_ma240(sid, dl):
                         end_date=end_date)
             
         if len(df) < 240:
-            continue
+            return False, {}
 
         # 計算各指標
         df['MA20'] = df['close'].rolling(window=20).mean()   # 月線
