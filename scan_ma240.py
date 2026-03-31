@@ -71,8 +71,6 @@ def strategy_near_ma240(sid, dl):
     
     #is_hit = abs(dist_ratio) <= 0.03
 
-    breakout_hits = []
-    
     try:
         # 抓取台股日成交資料 (建議 start_date 抓 500 天前以利計算與比較)
         df = dl.taiwan_stock_daily(
@@ -109,14 +107,14 @@ def strategy_near_ma240(sid, dl):
             # 判斷是在年線之上還是之下
             status = "年線上方強勢整理" if dist_ratio > 0 else "年線下方準備突破"
                 
-            breakout_hits.append({
+            breakout_hits = {
                     "股票代號": sid,
                     "今日收盤": curr_price,
                     "年線位置": round(ma240, 2),
                     "距離年線幅": f"{round(dist_ratio * 100, 2)}%",
                     "狀態": status,
                     "成交量": today['Trading_Volume']
-                })
+                }
             print(f"🎯 發現預備標的：{sid} ({status})，距離比：{round(dist_ratio*100, 2)}%")
             
         # FinMind 頻率限制
@@ -139,6 +137,8 @@ def scan_stocks(stock_ids, algo_func, dl):
         try:
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl)
+
+
             
             if is_hit:
                 res = {"股票代號": sid}
