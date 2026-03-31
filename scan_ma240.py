@@ -54,6 +54,12 @@ def strategy_near_ma240(sid, dl):
     年線預備股策略：自主決定抓取 500 天資料
     """
     import datetime
+    import time
+
+    # 1. 先宣告預設值，確保不論結果如何，變數都存在
+    is_in_range = False
+    breakout_hits = {}
+   
     # 策略決定需要的時間長度
     end_date = datetime.datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.datetime.now() - datetime.timedelta(days=500)).strftime("%Y-%m-%d")
@@ -62,7 +68,7 @@ def strategy_near_ma240(sid, dl):
     df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
     
     if df.empty or len(df) < 240:
-        return False, {}
+        return False, breakout_hits
 
     # 計算邏輯
     #df['MA240'] = df['close'].rolling(240).mean()
