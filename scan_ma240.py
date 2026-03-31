@@ -70,7 +70,7 @@ def strategy_near_ma240(sid, dl):
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
     
     is_hit = abs(dist_ratio) <= 0.20
-    return is_hit, {"年線": f"{today['MA240']}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
+    return is_hit, {"年線": f"{round(today['MA240']2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
 
 
 def scan_stocks(stock_ids, algo_func, dl):
