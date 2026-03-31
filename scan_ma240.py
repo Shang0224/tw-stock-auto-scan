@@ -142,7 +142,7 @@ def scan_stocks(stock_ids, algo_func, dl):
         try:
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl)
-          
+            print(f"info : {info}")
             if is_hit:
                 # 從傳進來的字典取得名稱
                 res = {"股票名稱": name_map.get(sid, "未知")}
