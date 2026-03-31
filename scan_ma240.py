@@ -117,11 +117,11 @@ def strategy_near_ma240(sid, dl):
                 })
             print(f"🎯 發現預備標的：{sid} ({status})，距離比：{round(dist_ratio*100, 2)}%")
             
-            # FinMind 頻率限制
-            time.sleep(0.5)
+        # FinMind 頻率限制
+        time.sleep(0.5)
 
-        except Exception as e:
-            print(f"❌ 處理 {sid} 時出錯: {e}")
+    except Exception as e:
+        print(f"❌ 處理 {sid} 時出錯: {e}")
 
     
     #return is_hit, {"年線": f"{round(today['MA240'], 2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
