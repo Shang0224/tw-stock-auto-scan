@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import os
 import requests
 
+import strategy.strategy_near_ma240 as strategy_near_ma240
+
 def smart_read_csv(file_path):
     # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
     encodings = ['utf-8', 'big5', 'utf-8-sig', 'cp950']
