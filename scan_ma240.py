@@ -141,12 +141,7 @@ def main():
         return
 
     print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
-    
-    # 設定時間範圍：抓取過去 360 天（確保有 240 根 K 線）
-    start_date = (datetime.now() - timedelta(days=500)).strftime('%Y-%m-%d')
-    end_date = datetime.now().strftime('%Y-%m-%d')
 
-    
     results = []
 
     # 3. 逐一抓取並計算
@@ -154,15 +149,15 @@ def main():
         # --- D. 執行 scan_stocks 呼叫敘述 ---
         # 這裡就是你問的「呼叫敘述」
         results = scan_stocks(
-                              stock_ids=stock_ids, 
+                            stock_ids=stock_ids, 
                             algo_func=strategy_near_ma240, 
                             dl=dl
         )
 
-    # --- E. 處理結果 ---
-    print("\n=== 掃描完成，符合條件的標的如下 ===")
-    for item in results:
-        print(item)
+        # --- E. 處理結果 ---
+        print("\n=== 掃描完成，符合條件的標的如下 ===")
+        for item in results:
+            print(item)
     except Exception as e:
         print(f"❌ 處理 {sid} 時出錯: {e}")
 
