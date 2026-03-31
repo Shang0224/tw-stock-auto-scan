@@ -1,3 +1,9 @@
+from FinMind.data import DataLoader
+import pandas as pd
+from datetime import datetime, timedelta
+import time
+
+
 def strategy_near_ma240(sid, dl):
     """
     年線預備股策略：自主決定抓取 500 天資料
