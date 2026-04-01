@@ -101,7 +101,7 @@ def st_near_ma240(sid, df_single):
 
     # 2. 檢查資料長度 (需足夠計算 MA240)
     if df_single is None or len(df_single) < 240:
-        print(f"df_single is None or len(df_single) < 240 {len(df_single) < 240}"
+        print(f"df_single is None or len(df_single) < 240 {len(df_single) < 240}")
         return False, {}
 
     try:
