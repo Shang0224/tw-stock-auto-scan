@@ -85,6 +85,53 @@ def st_near_ma240(sid, dl):
     except Exception as e:
         print(f"❌ 處理 {sid} 時出錯: {e}")
 
+
+
+    def st_near_ma240(sid, df_single):
+    """
+    年線預備股策略：純計算邏輯，不負責抓取資料
+    :param sid: 股票代號
+    :param df_single: 該檔股票的歷史 Dataframe (由外部切片傳入)
+    """
+    # 1. 初始化
+    is_in_range = False
+    breakout_hits = {}
+
+    # 2. 檢查資料長度 (需足夠計算 MA240)
+    if df_single is None or len(df_single) < 240:
+        return False, {}
+
+    try:
+        # 計算指標 (這裡建議只計算最後一筆，或對傳入的 df 進行計算)
+        # 注意：df_single 已經包含了 500 天的資料
+        ma240_series = df_single['close'].rolling(window=240).mean()
+        
+        today_price = df_single['close'].iloc[-1]
+        today_ma240 = ma240_series.iloc[-1]
+        
+        if today_ma240 == 0 or pandas.isna(today_ma240):
+            return False, {}
+
+        # 3. 邏輯判斷
+        dist_ratio = (today_price - today_ma240) / today_ma240
+        is_in_range = abs(dist_ratio) <= 0.03
+            
+        if is_in_range:
+            status = "年線上方強勢整理" if dist_ratio > 0 else "年線下方準備突破"
+            
+            breakout_hits = {
+                "股票代號": sid,
+                "今日收盤": today_price,
+                "年線位置": round(today_ma240, 2),
+                "距離年線幅": f"{round(dist_ratio * 100, 2)}%",
+                "狀態": status,
+                "成交量": df_single['Trading_Volume'].iloc[-1] if 'Trading_Volume' in df_single.columns else 0
+            }
+            
+    except Exception as e:
+        print(f"❌ 處理 {sid} 邏輯時出錯: {e}")
+
+    return is_in_range, breakout_hits
     
     #return is_hit, {"年線": f"{round(today['MA240'], 2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
 
