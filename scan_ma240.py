@@ -51,7 +51,7 @@ def send_line_message(message):
     else:
         print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
 
-def scan_stocks_new(stock_ids, strategy_func, dl):
+def scan_stocks_new(stock_ids, algo_func, dl):
     """
     通用策略執行器
     :param sids: 股票代號串列 (List of Strings)
@@ -91,7 +91,7 @@ def scan_stocks_new(stock_ids, strategy_func, dl):
         df_single = grouped.get_group(stock_ids).sort_values('date')
         
         # 呼叫傳入的策略函數指標
-        is_hit, info = strategy_func(stock_ids, df_single)
+        is_hit, info = algo_func(stock_ids, df_single)
         
         if is_hit:
             final_hits.append(info)
