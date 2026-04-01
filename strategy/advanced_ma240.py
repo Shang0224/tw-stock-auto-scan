@@ -8,11 +8,14 @@ def st_advanced_ma240(sid, dl, name_map):
     """
     進階策略：年線上下3% + 均線糾結 + 帶量轉強
     """
+      
     # 策略決定抓取 500 天資料
     end_date = datetime.datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.datetime.now() - datetime.timedelta(days=500)).strftime("%Y-%m-%d")
     
     df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+
+    print (f"st_advanced_ma240({sid})  len(df) {len(df)}\n")
     
     # 基礎檢查：資料量需足夠計算年線
     if df.empty or len(df) < 240:
