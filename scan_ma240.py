@@ -61,8 +61,8 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     :return: 所有命中策略的結果清單
     """
     # 1. 計算日期區間
-    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.datetime.now() - datetime.timedelta(500)).strftime("%Y-%m-%d")
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
 
     print(f"🚀 [Batch] 開始抓取 {len(sids)} 檔股票資料 (從 {start_date} 起)...")
     
