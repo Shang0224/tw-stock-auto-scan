@@ -51,6 +51,55 @@ def send_line_message(message):
     else:
         print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
 
+def scan_stocks_new(sids, strategy_func, dl):
+    """
+    通用策略執行器
+    :param sids: 股票代號串列 (List of Strings)
+    :param strategy_func: 策略函數指標 (Function Pointer)
+    :param dl: FinMind 或自定義的 DataLoader 物件
+    :param days: 往前回推的天數
+    :return: 所有命中策略的結果清單
+    """
+    # 1. 計算日期區間
+    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.datetime.now() - datetime.timedelta(500)).strftime("%Y-%m-%d")
+
+    print(f"🚀 [Batch] 開始抓取 {len(sids)} 檔股票資料 (從 {start_date} 起)...")
+    
+    # 2. 一次性批次抓取 (這是效能關鍵)
+    try:
+        all_df = dl.taiwan_stock_daily(stock_id=sids, start_date=start_date, end_date=end_date)
+    except Exception as e:
+        print(f"❌ 批次抓取資料失敗: {e}")
+        return []
+
+    if all_df.empty:
+        print("⚠️ 抓取結果為空，請檢查代號或網路。")
+        return []
+
+    # 3. 執行策略迴圈
+    final_hits = []
+    
+    # 使用 groupby 可以更快速地在記憶體中拆分各檔股票
+    grouped = all_df.groupby('stock_id')
+
+    for sid in sids:
+        # 從 Grouped 物件中取出該檔股票的 Dataframe
+        if sid not in grouped.groups:
+            continue
+            
+        df_single = grouped.get_group(sid).sort_values('date')
+        
+        # 呼叫傳入的策略函數指標
+        is_hit, info = strategy_func(sid, df_single)
+        
+        if is_hit:
+            final_hits.append(info)
+            
+    print(f"✅ 掃描完成，符合條件數: {len(final_hits)}")
+    return final_hits
+
+
 def scan_stocks(stock_ids, algo_func, dl):
     """
     通用掃描器：只負責傳入代號，不干涉策略細節
@@ -116,10 +165,15 @@ def main():
     try:
         # --- D. 執行 scan_stocks 呼叫敘述 ---
         # 這裡就是你問的「呼叫敘述」
-        results = scan_stocks(
+        results = scan_stocks_new(            
                             stock_ids=stock_ids, 
                             algo_func=st_near_ma240, 
                             dl=dl)
+
+        #results = scan_stocks(
+         #                   stock_ids=stock_ids, 
+          #                  algo_func=st_near_ma240, 
+           #                 dl=dl)
 
         # --- E. 處理結果 ---
         print("\n=== 掃描完成，符合條件的標的如下 ===")
