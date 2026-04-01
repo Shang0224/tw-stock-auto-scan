@@ -119,7 +119,9 @@ def st_near_ma240(sid, df_single):
         # 3. 邏輯判斷
         dist_ratio = (today_price - today_ma240) / today_ma240
         is_in_range = abs(dist_ratio) <= 0.03
-            
+
+        print(f"sid: {sid}  dist_ratio: {dist_ratio} today_price: {today_price} today_ma240: {today_ma240}  \n")
+        
         if is_in_range:
             status = "年線上方強勢整理" if dist_ratio > 0 else "年線下方準備突破"
             
