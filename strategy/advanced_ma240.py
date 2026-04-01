@@ -10,8 +10,8 @@ def st_advanced_ma240(sid, dl, name_map):
     """
       
     # 策略決定抓取 500 天資料
-    end_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=500)).strftime("%Y-%m-%d")
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
     
     df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
 
