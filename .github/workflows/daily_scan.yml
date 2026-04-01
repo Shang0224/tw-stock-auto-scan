@@ -29,7 +29,7 @@ jobs:
           LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ vars.LINE_USER_ID }}
           STOCK_FILES: ${{ vars.STOCK_FILES }}
-          FINMIND_ACCESS_TOKEN: ${{var.FINMIND_ACCESS_TOKEN}}
+          FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
         run: python scan_ma240.py        
 
       - name: Commit and Push results
