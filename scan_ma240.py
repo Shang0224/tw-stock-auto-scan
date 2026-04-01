@@ -119,9 +119,6 @@ def scan_stocks(stock_ids, algo_func, dl):
     """
     通用掃描器：只負責傳入代號，不干涉策略細節
     """
-
-    print(f"scan_stocks 開始抓取 {len(stock_ids)} 檔股票資料...")
-    
     # 1. 先抓一次全市場基本資訊
     df_info = dl.taiwan_stock_info()
 
@@ -132,7 +129,6 @@ def scan_stocks(stock_ids, algo_func, dl):
     hits = []
     for sid in stock_ids:
         try:
-            print(f"開始抓取 {sid} 股票資料...\n")
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl, stock_name_dict)
 
@@ -154,7 +150,6 @@ def main():
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN") 
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
-    #dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
     dl = DataLoader(token=finmindtoken)
     
     # 2. 讀取.csv檔
@@ -219,9 +214,14 @@ def main():
     
         # 逐行加入股票資訊
         message_text += report.to_string(index=False)
+
+        # 取得目前時間並格式化
+        # %Y:年, %m:月, %d:日, %H:時, %M:分
+        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        file_name = f'data/scan_report_{current_time}.csv'
         
         # 儲存 CSV（原本的邏輯保留）
-        report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
+        report.to_csv(file_name, index=False, encoding='utf-8-sig')
 
     else:
         message_text = f"📅 {now_str}\n今日無符合條件之股票。"
