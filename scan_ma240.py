@@ -128,7 +128,7 @@ def scan_stocks(stock_ids, algo_func, dl):
     print("df_info...\n")
     # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
     stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
-    print(f"stock_name_dict{stock_name_dict}...\n")
+    
     hits = []
     for sid in stock_ids:
         try:
@@ -155,7 +155,8 @@ def main():
    
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
-    dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
+    #dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
+    dl = DataLoader(token=finmindtoken)
     
     # 2. 讀取.csv檔
 
