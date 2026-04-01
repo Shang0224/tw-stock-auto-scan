@@ -128,13 +128,14 @@ def scan_stocks(stock_ids, algo_func, dl):
     for sid in stock_ids:
         try:
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
-            is_hit, info = algo_func(sid, dl)
+            is_hit, info = algo_func(sid, dl, stock_name_dict)
 
             if is_hit:
                 # 從傳進來的字典取得名稱
-                res = {"股票名稱": stock_name_dict.get(sid, "未知")}
-                res.update(info)
-                hits.append(res)
+                #res = {"股票名稱": stock_name_dict.get(sid, "未知")}
+                #res.update(info)
+                #hits.append(res)
+                hits.append(info)
                 print(f"✅ 策略命中: {sid}")
             
             time.sleep(0.5) # 保護 API
