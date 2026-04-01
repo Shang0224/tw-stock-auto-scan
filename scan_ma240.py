@@ -70,7 +70,7 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     try:
         all_df = dl.taiwan_stock_daily(stock_id=stock_ids, start_date=start_date, end_date=end_date)
 
-        print(f"all_df.unique({all_df['stock_id'].unique()}))")
+        print(f"all_df.unique({len(all_df['stock_id'].unique())}))")
     except Exception as e:
         print(f"❌ 批次抓取資料失敗: {e}")
         return []
