@@ -1,7 +1,7 @@
 from FinMind.data import DataLoader
 import pandas as pd
 import time
-from datetime import datetime, timedelta
+import datetime, timedelta
 import os
 import requests
 
