@@ -85,9 +85,14 @@ def st_near_ma240(sid, dl):
     except Exception as e:
         print(f"❌ 處理 {sid} 時出錯: {e}")
 
+    
+    #return is_hit, {"年線": f"{round(today['MA240'], 2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
 
+    print(f"strategy_near_ma240: {breakout_hits}  is_in_range : {is_in_range}")
+    
+    return is_in_range, breakout_hits
 
-    def st_near_ma240(sid, df_single):
+def st_near_ma240(sid, df_single):
     """
     年線預備股策略：純計算邏輯，不負責抓取資料
     :param sid: 股票代號
@@ -132,9 +137,4 @@ def st_near_ma240(sid, dl):
         print(f"❌ 處理 {sid} 邏輯時出錯: {e}")
 
     return is_in_range, breakout_hits
-    
-    #return is_hit, {"年線": f"{round(today['MA240'], 2)}", "距離年線": f"{round(dist_ratio*100, 2)}%", "收盤": today['close']}
 
-    print(f"strategy_near_ma240: {breakout_hits}  is_in_range : {is_in_range}")
-    
-    return is_in_range, breakout_hits
