@@ -8,9 +8,6 @@ def st_near_ma240(sid, dl):
     """
     年線預備股策略：自主決定抓取 500 天資料
     """
-    import datetime
-    import time
-
     # 1. 先宣告預設值，確保不論結果如何，變數都存在
     is_in_range = False
     breakout_hits = {}
