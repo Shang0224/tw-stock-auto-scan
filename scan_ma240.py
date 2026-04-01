@@ -51,7 +51,7 @@ def send_line_message(message):
     else:
         print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
 
-def scan_stocks_new(sids, strategy_func, dl):
+def scan_stocks_new(stock_ids, strategy_func, dl):
     """
     通用策略執行器
     :param sids: 股票代號串列 (List of Strings)
