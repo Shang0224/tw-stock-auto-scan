@@ -64,11 +64,11 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
 
-    print(f"🚀 [Batch] 開始抓取 {len(sids)} 檔股票資料 (從 {start_date} 起)...")
+    print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
     
     # 2. 一次性批次抓取 (這是效能關鍵)
     try:
-        all_df = dl.taiwan_stock_daily(stock_id=sids, start_date=start_date, end_date=end_date)
+        all_df = dl.taiwan_stock_daily(stock_id=stock_ids, start_date=start_date, end_date=end_date)
     except Exception as e:
         print(f"❌ 批次抓取資料失敗: {e}")
         return []
