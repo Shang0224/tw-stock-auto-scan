@@ -6,6 +6,8 @@ import os
 import requests
 
 from strategy.near_ma240 import st_near_ma240
+from strategy.advanced_ma240 import st_advanced_ma240
+
 
 def smart_read_csv(file_path):
     # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
@@ -182,9 +184,13 @@ def main():
           #                  algo_func=st_near_ma240, 
            #                 dl=dl)
 
+        #results = scan_stocks(
+         #                   stock_ids=stock_ids, 
+          #                  algo_func=st_near_ma240, 
+           #                 dl=dl)
         results = scan_stocks(
                             stock_ids=stock_ids, 
-                            algo_func=st_near_ma240, 
+                            algo_func=st_advanced_ma240, 
                             dl=dl)
 
         # --- E. 處理結果 ---
