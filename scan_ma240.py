@@ -117,13 +117,32 @@ def main():
     #stock_ids = [f"{code}.TW" for code in unique_codes]
 
     # 2. 讀取 CSV
-    try:
-        df_list = pd.read_csv('data/MID100.csv', encoding='big5')
+    #try:
+     #   df_list = pd.read_csv('data/MID100.csv', encoding='big5')
         # 確保欄位名稱正確
-        stock_ids = df_list['代號'].astype(str).tolist()
-    except Exception as e:
-        print(f"❌ 讀取 CSV 失敗: {e}")
-        return
+      #  stock_ids = df_list['代號'].astype(str).tolist()
+    #except Exception as e:
+     #   print(f"❌ 讀取 CSV 失敗: {e}")
+      #  return
+
+# 從系統環境變數讀取，若讀不到則給予預設值
+    files_env = os.environ.get('STOCK_FILES', 'data/MID100.csv')
+    
+    # 解析字串（將逗號分隔的字串轉回 list）
+    files = [f.strip() for f in files_env.split(',')]
+    
+    stock_ids = []
+    for file in files:
+        try:
+            df = pd.read_csv(file, encoding='big5')
+            # 確保代號欄位存在並轉為字串
+            stock_ids.extend(df['代號'].astype(str).tolist())
+            print(f"✅ 讀取成功: {file}")
+        except Exception as e:
+            print(f"❌ 讀取 {file} 失敗: {e}")
+            
+    # 去除重複項
+    stock_ids = list(set(stock_ids))   
 
     print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
