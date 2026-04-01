@@ -47,6 +47,7 @@ def strategy_advanced_ma240(sid, dl, name_map):
     status = "年線上方整理" if dist_ratio > 0 else "年線下方待突破"
     
     info = {
+        "代號": sid,
         "名稱": s_name,
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio*100, 2)}%",
