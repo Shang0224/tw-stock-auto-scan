@@ -119,6 +119,9 @@ def scan_stocks(stock_ids, algo_func, dl):
     """
     通用掃描器：只負責傳入代號，不干涉策略細節
     """
+
+    print(f"scan_stocks 開始抓取 {len(stock_ids)} 檔股票資料...")
+    
     # 1. 先抓一次全市場基本資訊
     df_info = dl.taiwan_stock_info()
     # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
