@@ -124,9 +124,11 @@ def scan_stocks(stock_ids, algo_func, dl):
     
     # 1. 先抓一次全市場基本資訊
     df_info = dl.taiwan_stock_info()
+
+    print("df_info...\n")
     # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
     stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
-    
+    print(f"stock_name_dict{stock_name_dict}...\n")
     hits = []
     for sid in stock_ids:
         try:
