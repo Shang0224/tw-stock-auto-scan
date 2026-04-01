@@ -180,7 +180,7 @@ def main():
         for item in results:
             print(item)
     except Exception as e:
-        print(f"❌ 處理 {sid} 時出錯: {e}")
+        print(f"❌ 處理掃描時出錯: {e}")
 
     # 4. 輸出報告
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
