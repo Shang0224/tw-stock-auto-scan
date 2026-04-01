@@ -89,6 +89,7 @@ def scan_stocks_new(stock_ids, algo_func, dl):
         
         # 從 Grouped 物件中取出該檔股票的 Dataframe
         if sid not in grouped.groups:
+            print(f"{sid} not in grouped.groups\n")           
             continue
             
         df_single = grouped.get_group(sid).sort_values('date')
