@@ -70,7 +70,7 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     try:
         all_df = dl.taiwan_stock_daily(stock_id=stock_ids, start_date=start_date, end_date=end_date)
 
-        print(f"all_df.unique({len(all_df['stock_id'].unique())}))")
+        print(f"all_df.unique({all_df['stock_id'].unique()}))   len(all_df): {len(all_df)}")
     except Exception as e:
         print(f"❌ 批次抓取資料失敗: {e}")
         return []
@@ -140,7 +140,7 @@ def main():
     FinMindToken = os.getenv("FINMIMD_ACCESS_TOKEN")
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
-    dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
+    dl = DataLoader(token=FinMindToken)
     
     # 2. 讀取.csv檔
 
