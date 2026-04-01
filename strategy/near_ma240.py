@@ -96,7 +96,7 @@ def st_near_ma240(sid, df_single):
     :param df_single: 該檔股票的歷史 Dataframe (由外部切片傳入)
     """
 
-    print(f"st_near_ma240({sid}, {len(df_single))")
+    print(f"st_near_ma240({sid}, {len(df_single)})")
     
     # 1. 初始化
     is_in_range = False
