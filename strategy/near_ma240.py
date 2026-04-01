@@ -111,7 +111,7 @@ def st_near_ma240(sid, df_single):
         today_price = df_single['close'].iloc[-1]
         today_ma240 = ma240_series.iloc[-1]
         
-        if today_ma240 == 0 or pandas.isna(today_ma240):
+        if today_ma240 == 0 or pd.isna(today_ma240):
             return False, {}
 
         # 3. 邏輯判斷
