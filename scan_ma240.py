@@ -217,7 +217,7 @@ def main():
 
         # 取得目前時間並格式化
         # %Y:年, %m:月, %d:日, %H:時, %M:分
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        current_time = datetime.now().strftime("%Y%m%d_%H%M")
         file_name = f'data/scan_report_{current_time}.csv'
         
         # 儲存 CSV（原本的邏輯保留）
