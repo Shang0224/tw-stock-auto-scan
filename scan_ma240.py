@@ -128,8 +128,6 @@ def scan_stocks(stock_ids, algo_func, dl):
     return hits
 
 def main():
-
-    send_line_message("tessts")
     
     FinMindToken = os.getenv("FINMIMD_ACCESS_TOKEN")
     
