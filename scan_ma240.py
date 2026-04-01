@@ -130,6 +130,7 @@ def scan_stocks(stock_ids, algo_func, dl):
     hits = []
     for sid in stock_ids:
         try:
+            print(f"開始抓取 {sid} 股票資料...\n")
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl, stock_name_dict)
 
