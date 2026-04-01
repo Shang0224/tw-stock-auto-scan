@@ -70,7 +70,11 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     try:
         all_df = dl.taiwan_stock_daily(stock_id=stock_ids, start_date=start_date, end_date=end_date)
 
-        print(f"all_df.unique({all_df['stock_id'].unique()}))   len(all_df): {len(all_df)}")
+        print("--- Debug Info ---")
+        print(f"傳入的 ID 數量: {len(stock_ids)}")
+        print(f"抓回來的總列數: {len(all_df)}")
+        print(f"抓回來的股票清單: {all_df['stock_id'].unique()}")
+        print("------------------")
     except Exception as e:
         print(f"❌ 批次抓取資料失敗: {e}")
         return []
