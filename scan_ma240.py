@@ -88,10 +88,10 @@ def scan_stocks_new(stock_ids, strategy_func, dl):
         if sid not in grouped.groups:
             continue
             
-        df_single = grouped.get_group(sid).sort_values('date')
+        df_single = grouped.get_group(stock_ids).sort_values('date')
         
         # 呼叫傳入的策略函數指標
-        is_hit, info = strategy_func(sid, df_single)
+        is_hit, info = strategy_func(stock_ids, df_single)
         
         if is_hit:
             final_hits.append(info)
