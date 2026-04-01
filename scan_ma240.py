@@ -85,6 +85,7 @@ def scan_stocks_new(stock_ids, algo_func, dl):
 
     for sid in stock_ids:
         
+        print(f"scan_stocks_new({sid}))")
         
         # 從 Grouped 物件中取出該檔股票的 Dataframe
         if sid not in grouped.groups:
@@ -92,7 +93,7 @@ def scan_stocks_new(stock_ids, algo_func, dl):
             
         df_single = grouped.get_group(sid).sort_values('date')
 
-        print(f"scan_stocks_new({sid})   df_single({len(df_single)})")
+        print(f"df_single({len(df_single)})")
         
         # 呼叫傳入的策略函數指標
         is_hit, info = algo_func(sid, df_single)
