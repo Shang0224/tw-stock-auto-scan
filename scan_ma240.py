@@ -65,9 +65,8 @@ def scan_stocks(stock_ids, algo_func, dl):
         try:
             # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(sid, dl)
-            print(f"is_hit : {is_hit} info : {info}")
+
             if is_hit:
-                print(f"股票名稱 : {stock_name_dict.get(sid, '未知')}\n")
                 # 從傳進來的字典取得名稱
                 res = {"股票名稱": stock_name_dict.get(sid, "未知")}
                 res.update(info)
@@ -88,43 +87,7 @@ def main():
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
     
-    # 2. 讀取您的 TW50.csv
-    # 1. 定義檔案名稱
-   
-    #file_tw50 = 'data/TW50.csv'
-    #file_mid100 = 'data/MID100.csv'
-    
-    #combined_codes = []
-
-    # 2. 讀取 台灣 50
-    #if os.path.exists(file_tw50):
-     #   df_50 = pd.read_csv(file_tw50, encoding='big5')
-        # 確保代號是字串，避免遺失前導零（雖然台股目前較少見）
-      #  combined_codes.extend(df_50['代號'].astype(str).tolist())
-    #else:  
-    #print(f"警告：找不到 {file_tw50}")
-
-    # 3. 讀取 中型 100
- #   if os.path.exists(file_mid100):
-  #      df_mid100 = pd.read_csv(file_mid100, encoding='big5')
-   #        combined_codes.extend(df_mid100['代號'].astype(str).tolist())
-   # else:
-    #   print(f"警告：找不到 {file_mid100}")
-
-    # 4. 去除重複項（若有股票同時存在於兩個清單）並排序
-    #unique_codes = sorted(list(set(combined_codes)))
-
-    # 5. 建立為 yfinance 格式的 stock_ids (加上 .TW)
-    #stock_ids = [f"{code}.TW" for code in unique_codes]
-
-    # 2. 讀取 CSV
-    #try:
-     #   df_list = pd.read_csv('data/MID100.csv', encoding='big5')
-        # 確保欄位名稱正確
-      #  stock_ids = df_list['代號'].astype(str).tolist()
-    #except Exception as e:
-     #   print(f"❌ 讀取 CSV 失敗: {e}")
-      #  return
+    # 2. 讀取.csv檔
 
     # 從系統環境變數讀取，若讀不到則給予預設值
     files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
@@ -190,20 +153,6 @@ def main():
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
     send_line_message(message_text)
-
-
-
-
-
-   # print(f"\n📅 掃描完成時間: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    #if breakout_hits:
-     #   report = pd.DataFrame(breakout_hits)
-      #  print("\n=== 今日突破 240MA 名單 (原始價) ===")
-       # print(report.to_string(index=False))
-        # 儲存 CSV 供後續 OpenClaw 或通知使用
-        #report.to_csv('data/breakout_report_finmind.csv', index=False, encoding='utf-8-sig')
-   # else:
-         #print("今日無符合條件之股票。")
 
 if __name__ == "__main__":
     main()
