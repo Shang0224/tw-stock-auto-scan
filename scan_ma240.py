@@ -83,15 +83,15 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     # 使用 groupby 可以更快速地在記憶體中拆分各檔股票
     grouped = all_df.groupby('stock_id')
 
-    for sid in sids:
+    for sid in stock_ids:
         # 從 Grouped 物件中取出該檔股票的 Dataframe
         if sid not in grouped.groups:
             continue
             
-        df_single = grouped.get_group(stock_ids).sort_values('date')
+        df_single = grouped.get_group(sid).sort_values('date')
         
         # 呼叫傳入的策略函數指標
-        is_hit, info = algo_func(stock_ids, df_single)
+        is_hit, info = algo_func(sid, df_single)
         
         if is_hit:
             final_hits.append(info)
