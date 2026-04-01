@@ -14,8 +14,6 @@ def st_advanced_ma240(sid, dl, name_map):
     start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
     
     df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
-
-    print (f"st_advanced_ma240({sid})  len(df) {len(df)}\n")
     
     # 基礎檢查：資料量需足夠計算年線
     if df.empty or len(df) < 240:
@@ -58,5 +56,7 @@ def st_advanced_ma240(sid, dl, name_map):
         "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
         "狀態": status
     }
+
+    print(f"st_advanced_ma240 is_hit:{is_hit}   info:{info}")
     
     return is_hit, info
