@@ -151,8 +151,7 @@ def scan_stocks(stock_ids, algo_func, dl):
 
 def main():
     
-    finmindtoken = os.getenv("FINMIMD_ACCESS_TOKEN")
-   
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN") 
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     #dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
