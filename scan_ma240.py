@@ -177,15 +177,15 @@ def main():
     try:
         # --- D. 執行 scan_stocks 呼叫敘述 ---
         # 這裡就是你問的「呼叫敘述」
-        results = scan_stocks_new(            
-                            stock_ids=stock_ids, 
-                            algo_func=st_near_ma240, 
-                            dl=dl)
-
-        #results = scan_stocks(
+        #results = scan_stocks_new(            
          #                   stock_ids=stock_ids, 
           #                  algo_func=st_near_ma240, 
            #                 dl=dl)
+
+        results = scan_stocks(
+                            stock_ids=stock_ids, 
+                            algo_func=st_near_ma240, 
+                            dl=dl)
 
         # --- E. 處理結果 ---
         print("\n=== 掃描完成，符合條件的標的如下 ===")
