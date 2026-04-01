@@ -83,6 +83,7 @@ def main():
 
     send_line_message("tessts")
     
+    FinMindToken = os.getenv("FINMIMD_ACCESS_TOKEN")
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNi0wMy0yOCAxOToxMzo1NiIsInVzZXJfaWQiOiJKdWxpMDQwMiIsImVtYWlsIjoia3VvMDIyNEBnbWFpbC5jb20iLCJpcCI6IjEuMTYwLjExLjIyIn0.Eu4oVipAFick0oXt9wHTQU477KT4LxrunZy-Fp5d1vY")
@@ -125,8 +126,8 @@ def main():
      #   print(f"❌ 讀取 CSV 失敗: {e}")
       #  return
 
-# 從系統環境變數讀取，若讀不到則給予預設值
-    files_env = os.environ.get('STOCK_FILES', 'data/MID100.csv')
+    # 從系統環境變數讀取，若讀不到則給予預設值
+    files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
     
     # 解析字串（將逗號分隔的字串轉回 list）
     files = [f.strip() for f in files_env.split(',')]
