@@ -54,7 +54,7 @@ def send_line_message(message):
 def scan_stocks_new(stock_ids, algo_func, dl):
     """
     通用策略執行器
-    :param sids: 股票代號串列 (List of Strings)
+    :param stock_ids: 股票代號串列 (List of Strings)
     :param strategy_func: 策略函數指標 (Function Pointer)
     :param dl: FinMind 或自定義的 DataLoader 物件
     :param days: 往前回推的天數
@@ -84,11 +84,15 @@ def scan_stocks_new(stock_ids, algo_func, dl):
     grouped = all_df.groupby('stock_id')
 
     for sid in stock_ids:
+        
+        
         # 從 Grouped 物件中取出該檔股票的 Dataframe
         if sid not in grouped.groups:
             continue
             
         df_single = grouped.get_group(sid).sort_values('date')
+
+        print(f"scan_stocks_new({sid})   df_single({len(df_single)})")
         
         # 呼叫傳入的策略函數指標
         is_hit, info = algo_func(sid, df_single)
