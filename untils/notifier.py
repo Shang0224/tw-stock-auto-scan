@@ -117,6 +117,19 @@ def send_email_with_csv(file_path, recipient_email, sender_email, app_password):
     except Exception as e:
         print(f"❌ 寄送 Email 失敗: {str(e)}")
 
+def cleanup_local_file(file_path):
+    """
+    清理本地暫存檔，確保環境整潔。
+    """
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            print(f"🧹 成功刪除本地暫存檔：{file_path}")
+        except Exception as e:
+            print(f"⚠️ 無法刪除檔案 {file_path}，錯誤原因：{e}")
+    else:
+        print(f"ℹ️ 檔案不存在，無需清理：{file_path}")
+
 def fetch_all_stocks(dl, stock_ids, start_date, end_date):
     all_data = []
     
