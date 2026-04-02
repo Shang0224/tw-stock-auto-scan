@@ -178,7 +178,7 @@ def send_line_message(message):
     token = os.getenv("LINE_ACCESS_TOKEN")
     user_id = os.getenv("LINE_USER_ID")
 
-    print(f"USER ID : {user_id}\nMessage {message}")
+    #print(f"USER ID : {user_id}\nMessage {message}")
     
     if not token or not user_id:
         print("錯誤：找不到 LINE 的設定資訊 (Secrets)")
@@ -194,7 +194,7 @@ def send_line_message(message):
         "messages": [{"type": "text", "text": message}]
     }
 
-    print(f"USER ID : {user_id}\nMessage {message}")
+    #print(f"USER ID : {user_id}\nMessage {message}")
     
     res = requests.post(url, headers=headers, json=payload)
     if res.status_code == 200:
