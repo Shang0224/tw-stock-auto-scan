@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta, timezone
 import os
 import requests
-from untils.utilts import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
+from untils.untils import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
