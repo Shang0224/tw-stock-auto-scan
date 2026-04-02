@@ -208,6 +208,9 @@ def fetch_all_stocks(dl, stock_ids, start_date, end_date):
 
 def main():
     
+    #取得 UTC 時間並強制加上 8 小時, 轉為台灣的localtime
+    tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
+    
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN") 
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
@@ -237,8 +240,8 @@ def main():
     print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
     # 1. 計算日期區間
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
+    end_date = tw_time.strftime("%Y-%m-%d")
+    start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
     
@@ -282,8 +285,7 @@ def main():
     except Exception as e:
         print(f"❌ 處理掃描時出錯: {e}")
 
-    # 4. 輸出報告, 取得 UTC 時間並強制加上 8 小時
-    tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
+    # 4. 輸出報告, 
     now_str = tw_time.strftime('%Y-%m-%d %H:%M')
 
     if results:
