@@ -194,7 +194,7 @@ def fetch_all_stocks(dl, stock_ids, start_date, end_date):
                 all_data.append(df)
             
             # 重要：如果您沒有 Token，建議加上微小延遲避免被封鎖
-             time.sleep(0.5) 
+            time.sleep(0.5) 
             
         except Exception as e:
             print(f"⚠️ 抓取 {sid} 失敗: {e}")
