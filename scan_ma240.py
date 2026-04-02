@@ -138,7 +138,7 @@ def main():
     PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
 
     # 3. 執行寄送
-    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
+    #send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
