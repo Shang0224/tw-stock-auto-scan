@@ -1,7 +1,7 @@
 from FinMind.data import DataLoader
 import pandas as pd
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import requests
 
@@ -145,6 +145,67 @@ def scan_stocks(stock_ids, algo_func, dl):
             print(f"❌ {sid} 處理出錯: {e}")
     return hits
 
+def scan_stocks_df(stock_ids, algo_func, dl):
+    """
+    通用掃描器：只負責傳入代號，不干涉策略細節
+    """
+    # 1. 先抓一次全市場基本資訊
+    df_info = dl.taiwan_stock_info()
+
+    print("df_info...\n")
+    # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
+    stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
+
+    # 策略決定抓取 500 天資料
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
+    
+    hits = []
+    for sid in stock_ids:
+        try:
+            df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+            
+            # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
+            is_hit, info = algo_func(df)
+
+            if is_hit:
+                # 從傳進來的字典取得名稱
+                stock_info = {"代號":sid, "股票名稱": stock_name_dict.get(sid, "未知")}                
+                res = {**stock_info, **info}
+                hits.append(res)
+                print(f"✅ 策略命中: {sid} --- res:{res}")
+            
+            time.sleep(0.5) # 保護 API
+        except Exception as e:
+            print(f"❌ {sid} 處理出錯: {e}")
+    return hits
+
+def fetch_all_stocks(dl, stock_ids, start_date, end_date):
+    all_data = []
+    
+    print(f"串聯抓取 {len(stock_ids)} 檔股票...")
+    
+    for sid in stock_ids:
+        try:
+            # 逐一抓取
+            df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+            
+            if df is not None and not df.empty:
+                all_data.append(df)
+            
+            # 重要：如果您沒有 Token，建議加上微小延遲避免被封鎖
+             time.sleep(0.5) 
+            
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 失敗: {e}")
+            continue
+            
+    if not all_data:
+        return pd.DataFrame()
+        
+    # 一次性垂直合併所有 Dataframe
+    return pd.concat(all_data, ignore_index=True)
+
 def main():
     
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN") 
@@ -175,6 +236,14 @@ def main():
 
     print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
+
+    # 1. 先獲取完整的大表
+    all_df = fetch_all_stocks(dl, stock_ids, start_date, end_date)
+
+    # 2. 檢查大表內容
+    if not all_df.empty:
+        print(f"📊 成功整合資料：共有 {all_df['stock_id'].nunique()} 檔股票，總計 {len(all_df)} 筆資料")
+
     results = []
 
     # 3. 逐一抓取並計算
@@ -190,10 +259,10 @@ def main():
          #                   stock_ids=stock_ids, 
           #                  algo_func=st_near_ma240, 
            #                 dl=dl)
-        results = scan_stocks(
-                            stock_ids=stock_ids, 
-                            algo_func=st_advanced_ma240, 
-                            dl=dl)
+       # results = scan_stocks(
+        #                    stock_ids=stock_ids, 
+        #        algo_func=st_advanced_ma240, 
+         #                   dl=dl)
 
         # --- E. 處理結果 ---
         print("\n=== 掃描完成，符合條件的標的如下 ===")
@@ -202,8 +271,9 @@ def main():
     except Exception as e:
         print(f"❌ 處理掃描時出錯: {e}")
 
-    # 4. 輸出報告
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+    # 4. 輸出報告, 取得 UTC 時間並強制加上 8 小時
+    tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
+    now_str = tw_time.strftime('%Y-%m-%d %H:%M')
 
     if results:
         report = pd.DataFrame(results)
