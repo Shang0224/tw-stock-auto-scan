@@ -15,29 +15,55 @@ import paramiko
 
 
 def upload_to_nas(host, port, username, password, local_path, remote_path):
-    """使用 paramiko 上傳檔案，並在目錄不存在時拋出異常"""
-    transport = paramiko.Transport((host, port))
+    """
+    使用 paramiko SSHClient 上傳檔案，並在連線失敗或目錄不存在時拋出異常。
+    """
+    ssh = paramiko.SSHClient()
+    
+    # 自動接受未知的 SSH key (第一次連線 NAS 時必需)
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
     try:
-        transport.connect(username=username, password=password)
-        sftp = paramiko.SFTPClient.from_transport(transport)
+        print(f"正在連線至 {host}:{port}...")
+        # 建立連線，增加 timeout 防止 GitHub Actions 卡死
+        ssh.connect(
+            hostname=host, 
+            port=port, 
+            username=username, 
+            password=password,
+            timeout=30,           # 建立 TCP 連線的超時
+            banner_timeout=30     # 等待 SSH 橫幅回傳的超時
+        )
 
-        # 檢查遠端資料夾是否存在
+        # 開啟 SFTP 通道
+        sftp = ssh.open_sftp()
+
+        # 檢查遠端目錄是否存在
         remote_dir = os.path.dirname(remote_path)
         try:
-            sftp.chdir(remote_dir)  # 嘗試切換到該目錄
+            sftp.chdir(remote_dir)
         except IOError:
-            # 如果目錄不存在，直接拋出異常
-            raise FileNotFoundError(f"❌ 遠端目錄不存在: {remote_dir}")
+            raise FileNotFoundError(f"❌ 遠端目錄不存在：{remote_dir}")
 
         # 執行上傳
+        print(f"正在上傳 {local_path} -> {remote_path}")
         sftp.put(local_path, remote_path)
-        print(f"✅ 檔案已成功上傳至 NAS: {remote_path}")
+        print(f"✅ 檔案已成功上傳至 NAS！")
 
+    except paramiko.ssh_exception.NoValidConnectionsError:
+        print("❌ 無法建立連線：請確認 NAS 的 IP 與 Port 是否正確，且防火牆已開啟。")
+        raise
+    except paramiko.AuthenticationException:
+        print("❌ 認證失敗：請檢查 NAS 的帳號或密碼。")
+        raise
     except Exception as e:
-        print(f"❌ 上傳失敗: {e}")
-        raise  # 重新拋出異常讓 GitHub Actions 知道失敗
+        print(f"❌ 上傳過程中發生錯誤: {e}")
+        raise
     finally:
-        transport.close()
+        # 確保資源釋放
+        if 'sftp' in locals():
+            sftp.close()
+        ssh.close()
 
 def send_email_with_csv(file_path, recipient_email, sender_email, app_password):
     # 1. 設定郵件標題與內容
