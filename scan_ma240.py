@@ -135,18 +135,19 @@ def main():
     RECEIVER = os.getenv("RECIPIENT_EMAIL")
     
     # 這是 16 位元的應用程式密碼，非登入密碼
-    PASSWORD = os.environ.get("EMAIL_APP_PASSWORD") 
+    PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
 
     # 3. 執行寄送
     send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
-        hostname=os.environ.get("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
-        username=os.environ.get("NAS_ACCOUNT"),
-        password=os.environ.get("NAS_PASSWORD"),
+        hostname=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
+        int(os.getenv("NAS_PORT", 22)),
+        username=os.getenv("NAS_ACCOUNT"),
+        password=os.getenv("NAS_PASSWORD"),
         local_path=file_name,
-        remote_path=os.environ.get("NAS_SFTP_PATH") 
+        remote_path=os.getenv("NAS_SFTP_PATH") 
     )
 
 
