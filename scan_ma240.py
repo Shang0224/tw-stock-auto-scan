@@ -30,9 +30,9 @@ def main():
     
     # 2. 讀取.csv檔
     # 從系統環境變數讀取，若讀不到則給予預設值
-    #files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+    files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
-    files_env = 'data/TW50.csv'
+    #files_env = 'data/TW50.csv'
     
     # 解析字串（將逗號分隔的字串轉回 list）
     files = [f.strip() for f in files_env.split(',')]
