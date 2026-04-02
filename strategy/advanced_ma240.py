@@ -43,9 +43,9 @@ def st_advanced_ma240_df(df_single):
     info = {
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio*100, 2)}%",
+        "狀態": status,
         "糾結度": f"{round(dispersion*100, 2)}%",
-        "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
-        "狀態": status
+        "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x"
     }
 
     #print(f"st_advanced_ma240(  df_single  ) is_hit:{is_hit}   info:{info}")
