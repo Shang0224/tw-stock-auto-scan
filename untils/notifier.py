@@ -29,7 +29,8 @@ def upload_to_nas(local_path, remote_path, hostname, username, password):
             
             # 確保遠端目錄存在
             if not sftp.exists(remote_path):
-                print("upload_to_nas NAS上沒有檔案上傳資料夾")
+                # 直接丟出異常，程式會在這裡停止並報錯
+                raise FileNotFoundError(f"❌ 錯誤：目標路徑 '{remote_path}' 不存在，無法進行上傳。")
             
             # 執行上傳
             with sftp.cd(remote_path):
