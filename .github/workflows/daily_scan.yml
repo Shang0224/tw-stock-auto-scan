@@ -39,7 +39,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
           EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
           NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
-          NAS_SFTP_PATH: ${{ secrets.NAS_SFTP_PATH }}          
+          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'          
           NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
