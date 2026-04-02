@@ -140,7 +140,7 @@ def main():
     # 3. 執行寄送
     #send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
-    print(f"NAS_SFTP_PATH: {os.getenv("NAS_SFTP_PATH"), loaclpath: {file_name}}")
+    print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH'), loaclpath: {file_name}}")
     
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
