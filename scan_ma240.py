@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta, timezone
 import os
 import requests
-from untils.notifier import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas
+from untils.utilts import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
@@ -109,15 +109,20 @@ def main():
 
     if results:
         report = pd.DataFrame(results)
-
-        report = report.sort_values(by='觸發策略', ascending=True)
-        
-        # 建立訊息標頭
-        message_text = f"📅 掃描完成: {now_str}\n"
-        message_text += "=== 靠近年線的名單 ===\n\n"
     
-        # 逐行加入股票資訊
-        message_text += report.to_string(index=False)
+        # 1. 先進行排序 (假設按 '觸發策略' 排序)
+        report = report.sort_values(by='觸發策略', ascending=False)
+
+        # 2. 【核心步驟】選取你想傳送到 LINE 的欄位
+        # 假設你只想傳：代號、名稱、收盤價、觸發策略
+        short_report = report[['代號', '名稱', '收盤', '年線位置', '觸發策略']]
+
+        # 3. 建立訊息標頭
+        message_text = f"📅 掃描完成: {now_str}\n"
+        message_text += "=== 靠近年線精選名單 ===\n\n"
+    
+        # 4. 使用簡化後的表格轉成文字
+        message_text += short_report.to_string(index=False)
     
         # 儲存 CSV（原本的邏輯保留）
         report.to_csv(file_name, index=False, encoding='utf-8-sig')
@@ -153,6 +158,7 @@ def main():
         local_path=file_name,
         remote_path=f"{os.getenv('NAS_SFTP_PATH')}/scan_report_{current_time}.csv")
 
+    cleanup_local_file(file_name)
 
 if __name__ == "__main__":
     main()
