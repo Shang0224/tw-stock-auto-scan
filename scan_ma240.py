@@ -109,7 +109,9 @@ def main():
 
     if results:
         report = pd.DataFrame(results)
-    
+
+        report = report.sort_values(by='觸發策略', ascending=True)
+        
         # 建立訊息標頭
         message_text = f"📅 掃描完成: {now_str}\n"
         message_text += "=== 靠近年線的名單 ===\n\n"
