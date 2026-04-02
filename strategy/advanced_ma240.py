@@ -48,7 +48,7 @@ def st_advanced_ma240_df(df):
         "狀態": status
     }
 
-    print(f"st_advanced_ma240(  df  ) is_hit:{is_hit}   info:{info}")
+    #print(f"st_advanced_ma240(  df  ) is_hit:{is_hit}   info:{info}")
     
     return is_hit, info
 
