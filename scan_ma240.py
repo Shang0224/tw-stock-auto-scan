@@ -128,7 +128,7 @@ def main():
     
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
-    send_line_message(message_text)
+    #send_line_message(message_text)
 
     # 2. 從環境變數讀取帳密 (安全性考量)
     SENDER = os.getenv("SENDER_EMAIL")
@@ -140,6 +140,8 @@ def main():
     # 3. 執行寄送
     #send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
+    print(f"NAS_SFTP_PATH: {os.getenv("NAS_SFTP_PATH"), loaclpath: {file_name}}")
+    
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
         host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
