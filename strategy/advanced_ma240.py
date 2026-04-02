@@ -32,7 +32,7 @@ def st_advanced_ma240_df(df_single):
     is_converged = dispersion < 0.05
     
     # 條件 3: 帶量 (今日量 > 5日均量 1.2倍)
-    vol_ma5 = df['Trading_Volume'].rolling(5).mean().iloc[-1]
+    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
     is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.2 if vol_ma5 > 0 else False
 
     # 綜合判斷：只要靠近年線且「糾結」或「帶量」其中之一符合即可視為預備股
