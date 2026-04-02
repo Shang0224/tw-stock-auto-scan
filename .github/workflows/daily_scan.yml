@@ -14,6 +14,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_VPN_AUTH_KEY }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -39,7 +43,7 @@ jobs:
           NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
-          TAILSCALE_VPN_AUTH_KEY: ${{ secrets.TAILSCALE_VPN_AUTH_KEY }}          
+     
         run: python scan_ma240.py        
 
       - name: Commit and Push results
