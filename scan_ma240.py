@@ -140,13 +140,6 @@ def main():
     # 3. 執行寄送
     send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
-    # 建議寫法：直接給予完整路徑
-    remote_path = 
-    # 如果你不確定資料夾是否存在，可以用 makedirs
-    if not sftp.exists(remote_path):
-        #send_line_message("NAS上沒有檔案上傳資料夾")
-        print("NAS上沒有檔案上傳資料夾")
-
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
         hostname=os.environ.get("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
