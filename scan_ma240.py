@@ -4,40 +4,11 @@ import time
 from datetime import datetime, timedelta, timezone
 import os
 import requests
-from untls import send_line_message
+from untls import send_line_message, fetch_all_stocks, send_e-mail
 
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
-
-
-
-
-def fetch_all_stocks(dl, stock_ids, start_date, end_date):
-    all_data = []
-    
-    print(f"串聯抓取 {len(stock_ids)} 檔股票...")
-    
-    for sid in stock_ids:
-        try:
-            # 逐一抓取
-            df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
-            
-            if df is not None and not df.empty:
-                all_data.append(df)
-            
-            # 重要：如果您沒有 Token，建議加上微小延遲避免被封鎖
-            time.sleep(0.5) 
-            
-        except Exception as e:
-            print(f"⚠️ 抓取 {sid} 失敗: {e}")
-            continue
-            
-    if not all_data:
-        return pd.DataFrame()
-        
-    # 一次性垂直合併所有 Dataframe
-    return pd.concat(all_data, ignore_index=True)
 
 def main():
     
