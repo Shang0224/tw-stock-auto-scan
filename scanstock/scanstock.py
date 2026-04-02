@@ -7,6 +7,7 @@ import requests
 
 def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
 
+    print(f"scan_stocks_df_list {algo_func_list}")
     final_hits = []
     grouped = all_df.groupby('stock_id')
 
