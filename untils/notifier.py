@@ -13,57 +13,66 @@ from email import encoders
 
 import paramiko
 
-
 def upload_to_nas(host, port, username, password, local_path, remote_path):
     """
-    使用 paramiko SSHClient 上傳檔案，並在連線失敗或目錄不存在時拋出異常。
+    透過 Tailscale 內網 IP 上傳檔案至 NAS。
     """
+    # 1. 基礎檢查：確保必要參數都有值
+    if not all([host, username, password]):
+        raise ValueError("❌ 錯誤：NAS 連線資訊不完整，請檢查環境變數 (Secrets)。")
+
     ssh = paramiko.SSHClient()
     
-    # 自動接受未知的 SSH key (第一次連線 NAS 時必需)
+    # 2. 自動接受 SSH 指紋 (在 GitHub Actions 這種乾淨環境必備)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
     try:
-        print(f"正在連線至 {host}:{port}...")
-        # 建立連線，增加 timeout 防止 GitHub Actions 卡死
+        print(f"🔗 正在嘗試連線至 Tailscale 節點: {host}:{port}...")
+        
+        # 3. 建立連線
+        # timeout: 等待 TCP 連線建立的時間
+        # banner_timeout: 等待 SSH 協定握手的時間
         ssh.connect(
             hostname=host, 
-            port=port, 
+            port=int(port), 
             username=username, 
             password=password,
-            timeout=30,           # 建立 TCP 連線的超時
-            banner_timeout=30     # 等待 SSH 橫幅回傳的超時
+            timeout=30,
+            banner_timeout=30
         )
 
-        # 開啟 SFTP 通道
+        # 4. 開啟 SFTP
         sftp = ssh.open_sftp()
 
-        # 檢查遠端目錄是否存在
+        # 5. 確保遠端目錄存在
         remote_dir = os.path.dirname(remote_path)
         try:
             sftp.chdir(remote_dir)
         except IOError:
+            # 如果目錄不存在，可以選擇直接報錯或自動建立
+            # 這裡我們選擇拋出異常，確保你的路徑設定是正確的
             raise FileNotFoundError(f"❌ 遠端目錄不存在：{remote_dir}")
 
-        # 執行上傳
-        print(f"正在上傳 {local_path} -> {remote_path}")
+        # 6. 執行上傳
+        print(f"🚀 開始上傳：{os.path.basename(local_path)} -> {remote_path}")
         sftp.put(local_path, remote_path)
-        print(f"✅ 檔案已成功上傳至 NAS！")
+        print(f"✅ 上傳成功！")
 
-    except paramiko.ssh_exception.NoValidConnectionsError:
-        print("❌ 無法建立連線：請確認 NAS 的 IP 與 Port 是否正確，且防火牆已開啟。")
-        raise
     except paramiko.AuthenticationException:
-        print("❌ 認證失敗：請檢查 NAS 的帳號或密碼。")
+        print("❌ 認證失敗：請檢查 NAS 的帳號或密碼是否正確。")
+        raise
+    except paramiko.SSHException as e:
+        print(f"❌ SSH 協定錯誤：{e}")
         raise
     except Exception as e:
-        print(f"❌ 上傳過程中發生錯誤: {e}")
+        print(f"❌ 發生非預期錯誤: {e}")
         raise
     finally:
-        # 確保資源釋放
+        # 7. 確保不論成功失敗都會關閉連線
         if 'sftp' in locals():
             sftp.close()
         ssh.close()
+        print("🔌 已斷開 SSH 連線。")
 
 def send_email_with_csv(file_path, recipient_email, sender_email, app_password):
     # 1. 設定郵件標題與內容
