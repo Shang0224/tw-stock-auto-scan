@@ -5,7 +5,7 @@ import time
 
 def st_near_ma240_df(df_single):
     """
-    股價在年線下上3%以內
+    年線下上3%以內
     """
 
     print(f"st_near_ma240_df(  {len(df_single)})")
