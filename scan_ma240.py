@@ -97,7 +97,7 @@ def main():
         # --- E. 處理結果 ---
         print("\n=== 掃描完成，符合條件的標的如下 ===")
         for item in results:
-            print(item)
+            print(item['代號'])
     except Exception as e:
         print(f"❌ 處理掃描時出錯: {e}")
 
@@ -133,7 +133,7 @@ def main():
         message_text = f"📅 {now_str}\n今日無符合條件之股票。"
 
     # 原本的 print 輸出也可以保留在 Console 方便除錯
-    print(message_text)
+    #print(message_text)
     
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
