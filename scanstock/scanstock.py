@@ -5,6 +5,41 @@ from datetime import datetime, timedelta, timezone
 import os
 import requests
 
+def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
+
+    final_hits = []
+    grouped = all_df.groupby('stock_id')
+
+    for sid in stock_ids:
+        if sid not in grouped.groups: continue
+        df_single = grouped.get_group(sid).sort_values('date')
+        
+        # 初始標籤
+        hit_row = {
+            "代號": sid,
+            "名稱": stock_map.get(sid, "未知"),
+            "觸發策略": []
+        }
+        any_hit = False
+
+        for algo_func in algo_func_list:
+            is_hit, detail_info = algo_func(df_single=df_single)
+            if is_hit:
+                any_hit = True
+                # 紀錄策略名稱
+                hit_row["觸發策略"].append(algo_func.__name__)
+                # 【關鍵】將詳細內容合併進這一列
+                hit_row.update(detail_info)
+        
+        if any_hit:
+            # 將串列轉為字串方便 CSV 儲存
+            hit_row["觸發策略"] = ", ".join(hit_row["觸發策略"])
+            final_hits.append(hit_row)
+            
+    return final_hits
+
+
+
 def scan_stocks_new(stock_ids, algo_func, dl):
     """
     通用策略執行器
