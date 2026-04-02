@@ -151,7 +151,7 @@ def main():
         username=os.getenv("NAS_ACCOUNT"),
         password=os.getenv("NAS_PASSWORD"),
         local_path=file_name,
-        remote_path=f'/volume1/StockData/scan_report_{current_time}.csv')  
+        remote_path=f'/StockData/scan_report_{current_time}.csv')  
     #remote_path=os.getenv("NAS_SFTP_PATH")       
 
 
