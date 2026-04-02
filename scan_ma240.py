@@ -141,6 +141,8 @@ def main():
     #send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
     print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
+
+
     
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
@@ -149,7 +151,7 @@ def main():
         username=os.getenv("NAS_ACCOUNT"),
         password=os.getenv("NAS_PASSWORD"),
         local_path=file_name,
-        remote_path="/volume1/StockData")  
+        remote_path=f'/volume1/StockData/scan_report_{current_time}.csv')  
     #remote_path=os.getenv("NAS_SFTP_PATH")       
 
 
