@@ -236,14 +236,25 @@ def main():
 
     print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
+    # 1. 計算日期區間
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
 
+    print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
+    
     # 1. 先獲取完整的大表
     all_df = fetch_all_stocks(dl, stock_ids, start_date, end_date)
 
     # 2. 檢查大表內容
-    if not all_df.empty:
+    if not all_df.empty and not all_df.empty:
         print(f"📊 成功整合資料：共有 {all_df['stock_id'].nunique()} 檔股票，總計 {len(all_df)} 筆資料")
-
+        print(f"✅ 成功抓取資料！")
+        print(f"   - 總列數: {len(all_df)}")
+        print(f"   - 欄位名稱: {list(all_df.columns)}")
+        print(f"   - 涵蓋股票數: {all_df['stock_id'].nunique()}")
+    else:
+        print("❌ 嚴重錯誤：抓回來的資料是空的！請檢查 Token 或網路。")
+    
     results = []
 
     # 3. 逐一抓取並計算
