@@ -10,7 +10,7 @@ def st_advanced_ma240_df(df_single):
     """
       
     # 基礎檢查：資料量需足夠計算年線
-    if df.empty or len(df_single) < 240:
+    if df_single.empty or len(df_single) < 240:
         return False, {}
 
     # 計算技術指標
