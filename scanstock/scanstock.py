@@ -7,7 +7,6 @@ import requests
 
 def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
 
-    print(f"scan_stocks_df_list {algo_func_list}")
     final_hits = []
     grouped = all_df.groupby('stock_id')
 
@@ -24,13 +23,14 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
         any_hit = False
 
         for algo_func in algo_func_list:
-            print(f"scan_stocks_df_list algo_func {algo_func}")
+            
             is_hit, detail_info = algo_func(df_single=df_single)
             if is_hit:
                 any_hit = True
                 # 紀錄策略名稱
                 hit_row["觸發策略"].append(algo_func.__doc__.strip().split('\n')[0])
                 # 【關鍵】將詳細內容合併進這一列
+                print(f"{algo_func.name} - {detail_info : {detail_info}")
                 hit_row.update(detail_info)
         
         if any_hit:
