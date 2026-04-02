@@ -145,32 +145,21 @@ def scan_stocks(stock_ids, algo_func, dl):
             print(f"❌ {sid} 處理出錯: {e}")
     return hits
 
-def scan_stocks_df(stock_ids, algo_func, dl):
+def scan_stocks_df(stock_ids, algo_func, all_df, stock_map):
     """
     通用掃描器：只負責傳入代號，不干涉策略細節
     """
-    # 1. 先抓一次全市場基本資訊
-    df_info = dl.taiwan_stock_info()
 
-    print("df_info...\n")
-    # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
-    stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
-
-    # 策略決定抓取 500 天資料
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
-    
+ 
     hits = []
     for sid in stock_ids:
-        try:
-            df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
-            
-            # 只需要把 sid 和 dl 丟進去，剩下的策略會自己搞定
-            is_hit, info = algo_func(df)
+        try:          
+            # 只需要把 df 丟進去，剩下的策略會自己搞定
+            is_hit, info = algo_func(all_df)
 
             if is_hit:
                 # 從傳進來的字典取得名稱
-                stock_info = {"代號":sid, "股票名稱": stock_name_dict.get(sid, "未知")}                
+                stock_info = {"代號":sid, "股票名稱": stock_map.get(sid, "未知")}                
                 res = {**stock_info, **info}
                 hits.append(res)
                 print(f"✅ 策略命中: {sid} --- res:{res}")
@@ -215,9 +204,15 @@ def main():
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token=finmindtoken)
+    # 1. 先抓一次全市場基本資訊
+    df_info = dl.taiwan_stock_info()
+
+    print("df_info...\n")
+    # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
+    stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
+
     
     # 2. 讀取.csv檔
-
     # 從系統環境變數讀取，若讀不到則給予預設值
     files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
     
@@ -273,10 +268,11 @@ def main():
          #                   stock_ids=stock_ids, 
           #                  algo_func=st_near_ma240, 
            #                 dl=dl)
-        results = scan_stocks(
+        results = scan_stocks_df(
                             stock_ids=stock_ids, 
                             algo_func=st_advanced_ma240, 
-                            df=all_df)
+                            df=all_df, 
+                            stock_map=stock_name_dict)
 
         # --- E. 處理結果 ---
         print("\n=== 掃描完成，符合條件的標的如下 ===")
