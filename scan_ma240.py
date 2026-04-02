@@ -270,7 +270,7 @@ def main():
            #                 dl=dl)
         results = scan_stocks_df(
                             stock_ids=stock_ids, 
-                            algo_func=st_advanced_ma240, 
+                            algo_func=st_advanced_ma240_df, 
                             all_df=all_df, 
                             stock_map=stock_name_dict)
 
