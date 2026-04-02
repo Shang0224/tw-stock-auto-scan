@@ -19,7 +19,7 @@ def st_advanced_ma240_df(df_single):
     df_single['MA60'] = df_single['close'].rolling(60).mean()
     df_single['MA240'] = df_single['close'].rolling(240).mean()
     
-    today = df.iloc[-1]
+    today = df_single.iloc[-1]
 
     # --- 篩選條件 ---
     # 條件 1: 距離年線 3% 以內
