@@ -121,6 +121,8 @@ def cleanup_local_file(file_path):
     """
     清理本地暫存檔，確保環境整潔。
     """
+    printf(f"cleanup_local_file({file_path})")
+    
     if os.path.exists(file_path):
         try:
             os.remove(file_path)
