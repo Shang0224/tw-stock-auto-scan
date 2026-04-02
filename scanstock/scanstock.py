@@ -29,7 +29,7 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
             if is_hit:
                 any_hit = True
                 # 紀錄策略名稱
-                hit_row["觸發策略"].append(algo_func.__name__)
+                hit_row["觸發策略"].append(algo_func.__doc__.strip().split('\n')[0])
                 # 【關鍵】將詳細內容合併進這一列
                 hit_row.update(detail_info)
         
