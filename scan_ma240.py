@@ -156,7 +156,7 @@ def scan_stocks_df(stock_ids, algo_func, all_df, stock_map):
         try:          
             # 只需要把 df 丟進去，剩下的策略會自己搞定
             is_hit, info = algo_func(all_df)
-            print(f"{sid} {stock_map.get(sid, "未知")} info: {info}")
+            print(f"{sid} {stock_map.get(sid, '未知')} info: {info}")
             if is_hit:
                 # 從傳進來的字典取得名稱
                 stock_info = {"代號":sid, "股票名稱": stock_map.get(sid, "未知")}                
