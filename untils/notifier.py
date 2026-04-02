@@ -11,6 +11,35 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+import pysftp
+
+def upload_to_nas(local_path, remote_path, hostname, username, password):
+    """
+    將本地檔案上傳至 NAS 伺服器
+    local_path: 本地檔案路徑 (例如 'report.csv')
+    remote_path: NAS 上的目標路徑 (例如 '/volume1/stock_data/')
+    """
+    # 關閉主機金鑰驗證 (在自動化腳本中較方便，但正式環境建議設定 cnopts)
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None 
+
+    try:
+        with pysftp.Connection(hostname, username=username, password=password, cnopts=cnopts) as sftp:
+            print(f"成功連線至 {hostname}")
+            
+            # 確保遠端目錄存在
+            if not sftp.exists(remote_path):
+                sftp.makedirs(remote_path)
+            
+            # 執行上傳
+            with sftp.cd(remote_path):
+                sftp.put(local_path)
+                
+        print(f"✅ 檔案 {local_path} 已成功上傳至 NAS")
+        
+    except Exception as e:
+        print(f"❌ 上傳失敗: {str(e)}")
+
 def send_email_with_csv(file_path, recipient_email, sender_email, app_password):
     # 1. 設定郵件標題與內容
     subject = f"📊 股市掃描報告 - {os.path.basename(file_path)}"
