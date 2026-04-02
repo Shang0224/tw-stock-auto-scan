@@ -30,6 +30,9 @@ jobs:
           LINE_USER_ID: ${{ vars.LINE_USER_ID }}
           STOCK_FILES: ${{ vars.STOCK_FILES }}
           FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
+          SENDER_EMAIL: ${{ vars.SENDER_EMAIL }}
+          RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
+          EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
         run: python scan_ma240.py        
 
       - name: Commit and Push results
