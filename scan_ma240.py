@@ -143,7 +143,7 @@ def main():
     # 使用 Tailscale 分配給 NAS 的私有 IP
     upload_to_nas(
         host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
-        port=int(os.getenv("NAS_PORT")),
+        port=int(os.getenv("NAS_SFTP_PORT")),
         username=os.getenv("NAS_ACCOUNT"),
         password=os.getenv("NAS_PASSWORD"),
         local_path=file_name,
