@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 import os
 import requests
 
-from strategy.near_ma240 import st_near_ma240
-from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_near_ma240_df
+from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
+from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
 from scanstock.scanstock import scanstock_df
 
 def smart_read_csv(file_path):
