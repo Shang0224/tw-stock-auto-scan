@@ -128,7 +128,7 @@ def main():
     
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
-    #send_line_message(message_text)
+    send_line_message(message_text)
 
     # 2. 從環境變數讀取帳密 (安全性考量)
     SENDER = os.getenv("SENDER_EMAIL")
