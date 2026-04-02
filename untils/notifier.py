@@ -12,7 +12,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 import paramiko
-import os
+
 
 def upload_to_nas(local_path, remote_path):
     """使用 paramiko 上傳檔案，並在目錄不存在時拋出異常"""
