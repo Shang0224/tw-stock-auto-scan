@@ -7,7 +7,7 @@ import requests
 
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
-from scanstock.scanstock import scanstock_df
+from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 
 def smart_read_csv(file_path):
     # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
