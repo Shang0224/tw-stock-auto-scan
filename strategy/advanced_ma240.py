@@ -58,16 +58,16 @@ def st_advanced_ma240(df):
 
 
 # --- 1. 策略邏輯函數 (具備自主抓資料權力) ---
-def st_advanced_ma240_dl(dl):
+def st_advanced_ma240_df(df):
     """
     進階策略：年線上下3% + 均線糾結 + 帶量轉強
     """
       
     # 策略決定抓取 500 天資料
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
+    #end_date = datetime.now().strftime("%Y-%m-%d")
+    #start_date = (datetime.now() - timedelta(days=500)).strftime("%Y-%m-%d")
     
-    df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+    #df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
     
     # 基礎檢查：資料量需足夠計算年線
     if df.empty or len(df) < 240:
@@ -80,7 +80,7 @@ def st_advanced_ma240_dl(dl):
     df['MA240'] = df['close'].rolling(240).mean()
     
     today = df.iloc[-1]
-    s_name = name_map.get(sid, sid)
+    #s_name = name_map.get(sid, sid)
 
     # --- 篩選條件 ---
     # 條件 1: 距離年線 3% 以內
@@ -102,8 +102,6 @@ def st_advanced_ma240_dl(dl):
     status = "年線上方整理" if dist_ratio > 0 else "年線下方待突破"
     
     info = {
-        "代號": sid,
-        "名稱": s_name,
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio*100, 2)}%",
         "糾結度": f"{round(dispersion*100, 2)}%",
