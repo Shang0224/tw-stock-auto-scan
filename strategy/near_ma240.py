@@ -5,8 +5,7 @@ import time
 
 def st_near_ma240_df(df_single):
     """
-    年線預備股策略：純計算邏輯，不負責抓取資料
-    :param df_single: 該檔股票的歷史 Dataframe (由外部切片傳入)
+    股價在年線下上3%以內
     """
 
     print(f"st_near_ma240_df(  {len(df_single)})")
