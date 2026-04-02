@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pandas requests pysftp  # 在這裡加上 pysftp
+          pip install pandas requests 
 
       - name: Run Analysis Script
         env:
