@@ -102,6 +102,11 @@ def main():
     # 4. 輸出報告, 
     now_str = tw_time.strftime('%Y-%m-%d %H:%M')
 
+    # 取得目前時間並格式化
+    # %Y:年, %m:月, %d:日, %H:時, %M:分
+    current_time = tw_time.now().strftime("%Y%m%d_%H%M")
+    file_name = f'data/scan_report_{current_time}.csv'
+
     if results:
         report = pd.DataFrame(results)
     
@@ -111,12 +116,7 @@ def main():
     
         # 逐行加入股票資訊
         message_text += report.to_string(index=False)
-
-        # 取得目前時間並格式化
-        # %Y:年, %m:月, %d:日, %H:時, %M:分
-        current_time = datetime.now().strftime("%Y%m%d_%H%M")
-        file_name = f'data/scan_report_{current_time}.csv'
-        
+    
         # 儲存 CSV（原本的邏輯保留）
         report.to_csv(file_name, index=False, encoding='utf-8-sig')
 
