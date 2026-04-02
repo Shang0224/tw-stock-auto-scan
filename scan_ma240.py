@@ -157,7 +157,7 @@ def main():
            #                 dl=dl)
         results = scan_stocks_df_list(
                             stock_ids=stock_ids, 
-                            algo_func=my_strategies, 
+                            algo_func_list=my_strategies, 
                             all_df=all_df, 
                             stock_map=stock_name_dict)
 
