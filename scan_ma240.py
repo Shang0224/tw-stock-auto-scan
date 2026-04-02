@@ -147,8 +147,7 @@ def main():
         username=os.getenv("NAS_ACCOUNT"),
         password=os.getenv("NAS_PASSWORD"),
         local_path=file_name,
-        remote_path=os.getenv("NAS_SFTP_PATH") 
-    )
+        remote_path=os.getenv("NAS_SFTP_PATH"))
 
 
 if __name__ == "__main__":
