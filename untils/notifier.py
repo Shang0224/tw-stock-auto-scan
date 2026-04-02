@@ -46,6 +46,8 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
 
         # 5. 確保遠端目錄存在
         remote_dir = os.path.dirname(remote_path)
+        print(f"遠端目錄：{remote_dir}")
+        
         try:
             sftp.chdir(remote_dir)
         except IOError:
