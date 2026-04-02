@@ -15,7 +15,8 @@ def main():
     #取得 UTC 時間並強制加上 8 小時, 轉為台灣的localtime
     tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
     
-    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN") 
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
+    
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token=finmindtoken)
@@ -128,6 +129,17 @@ def main():
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
     send_line_message(message_text)
+
+
+    # 2. 從環境變數讀取帳密 (安全性考量)
+    SENDER = os.getenv("SENDER_EMAIL")
+    RECEIVER = os.getenv("RECIPIENT_EMAIL")
+    
+    # 這是 16 位元的應用程式密碼，非登入密碼
+    PASSWORD = os.environ.get("EMAIL_APP_PASSWORD") 
+
+    # 3. 執行寄送
+    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
 if __name__ == "__main__":
     main()
