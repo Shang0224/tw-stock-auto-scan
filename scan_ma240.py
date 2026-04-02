@@ -276,7 +276,7 @@ def main():
         results = scan_stocks(
                             stock_ids=stock_ids, 
                             algo_func=st_advanced_ma240, 
-                            dl=dl)
+                            df=all_df)
 
         # --- E. 處理結果 ---
         print("\n=== 掃描完成，符合條件的標的如下 ===")
