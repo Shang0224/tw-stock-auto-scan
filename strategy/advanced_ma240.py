@@ -58,7 +58,7 @@ def st_advanced_ma240(df):
 
 
 # --- 1. 策略邏輯函數 (具備自主抓資料權力) ---
-def st_advanced_ma240_dl(sid, dl, name_map):
+def st_advanced_ma240_dl(dl):
     """
     進階策略：年線上下3% + 均線糾結 + 帶量轉強
     """
