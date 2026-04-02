@@ -42,9 +42,9 @@ def st_near_ma240_df(df_single):
             status = "年線上方強勢整理" if dist_ratio > 0 else "年線下方準備突破"
             
             breakout_hits = {
-                "今日收盤": today_price,
+                "收盤": today_price,
                 "年線位置": round(today_ma240, 2),
-                "距離年線幅": f"{round(dist_ratio * 100, 2)}%",
+                "距離年線": f"{round(dist_ratio * 100, 2)}%",
                 "狀態": status,
                 "成交量": df_single['Trading_Volume'].iloc[-1] if 'Trading_Volume' in df_single.columns else 0
             }
