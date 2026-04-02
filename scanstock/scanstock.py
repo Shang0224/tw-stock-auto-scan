@@ -24,6 +24,7 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
         any_hit = False
 
         for algo_func in algo_func_list:
+            print(f"scan_stocks_df_list algo_func {algo_func}")
             is_hit, detail_info = algo_func(df_single=df_single)
             if is_hit:
                 any_hit = True
