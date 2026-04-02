@@ -8,7 +8,7 @@ def st_near_ma240_df(df_single):
     年線下上3%以內
     """
 
-    print(f"st_near_ma240_df(  {len(df_single)})")
+    #print(f"st_near_ma240_df(  {len(df_single)})")
     
     # 1. 初始化
     is_in_range = False
@@ -16,7 +16,7 @@ def st_near_ma240_df(df_single):
 
     # 2. 檢查資料長度 (需足夠計算 MA240)
     if df_single is None or len(df_single) < 240:
-        print(f"df_single is None or len(df_single) < 240 {len(df_single) < 240}")
+        #print(f"df_single is None or len(df_single) < 240 {len(df_single) < 240}")
         return False, {}
 
     try:
@@ -28,14 +28,14 @@ def st_near_ma240_df(df_single):
         today_ma240 = ma240_series.iloc[-1]
         
         if today_ma240 == 0 or pd.isna(today_ma240):
-            print("today_ma240 == 0 or pd.isna(today_ma240):")
+            #print("today_ma240 == 0 or pd.isna(today_ma240):")
             return False, {}
 
         # 3. 邏輯判斷
         dist_ratio = (today_price - today_ma240) / today_ma240
         is_in_range = abs(dist_ratio) <= 0.03
 
-        print(f"dist_ratio: {dist_ratio} today_price: {today_price} today_ma240: {today_ma240}  \n")
+        #print(f"dist_ratio: {dist_ratio} today_price: {today_price} today_ma240: {today_ma240}  \n")
         
         if is_in_range:
             status = "年線上方強勢整理" if dist_ratio > 0 else "年線下方準備突破"
