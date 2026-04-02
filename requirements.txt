@@ -6,3 +6,4 @@ line-bot-sdk
 ta
 FinMind
 tqdm
+paramiko
