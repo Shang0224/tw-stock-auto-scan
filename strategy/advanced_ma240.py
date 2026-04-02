@@ -10,14 +10,14 @@ def st_advanced_ma240_df(df_single):
     """
       
     # 基礎檢查：資料量需足夠計算年線
-    if df.empty or len(df) < 240:
+    if df.empty or len(df_single) < 240:
         return False, {}
 
     # 計算技術指標
-    df['MA5'] = df['close'].rolling(5).mean()
-    df['MA20'] = df['close'].rolling(20).mean()
-    df['MA60'] = df['close'].rolling(60).mean()
-    df['MA240'] = df['close'].rolling(240).mean()
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
     
     today = df.iloc[-1]
 
@@ -48,7 +48,7 @@ def st_advanced_ma240_df(df_single):
         "狀態": status
     }
 
-    #print(f"st_advanced_ma240(  df  ) is_hit:{is_hit}   info:{info}")
+    #print(f"st_advanced_ma240(  df_single  ) is_hit:{is_hit}   info:{info}")
     
     return is_hit, info
 
