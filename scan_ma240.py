@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta, timezone
 import os
 import requests
-from untils.notifier import send_line_message, fetch_all_stocks, send_email_with_csv
+from untils.notifier import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas
 
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
@@ -130,7 +130,6 @@ def main():
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
     send_line_message(message_text)
 
-
     # 2. 從環境變數讀取帳密 (安全性考量)
     SENDER = os.getenv("SENDER_EMAIL")
     RECEIVER = os.getenv("RECIPIENT_EMAIL")
@@ -140,6 +139,23 @@ def main():
 
     # 3. 執行寄送
     send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
+
+    # 建議寫法：直接給予完整路徑
+    remote_path = 
+    # 如果你不確定資料夾是否存在，可以用 makedirs
+    if not sftp.exists(remote_path):
+        #send_line_message("NAS上沒有檔案上傳資料夾")
+        print("NAS上沒有檔案上傳資料夾")
+
+    # 使用 Tailscale 分配給 NAS 的私有 IP
+    upload_to_nas(
+        hostname=os.environ.get("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
+        username=os.environ.get("NAS_ACCOUNT"),
+        password=os.environ.get("NAS_PASSWORD"),
+        local_path=file_name,
+        remote_path=os.environ.get("NAS_SFTP_PATH") 
+    )
+
 
 if __name__ == "__main__":
     main()
