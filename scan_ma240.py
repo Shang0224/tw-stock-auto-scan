@@ -13,8 +13,14 @@ from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 def main():
     
     #取得 UTC 時間並強制加上 8 小時, 轉為台灣的localtime
-    tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
-    
+    #tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
+
+    # 建立 UTC+8 的時區物件
+    tz_tw = timezone(timedelta(hours=8))
+
+    # 指定 2024/6/8，並附帶時區資訊
+    tw_time = datetime(2024, 6, 8, tzinfo=tz_tw)
+            
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
     
     
