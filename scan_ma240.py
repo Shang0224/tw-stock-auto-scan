@@ -18,7 +18,7 @@ def main():
     # 建立 UTC+8 的時區物件
     tz_tw = timezone(timedelta(hours=8))
 
-    # 指定 2024/6/8，並附帶時區資訊
+    # 指定 2024/6/9，並附帶時區資訊, 當日若非交易日, 則將向前抓到最後一個交易日
     tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
             
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
