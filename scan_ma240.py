@@ -19,7 +19,7 @@ def main():
     tz_tw = timezone(timedelta(hours=8))
 
     # 指定 2024/6/8，並附帶時區資訊
-    tw_time = datetime(2024, 6, 8, tzinfo=tz_tw)
+    tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
             
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
     
