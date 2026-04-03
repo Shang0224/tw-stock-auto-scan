@@ -25,6 +25,8 @@ def st_near_ma240_df(df_single):
         ma240_series = df_single['close'].rolling(window=240).mean()
         
         today_price = df_single['close'].iloc[-1]
+        print(f"st_near_ma240_df today_price = {round(today_price)}")
+        
         today_ma240 = ma240_series.iloc[-1]
         
         if today_ma240 == 0 or pd.isna(today_ma240):
