@@ -12,17 +12,21 @@ from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 
 def main():
     
-    #取得 UTC 時間並強制加上 8 小時, 轉為台灣的localtime
-    #tw_time = datetime.now(timezone.utc) + timedelta(hours=8)
-
-    # 建立 UTC+8 的時區物件
+    # 1. 建立台灣時區 (UTC+8)
     tz_tw = timezone(timedelta(hours=8))
 
-    # 指定 2024/6/9，並附帶時區資訊, 當日若非交易日, 則將向前抓到最後一個交易日
+    # 2. 設定初始時間（預設為你的測試日期）
+    # 當你在本機執行時，會直接採用這個時間
     tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
-            
-    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
-    
+
+    # 3. 環境判定：如果是 GitHub Actions 執行，則覆蓋為「現在的台灣時間」
+    if os.getenv('GITHUB_ACTIONS') == 'true':
+        tw_time = datetime.now(tz_tw)
+        print(f"--- 偵測到 Actions 環境：自動切換至今日 {tw_time.strftime('%Y-%m-%d %H:%M')} ---")
+    else:
+        print(f"--- 偵測到本機環境：執行測試日期 {tw_time.strftime('%Y-%m-%d')} ---")
+        
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")    
     
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token=finmindtoken)
