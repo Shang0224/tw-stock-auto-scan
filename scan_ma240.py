@@ -7,8 +7,9 @@ import requests
 from untils.untils import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
-from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
+
+from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
 
 def main():
     #起始資料設定
