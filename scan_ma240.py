@@ -19,8 +19,8 @@ def main():
     # 當你在本機執行時，會直接採用這個時間
     tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
 
-    #files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
-    files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
+    files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
+    #files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
     
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
