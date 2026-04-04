@@ -25,7 +25,7 @@ def main():
 
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
-    tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
+    tw_time = datetime(2024, 1, 9, tzinfo=tz_tw)
    
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
