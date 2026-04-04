@@ -22,9 +22,9 @@ def main():
     # 3. 環境判定：如果是 GitHub Actions 執行，則覆蓋為「現在的台灣時間」
     if os.getenv('GITHUB_EVENT_NAME') == 'schedule':
         tw_time = datetime.now(tz_tw)
-        print(f"--- 偵測到 Actions 環境：自動切換至今日 {tw_time.strftime('%Y-%m-%d %H:%M')} ---")
+        print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}")
     else:
-        print(f"--- 偵測到本機環境：執行測試日期 {tw_time.strftime('%Y-%m-%d')} ---")
+        print(f"【GitHub 手動模式】執行程式內設定日期：{tw_time.strftime('%Y-%m-%d')}")
         
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")    
     
