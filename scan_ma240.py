@@ -21,15 +21,19 @@ def main():
 
     files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
     
-    # 3. 環境判定：如果是 GitHub Actions 執行，則覆蓋為「現在的台灣時間」
-    if os.getenv('GITHUB_EVENT_NAME') == 'schedule':
+    # 3. 環境判定：取得觸發事件名稱
+    event_name = os.getenv('GITHUB_EVENT_NAME')
+    
+    # 邏輯判定：只有在「定時排程」時才切換到今日時間
+    if event_name == 'schedule':
         tw_time = datetime.now(tz_tw)
         # 2. 讀取.csv檔
         # 從系統環境變數讀取，若讀不到則給予預設值
         files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
         print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
     else:
-        print(f"【GitHub 手動模式】執行程式內設定日期：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
+        print(type(files_env), files_env)
+        print(f"\n【GitHub 手動模式】執行程式內設定日期：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
         
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")    
     
@@ -163,17 +167,19 @@ def main():
     #send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
     #print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
-   
-    # 使用 Tailscale 分配給 NAS 的私有 IP
-    upload_to_nas(
-        host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
-        port=int(os.getenv("NAS_SFTP_PORT")),
-        username=os.getenv("NAS_ACCOUNT"),
-        password=os.getenv("NAS_PASSWORD"),
-        local_path=file_name,
-        remote_path=f"{os.getenv('NAS_SFTP_PATH')}/scan_report_{current_time}.csv")
 
-    cleanup_local_file(file_name)
+    # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
+    if event_name == 'schedule':
+        # 使用 Tailscale 分配給 NAS 的私有 IP
+        upload_to_nas(
+            host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
+            port=int(os.getenv("NAS_SFTP_PORT")),
+            username=os.getenv("NAS_ACCOUNT"),
+            password=os.getenv("NAS_PASSWORD"),
+            local_path=file_name,
+            remote_path=f"{os.getenv('NAS_SFTP_PATH')}/scan_report_{current_time}.csv")
+
+        cleanup_local_file(file_name)
 
 if __name__ == "__main__":
     main()
