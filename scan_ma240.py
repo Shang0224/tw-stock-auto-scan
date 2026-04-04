@@ -51,9 +51,6 @@ def main():
     # 建立一個字典，方便快速查找名稱：{ "2317": "鴻海", ... }
     stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
 
-    
-
-
     #files_env = 'data/TW50.csv'
     
     # 解析字串（將逗號分隔的字串轉回 list）
@@ -95,8 +92,6 @@ def main():
     
     results = []
 
-    my_strategies = [st_near_ma240_df, st_advanced_ma240_df]
-
     # 3. 逐一抓取並計算
     try:
         # --- D. 執行 scan_stocks 呼叫敘述 ---
@@ -135,7 +130,7 @@ def main():
         report = pd.DataFrame(results)
     
         # 1. 先進行排序 (假設按 '觸發策略' 排序)
-        report = report.sort_values(by='觸發策略', ascending=False)
+        report = report.sort_values(by=['觸發策略', '代號'], ascending=False)
 
         # 2. 【核心步驟】選取你想傳送到 LINE 的欄位
         # 假設你只想傳：代號、名稱、收盤價、觸發策略
