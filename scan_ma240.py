@@ -130,7 +130,7 @@ def main():
         report = pd.DataFrame(results)
     
         # 1. 先進行排序 (假設按 '觸發策略' 排序)
-        report = report.sort_values(by=['觸發策略', '代號'], ascending=False)
+        report = report.sort_values(by=['觸發策略', '代號'], ascending=[False, True])
 
         # 2. 【核心步驟】選取你想傳送到 LINE 的欄位
         # 假設你只想傳：代號、名稱、收盤價、觸發策略
