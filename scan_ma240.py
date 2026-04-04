@@ -19,9 +19,14 @@ def main():
     # 當你在本機執行時，會直接採用這個時間
     tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
 
+    files_env = os.getenv('STOCK_FILES_TEST', 'data/MID100.csv')
+    
     # 3. 環境判定：如果是 GitHub Actions 執行，則覆蓋為「現在的台灣時間」
     if os.getenv('GITHUB_EVENT_NAME') == 'schedule':
         tw_time = datetime.now(tz_tw)
+        # 2. 讀取.csv檔
+        # 從系統環境變數讀取，若讀不到則給予預設值
+        files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
         print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}")
     else:
         print(f"【GitHub 手動模式】執行程式內設定日期：{tw_time.strftime('%Y-%m-%d')}")
@@ -38,9 +43,7 @@ def main():
     stock_name_dict = dict(zip(df_info['stock_id'], df_info['stock_name']))
 
     
-    # 2. 讀取.csv檔
-    # 從系統環境變數讀取，若讀不到則給予預設值
-    files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+
 
     #files_env = 'data/TW50.csv'
     
