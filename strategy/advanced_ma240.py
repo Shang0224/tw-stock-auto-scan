@@ -56,6 +56,7 @@ def st_advanced_ma240_df_up(df_single):
         "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x"
     }
 
+    print(f"st_advanced_ma240_df_up {is_hit} info {info}")
     return is_hit, info
 
 
