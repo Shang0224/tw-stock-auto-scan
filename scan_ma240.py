@@ -26,7 +26,7 @@ def main():
         tw_time = datetime.now(tz_tw)
         # 2. 讀取.csv檔
         # 從系統環境變數讀取，若讀不到則給予預設值
-        files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+        files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
         print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
     else:
         print(f"【GitHub 手動模式】執行程式內設定日期：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
