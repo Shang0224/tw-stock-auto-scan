@@ -11,6 +11,12 @@ from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 
 def main():
+    #起始資料設定
+    files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
+    #files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
+
+    my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
+
     
     # 1. 建立台灣時區 (UTC+8)
     tz_tw = timezone(timedelta(hours=8))
@@ -18,10 +24,7 @@ def main():
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
     tw_time = datetime(2024, 6, 9, tzinfo=tz_tw)
-
-    files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
-    #files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
-    
+   
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
     
