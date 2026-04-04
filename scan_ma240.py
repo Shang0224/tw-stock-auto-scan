@@ -16,7 +16,8 @@ def main():
     files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
     #files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
 
-    my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
+    #my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
+    my_strategies = [st_advanced_ma240_df_up]
 
     
     # 1. 建立台灣時區 (UTC+8)
