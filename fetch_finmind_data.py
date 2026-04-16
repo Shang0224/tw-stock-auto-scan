@@ -17,12 +17,19 @@ def fetch_finmind_data():
 
     # 3. 取得台灣 50 與 中型 100 清單 (由 FinMind 取得最新成份股)
     print("🔍 正在取得指數成份股清單...")
-    tw50 = dl.taiwan_stock_holding_shares_per(stock_id="0050")
-    mid100 = dl.taiwan_stock_holding_shares_per(stock_id="0051")
     
-    # 合併代號並去重 (取 stock_id 欄位)
-    stock_list = list(set(tw50['stock_id'].tolist() + mid100['stock_id'].tolist()))
-    print(f"✅ 預計抓取股票數量: {len(stock_list)} 檔")
+    stock_list = []
+    
+    try
+        tw50 = dl.taiwan_stock_holding_shares_per(stock_id="0050")
+        mid100 = dl.taiwan_stock_holding_shares_per(stock_id="0051")
+    
+        # 合併代號並去重 (取 stock_id 欄位)
+        stock_list = list(set(tw50['stock_id'].tolist() + mid100['stock_id'].tolist()))
+        print(f"✅ 預計抓取股票數量: {len(stock_list)} 檔")
+    except Exception as e:
+            print(f"❌ 處理時發生錯誤: {e}")
+    
 
     # 4. 設定時間區間 (回溯 20 年)
     end_date = datetime.now().strftime('%Y-%m-%d')
