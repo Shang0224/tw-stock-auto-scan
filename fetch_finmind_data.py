@@ -1,10 +1,26 @@
+import requests
 import os
 import time
 import pandas as pd
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta
 
+def get_tw50():
+    url = "https://www.yuantaetfs.com/api/StkWeights?fundid=0050"
+    data = requests.get(url).json()
+
+    df = pd.DataFrame(data)
+    df = df[['StockCode', 'StockName', 'Weight']]
+
+    return df
+
 def fetch_finmind_data():
+
+
+
+    df = get_tw50()
+    print(df)
+    
     # 1. 初始化 FinMind 客戶端
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
     dl = DataLoader(token=finmindtoken)
