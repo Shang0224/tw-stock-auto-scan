@@ -21,8 +21,8 @@ def fetch_finmind_data():
     stock_list = []
     
     try:
-        tw50 = dl.taiwan_stock_holding_shares_per(stock_id="0050")
-        mid100 = dl.taiwan_stock_holding_shares_per(stock_id="0051")
+        tw50 = dl.taiwan_stock_holding_shares_per(index_id="0050")
+        mid100 = dl.taiwan_stock_holding_shares_per(index_id="0051")
     
         # 合併代號並去重 (取 stock_id 欄位)
         stock_list = list(set(tw50['stock_id'].tolist() + mid100['stock_id'].tolist()))
