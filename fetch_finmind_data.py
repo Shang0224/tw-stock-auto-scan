@@ -20,7 +20,7 @@ def fetch_finmind_data():
     
     stock_list = []
     
-    try
+    try:
         tw50 = dl.taiwan_stock_holding_shares_per(stock_id="0050")
         mid100 = dl.taiwan_stock_holding_shares_per(stock_id="0051")
     
