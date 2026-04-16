@@ -8,6 +8,13 @@ from datetime import datetime, timedelta
 def get_tw50():
     url = "https://www.yuantaetfs.com/api/StkWeights?fundid=0050"
 
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+    }
+
+    res = requests.get(url, headers=headers)
+    
     res = requests.get(url)
     
     print(res.status_code)
