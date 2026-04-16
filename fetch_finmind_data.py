@@ -7,6 +7,12 @@ from datetime import datetime, timedelta
 
 def get_tw50():
     url = "https://www.yuantaetfs.com/api/StkWeights?fundid=0050"
+
+    res = requests.get(url)
+    
+    print(res.status_code)
+    print(res.text[:200])  # 看前200字
+    
     data = requests.get(url).json()
 
     df = pd.DataFrame(data)
