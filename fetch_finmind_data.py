@@ -112,7 +112,8 @@ def fetch_finmind_data():
             # 抓取還原股價成交資料
             df = dl.taiwan_stock_daily_adj(
                 stock_id=stock_id,
-                start_date=start_date
+                start_date=start_date,
+                end_date=end_date
             )
 
             if not df.empty:
