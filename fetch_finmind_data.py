@@ -80,10 +80,10 @@ def fetch_finmind_data():
             # 檢查是否已有該股票的任何 CSV (避免重複抓取)
             existing_files = [f for f in os.listdir(target_dir) if f.startswith(f"{stock_id}_")]
             if existing_files:
-                print(f"⏩ [{i+1}/{len(stock_list)}] {stock_id} 已存在，跳過。")
+                print(f"⏩ [{i+1}/{len(stock_ids)}] {stock_id} 已存在，跳過。")
                 continue
 
-            print(f"🚀 [{i+1}/{len(stock_list)}] 正在抓取 {stock_id} (從 {start_date} 起)...")
+            print(f"🚀 [{i+1}/{len(stock_ids)}] 正在抓取 {stock_id} (從 {start_date} 起)...")
             
             # 抓取日成交資料
             df = dl.taiwan_stock_daily(
