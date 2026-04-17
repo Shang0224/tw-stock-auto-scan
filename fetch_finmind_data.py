@@ -3,7 +3,7 @@ import os
 import time
 import pandas as pd
 from FinMind.data import DataLoader
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def fetch_finmind_data():
     
