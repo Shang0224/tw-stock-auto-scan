@@ -14,7 +14,7 @@ def fetch_finmind_data():
         print(f"📁 已建立資料夾: {target_dir}")
 
     #起始資料設定
-    files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50.csv')
+    files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
     
     # 1. 建立台灣時區 (UTC+8)
     tz_tw = timezone(timedelta(hours=8))
