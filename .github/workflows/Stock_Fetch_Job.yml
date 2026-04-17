@@ -9,6 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  # 允許程式將 CSV push 回儲存庫
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -46,4 +49,3 @@ jobs:
         name: stock-csv-data
         path: data/*.csv
         retention-days: 5 # 下載連結保留 5 天
-
