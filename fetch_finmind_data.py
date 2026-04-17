@@ -86,7 +86,7 @@ def fetch_finmind_data():
             print(f"🚀 [{i+1}/{len(stock_ids)}] 正在抓取 {stock_id} (從 {start_date} 起)...")
             
             # 抓取日成交資料
-            df = dl.taiwan_stock_daily_adj(
+            df = dl.taiwan_stock_daily(
                 stock_id=stock_id,
                 start_date=start_date,
                 end_date=end_date
