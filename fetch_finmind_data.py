@@ -72,26 +72,10 @@ def fetch_finmind_data():
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
     
-    for sid in stock_ids:
-        try:
-            # 逐一抓取
-            df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
-            
-            if df is not None and not df.empty:
-                
-            
-            # 重要：如果您沒有 Token，建議加上微小延遲避免被封鎖
-            time.sleep(0.5) 
-            
-        except Exception as e:
-            print(f"⚠️ 抓取 {sid} 失敗: {e}")
-            continue
-
-    
     results = []
 
     # 5. 開始迴圈抓取
-    for i, stock_id in enumerate(stock_list):
+    for i, stock_id in enumerate(stock_ids):
         try:
             # 檢查是否已有該股票的任何 CSV (避免重複抓取)
             existing_files = [f for f in os.listdir(target_dir) if f.startswith(f"{stock_id}_")]
@@ -123,11 +107,11 @@ def fetch_finmind_data():
                 print(f"⚠️ {stock_id} 無資料返回。")
 
             # 💡 關鍵：防封鎖機制 (每抓一檔停 2 秒)
-            time.sleep(20)
+            time.sleep(2)
 
         except Exception as e:
             print(f"❌ 處理 {stock_id} 時發生錯誤: {e}")
-            time.sleep(50) # 發生錯誤時停久一點
+            time.sleep(5) # 發生錯誤時停久一點
 
     print("\n✨ 所有任務執行完畢！")
 
