@@ -109,6 +109,29 @@ def fetch_finmind_data():
             # 💡 關鍵：防封鎖機制 (每抓一檔停 2 秒)
             time.sleep(2)
 
+            # 抓取還原股價成交資料
+            df = dl.taiwan_stock_daily_adj(
+                stock_id=stock_id,
+                start_date=start_date
+            )
+
+            if not df.empty:
+                # 取得最後一筆資料的日期
+                last_date = df['date'].iloc[-1]
+                
+                # 設定檔名: 代號_最後日期.csv
+                file_name = f"{stock_id}_daily_adj_{last_date}.csv"
+                file_path = os.path.join(target_dir, file_name)
+                
+                # 儲存 CSV
+                df.to_csv(file_path, index=False, encoding='utf-8-sig')
+                print(f"💾 已存檔: {file_path} (共 {len(df)} 筆)")
+            else:
+                print(f"⚠️ {stock_id} 無資料返回。")
+
+            # 💡 關鍵：防封鎖機制 (每抓一檔停 2 秒)
+            time.sleep(2)
+
         except Exception as e:
             print(f"❌ 處理 {stock_id} 時發生錯誤: {e}")
             time.sleep(5) # 發生錯誤時停久一點
