@@ -102,7 +102,7 @@ def fetch_finmind_data():
                 
                 # 儲存 CSV
                 df.to_csv(file_path, index=False, encoding='utf-8-sig')
-                print(f"💾 已存檔: {file_name} (共 {len(df)} 筆)")
+                print(f"💾 已存檔: {file_path} (共 {len(df)} 筆)")
             else:
                 print(f"⚠️ {stock_id} 無資料返回。")
 
