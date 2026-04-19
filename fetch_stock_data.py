@@ -203,8 +203,10 @@ def fetch_fugle_data():
     print(f"🔍 正在透過 Fugle 取得 {len(stock_ids)} 檔成分股 (原始數據)...") 
 
     # 1. 計算日期區間
-    to_date = tw_time.strftime("%Y-%m-%d")
-    from_date = "2010-01-01"
+    to_date = "2026-01-02"
+    from_date = "2026-01-10"
+    #to_date = tw_time.strftime("%Y-%m-%d")
+    #from_date = "2010-01-01"
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {from_date} 起)...")
 
@@ -232,8 +234,8 @@ def fetch_fugle_data():
             # from_date：富果個股資料最遠支援至 2010-01-01
             raw_data = stock.historical.candles(
                 symbol=stock_id,
-                from_date="2020-01-01",
-                to_date="2020-01-05",
+                from_date=from_date,
+                to_date=to_date,
                 fields="open,high,low,close,volume,change",
                 is_adjusted=True 
             )
