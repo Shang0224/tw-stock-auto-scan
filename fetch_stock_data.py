@@ -261,7 +261,7 @@ def fetch_fugle_data():
                 last_date = df['date'].iloc[-1]        
             
                 # 6. 存入檔案
-                file_name = f"{stock_id}_{last_date}_history_adj.csv"
+                file_name = f"{stock_id}_{last_date.strftime("%Y-%m-%d")}_history_adj.csv"
                 file_path = os.path.join(target_dir, file_name)
         
                 df.to_csv(file_path, index=False, encoding='utf-8-sig')
