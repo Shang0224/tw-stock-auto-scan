@@ -7,4 +7,4 @@ ta
 FinMind
 tqdm
 paramiko
-fugle-marketdata-python
+fugle-marketdata
