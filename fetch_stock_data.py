@@ -172,7 +172,9 @@ def fetch_fugle_data():
         print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
     else:
         print(f"\n【GitHub 手動模式】執行程式內設定日期：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
-        
+
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")
+    
     # 1. 初始化 FinMind (建議去官網申請免費 Token 速度更快，沒 Token 每日限額較少)
     dl = DataLoader(token=finmindtoken)
     # 1. 先抓一次全市場基本資訊
