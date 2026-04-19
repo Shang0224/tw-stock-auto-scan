@@ -232,7 +232,7 @@ def fetch_fugle_data():
             # from_date：富果個股資料最遠支援至 2010-01-01
             raw_data = stock.historical.candles(
                 symbol=stock_id,
-                from_date=from_date,
+                from_date="2010-01-01",
                 to_date=to_date,
                 fields="open,high,low,close,volume,change",
                 is_adjusted=True 
