@@ -206,7 +206,7 @@ def fetch_fugle_data():
     to_date = tw_time.strftime("%Y-%m-%d")
     from_date = "2010-01-01"
 
-    print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
+    print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {from_date} 起)...")
 
     # 1. 初始化 Fugle
     fugletoken = os.getenv("FUGLE_ACCESS_TOKEN")  
