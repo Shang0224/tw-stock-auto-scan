@@ -41,7 +41,7 @@ jobs:
         NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
         NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
       run: |
-        python fetch_finmind_data.py
+        python fetch_stock_data.py
 
     - name: Upload Data Artifact
       uses: actions/upload-artifact@v4
