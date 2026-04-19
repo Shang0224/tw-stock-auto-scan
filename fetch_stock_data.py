@@ -200,7 +200,7 @@ def fetch_fugle_data():
     # 去除重複項
     stock_ids = list(set(stock_ids))   
 
-    print(f"🔍 正在透過 FinMind 取得 {len(stock_ids)} 檔成分股 (原始數據)...") 
+    print(f"🔍 正在透過 Fugle 取得 {len(stock_ids)} 檔成分股 (原始數據)...") 
 
     # 1. 計算日期區間
     to_date = tw_time.strftime("%Y-%m-%d")
@@ -224,7 +224,7 @@ def fetch_fugle_data():
                 print(f"⏩ [{i+1}/{len(stock_ids)}] {stock_id} 已存在，跳過。")
                 continue
 
-            print(f"🚀 [{i+1}/{len(stock_ids)}] 正在抓取 {stock_id} (從 {start_date} 起)...")
+            print(f"🚀 [{i+1}/{len(stock_ids)}] 正在抓取 {stock_id} (從 {from_date} 起)...")
             
         
             # 2. 呼叫歷史 K 線接口
