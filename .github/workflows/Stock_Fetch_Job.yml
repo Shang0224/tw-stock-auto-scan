@@ -32,6 +32,7 @@ jobs:
         STOCK_FILES: ${{ vars.STOCK_FILES }}
         STOCK_FILES_TEST: ${{ vars.STOCK_FILES_TEST }}
         FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
+        FUGLE_ACCESS_TOKEN: ${{ vars.FUGLE_ACCESS_TOKEN }}
         SENDER_EMAIL: ${{ vars.SENDER_EMAIL }}
         RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
         EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
