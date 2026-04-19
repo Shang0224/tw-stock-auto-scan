@@ -264,7 +264,7 @@ def fetch_fugle_data():
         
                 df.to_csv(file_path, index=False, encoding='utf-8-sig')
                 print(f"資料處理完成！已成功存入檔案: {file_name} (共 {len(df)} 筆)")
-            else        
+            else :       
                 print(f"⚠️ 轉換後的 DataFrame 是空的, {stock_id} 無資料返回。")
                         
             # 💡 關鍵：防封鎖機制 (每抓一檔停 2 秒)
