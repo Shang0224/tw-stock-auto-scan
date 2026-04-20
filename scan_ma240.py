@@ -6,7 +6,7 @@ import requests
 
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
-from untils.untils import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
+from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
@@ -79,7 +79,7 @@ def yfinance_Scan_ma240():
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
     
     # 1. 先獲取完整的大表
-    all_df = fetch_all_stocks(dl, stock_ids, start_date, end_date)
+    all_df = yf_fetch_all_stocks(dl, stock_ids, start_date, end_date)
 
     # 2. 檢查大表內容
     if not all_df.empty and not all_df.empty:
@@ -243,7 +243,7 @@ def finmind_scan_ma240():
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
     
     # 1. 先獲取完整的大表
-    all_df = fetch_all_stocks(dl, stock_ids, start_date, end_date)
+    all_df = fm_fetch_all_stocks(dl, stock_ids, start_date, end_date)
 
     # 2. 檢查大表內容
     if not all_df.empty and not all_df.empty:
