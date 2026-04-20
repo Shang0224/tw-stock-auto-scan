@@ -321,7 +321,7 @@ def fetch_fugle_data():
 
     # 1. 計算日期區間
     to_date = "2025-01-10" #結束日期
-    from_date = "2025-01-2" ＃開始日期
+    from_date = "2025-01-2" #開始日期
     
     #to_date = tw_time.strftime("%Y-%m-%d")
     #from_date = "2010-01-01"
