@@ -11,7 +11,7 @@ from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
 
-def yfinance_Scan_ma240():
+def yfinance_scan_ma240():
     #起始資料設定
     #files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
     files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
@@ -348,5 +348,5 @@ def finmind_scan_ma240():
         cleanup_local_file(file_name)
 
 if __name__ == "__main__":
-    finmind_Scan_ma240()
-    #yfinance_Scan_ma240()
+    finmind_scan_ma240()
+    #yfinance_scan_ma240()
