@@ -96,18 +96,22 @@ def fetch_yfinance_data():
             stock = yf.Ticker(f"{stock_id}.TW")
 
             df = stock.history(start=start_date, end=end_date)
-
-            # 1. 確保時區正確（台灣為 +8），並移除時區資訊使其變為「純時間」
-            df.index = df.index.tz_convert('Asia/Taipei').tz_localize(None)
-
-            # 2. 將索引轉換為純日期 (YYYY-MM-DD)
-            df.index = df.index.date
-
-            # 3. (選用) 如果你希望日期變成一個欄位，而不是索引
-            df = df.reset_index().rename(columns={'index': 'Date'})
-
+          
             # 3. 判斷資料是否為空 (關鍵邏輯)    
             if not df.empty:
+                # 1. 確保時區正確（台灣為 +8），並移除時區資訊使其變為「純時間」
+                df.index = df.index.tz_convert('Asia/Taipei').tz_localize(None)
+
+                # 2. 將索引轉換為純日期 (YYYY-MM-DD)
+                df.index = df.index.date
+
+                # 3. (選用) 如果你希望日期變成一個欄位，而不是索引
+                df = df.reset_index().rename(columns={'index': 'Date'})
+
+                # 新增一個欄位叫 'Volume_K' (張數)
+                # 使用 // 是整數除法，若要精確到小數點可用 /
+                df['Volume_K'] = df['Volume'] / 1000
+                
                 # 取得最後一筆資料的日期
                 last_date = df['Date'].iloc[-1]
                 
