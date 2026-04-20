@@ -303,7 +303,7 @@ def finmind_scan_ma240():
         short_report = report[['代號', '名稱', '收盤', '觸發策略']]
 
         # 3. 建立訊息標頭
-        message_text = f"📅 掃描完成: {now_str}\n"
+        message_text = f"📅 finmind 掃描完成: {now_str}\n"
         message_text += "=== 靠近年線精選名單 ===\n\n"
     
         # 4. 使用簡化後的表格轉成文字
@@ -313,7 +313,7 @@ def finmind_scan_ma240():
         report.to_csv(file_name, index=False, encoding='utf-8-sig')
 
     else:
-        message_text = f"📅 {now_str}\n今日無符合條件之股票。"
+        message_text = f"📅 finmind {now_str}\n今日無符合條件之股票。"
 
     # 原本的 print 輸出也可以保留在 Console 方便除錯
     #print(message_text)
