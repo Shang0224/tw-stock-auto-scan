@@ -148,6 +148,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
     for sid in stock_ids:
         # 自動補齊台股後綴 (若使用者只輸入 2330)
         ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
+        print(f"yf_fetch_all_stocks ticker_id : {} \n")
         
         try:
             # yfinance 下載資料
@@ -167,7 +168,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 all_data.append(df)
             
             # 延遲避免請求過於頻繁
-            time.sleep(0.6)
+            time.sleep(2)
             
         except Exception as e:
             print(f"⚠️ 抓取 {ticker_id} 失敗: {e}")
