@@ -14,6 +14,57 @@ from email import encoders
 
 import paramiko
 
+
+def yf_fetch_all_stocks(stock_ids, start_date, end_date):
+    """
+    將原有的 FinMind 邏輯改為使用 yfinance 取得台股資料
+    
+    :param stock_ids: list, 例如 ['2330.TW', '2454.TW'] 或 ['2330', '2454']
+    :param start_date: str, 格式 'YYYY-MM-DD'
+    :param end_date: str, 格式 'YYYY-MM-DD'
+    """
+    all_data = []
+    
+    print(f"📡 正在透過 yfinance 抓取 {len(stock_ids)} 檔股票...")
+    
+    for sid in stock_ids:
+        # 自動補齊台股後綴 (若使用者只輸入 2330)
+        ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
+        print(f"yf_fetch_all_stocks ticker_id : {ticker_id} \n")
+        
+        try:
+            # yfinance 下載資料
+            # auto_adjust=True 會自動處理除權息調整價
+            df = yf.download(ticker_id, start=start_date, end=end_date, progress=False)
+            
+            if not df.empty:
+                # 重整格式：yfinance 預設 index 是 Date，轉換成欄位方便合併
+                df = df.reset_index()
+                
+                # 加入股票代碼欄位以便後續辨識
+                df['stock_id'] = sid
+                
+                # 統一欄位名稱為小寫 (符合原本 FinMind 習慣，自由選用)
+                df.columns = [col.lower().replace(' ', '_') for col in df.columns]
+                
+                all_data.append(df)
+            
+            # 延遲避免請求過於頻繁
+            time.sleep(2)
+            
+        except Exception as e:
+            print(f"⚠️ 抓取 {ticker_id} 失敗: {e}")
+            continue
+            
+    if not all_data:
+        print("❌ 未抓取到任何資料")
+        return pd.DataFrame()
+        
+    # 合併所有資料並重置 index
+    final_df = pd.concat(all_data, ignore_index=True)
+    return final_df
+
+
 def upload_to_nas(host, port, username, password, local_path, remote_path):
     """
     透過 Tailscale 內網 IP 上傳檔案至 NAS。
@@ -132,56 +183,6 @@ def cleanup_local_file(file_path):
             print(f"⚠️ 無法刪除檔案 {file_path}，錯誤原因：{e}")
     else:
         print(f"ℹ️ 檔案不存在，無需清理：{file_path}")
-
-def yf_fetch_all_stocks(stock_ids, start_date, end_date):
-    """
-    將原有的 FinMind 邏輯改為使用 yfinance 取得台股資料
-    
-    :param stock_ids: list, 例如 ['2330.TW', '2454.TW'] 或 ['2330', '2454']
-    :param start_date: str, 格式 'YYYY-MM-DD'
-    :param end_date: str, 格式 'YYYY-MM-DD'
-    """
-    all_data = []
-    
-    print(f"📡 正在透過 yfinance 抓取 {len(stock_ids)} 檔股票...")
-    
-    for sid in stock_ids:
-        # 自動補齊台股後綴 (若使用者只輸入 2330)
-        ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
-        print(f"yf_fetch_all_stocks ticker_id : {} \n")
-        
-        try:
-            # yfinance 下載資料
-            # auto_adjust=True 會自動處理除權息調整價
-            df = yf.download(ticker_id, start=start_date, end=end_date, progress=False)
-            
-            if not df.empty:
-                # 重整格式：yfinance 預設 index 是 Date，轉換成欄位方便合併
-                df = df.reset_index()
-                
-                # 加入股票代碼欄位以便後續辨識
-                df['stock_id'] = sid
-                
-                # 統一欄位名稱為小寫 (符合原本 FinMind 習慣，自由選用)
-                df.columns = [col.lower().replace(' ', '_') for col in df.columns]
-                
-                all_data.append(df)
-            
-            # 延遲避免請求過於頻繁
-            time.sleep(2)
-            
-        except Exception as e:
-            print(f"⚠️ 抓取 {ticker_id} 失敗: {e}")
-            continue
-            
-    if not all_data:
-        print("❌ 未抓取到任何資料")
-        return pd.DataFrame()
-        
-    # 合併所有資料並重置 index
-    final_df = pd.concat(all_data, ignore_index=True)
-    return final_df
-
 
 def fm_fetch_all_stocks(dl, stock_ids, start_date, end_date):
     all_data = []
