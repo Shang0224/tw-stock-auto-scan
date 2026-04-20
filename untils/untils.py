@@ -35,7 +35,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
         try:
             # yfinance 下載資料
             # auto_adjust=True 會自動處理除權息調整價
-            df = yf.download(ticker_id, start=start_date, end=end_date, progress=False)
+            df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
             
             if not df.empty:
                 # 重整格式：yfinance 預設 index 是 Date，轉換成欄位方便合併
