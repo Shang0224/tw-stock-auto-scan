@@ -1,14 +1,14 @@
-from FinMind.data import DataLoader
+import yfinance as yf
 import pandas as pd
 import time
-from datetime import datetime, timedelta, timezone
 import os
 import requests
-from untils.untils import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 
+from FinMind.data import DataLoader
+from datetime import datetime, timedelta, timezone
+from untils.untils import send_line_message, fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
-
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
 
 def yfinance_Scan_ma240():
@@ -70,7 +70,7 @@ def yfinance_Scan_ma240():
     # 去除重複項
     stock_ids = list(set(stock_ids))   
 
-    print(f"🔍 正在透過 FinMind 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
+    print(f"🔍 正在透過 yfinance 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
     # 1. 計算日期區間
     end_date = tw_time.strftime("%Y-%m-%d")
@@ -97,15 +97,6 @@ def yfinance_Scan_ma240():
     try:
         # --- D. 執行 scan_stocks 呼叫敘述 ---
         # 這裡就是你問的「呼叫敘述」
-        #results = scan_stocks_new(            
-         #                   stock_ids=stock_ids, 
-          #                  algo_func=st_near_ma240, 
-           #                 dl=dl)
-
-        #results = scan_stocks(
-         #                   stock_ids=stock_ids, 
-          #                  algo_func=st_near_ma240, 
-           #                 dl=dl)
         results = scan_stocks_df_list(
                             stock_ids=stock_ids, 
                             algo_func_list=my_strategies, 
@@ -125,7 +116,7 @@ def yfinance_Scan_ma240():
     # 取得目前時間並格式化
     # %Y:年, %m:月, %d:日, %H:時, %M:分
     current_time = tw_time.now().strftime("%Y%m%d_%H%M")
-    file_name = f'data/scan_report_{current_time}.csv'
+    file_name = f'data/yfinance/scan_report_yf_{current_time}.csv'
 
     if results:
         report = pd.DataFrame(results)
@@ -298,7 +289,7 @@ def finmind_scan_ma240():
     # 取得目前時間並格式化
     # %Y:年, %m:月, %d:日, %H:時, %M:分
     current_time = tw_time.now().strftime("%Y%m%d_%H%M")
-    file_name = f'data/scan_report_{current_time}.csv'
+    file_name = f'data/finmind/scan_report_fm_{current_time}.csv'
 
     if results:
         report = pd.DataFrame(results)
