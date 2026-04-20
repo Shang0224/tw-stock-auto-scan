@@ -132,7 +132,7 @@ def cleanup_local_file(file_path):
     else:
         print(f"ℹ️ 檔案不存在，無需清理：{file_path}")
 
-def fetch_all_stocks_yf(stock_ids, start_date, end_date):
+def yf_fetch_all_stocks(stock_ids, start_date, end_date):
     """
     將原有的 FinMind 邏輯改為使用 yfinance 取得台股資料
     
@@ -181,7 +181,7 @@ def fetch_all_stocks_yf(stock_ids, start_date, end_date):
     return final_df
 
 
-def fetch_all_stocks_fm(dl, stock_ids, start_date, end_date):
+def fm_fetch_all_stocks(dl, stock_ids, start_date, end_date):
     all_data = []
     
     print(f"串聯抓取 {len(stock_ids)} 檔股票...")
