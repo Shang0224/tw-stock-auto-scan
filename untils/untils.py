@@ -3,6 +3,7 @@ import os
 import requests
 import smtplib
 import time
+import yfinance as yf
 
 from datetime import datetime, timedelta, timezone
 from FinMind.data import DataLoader
