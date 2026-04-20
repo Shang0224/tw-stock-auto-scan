@@ -24,7 +24,7 @@ def yfinance_scan_ma240():
 
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
-    tw_time = datetime(2026, 4, 19, tzinfo=tz_tw)
+    tw_time = datetime(2026, 4, 17, tzinfo=tz_tw)
    
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
@@ -188,7 +188,7 @@ def finmind_scan_ma240():
 
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
-    tw_time = datetime(2026, 4, 19, tzinfo=tz_tw)
+    tw_time = datetime(2026, 4, 17, tzinfo=tz_tw)
    
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
@@ -348,5 +348,12 @@ def finmind_scan_ma240():
         cleanup_local_file(file_name)
 
 if __name__ == "__main__":
-    #finmind_scan_ma240()
-    yfinance_scan_ma240()
+    # 3. 環境判定：取得觸發事件名稱
+    event_name = os.getenv('GITHUB_EVENT_NAME')
+    
+    # 邏輯判定：只有在「定時排程」時才切換到今日時間
+    if event_name == 'schedule':    
+        finmind_scan_ma240()
+    else:
+        yfinance_scan_ma240()
+        finmind_scan_ma240()
