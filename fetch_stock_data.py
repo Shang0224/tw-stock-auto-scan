@@ -97,10 +97,19 @@ def fetch_yfinance_data():
 
             df = stock.history(start=start_date, end=end_date)
 
+            # 1. 確保時區正確（台灣為 +8），並移除時區資訊使其變為「純時間」
+            df.index = df.index.tz_convert('Asia/Taipei').tz_localize(None)
+
+            # 2. 將索引轉換為純日期 (YYYY-MM-DD)
+            df.index = df.index.date
+
+            # 3. (選用) 如果你希望日期變成一個欄位，而不是索引
+            df = df.reset_index().rename(columns={'index': 'Date'})
+
             # 3. 判斷資料是否為空 (關鍵邏輯)    
             if not df.empty:
                 # 取得最後一筆資料的日期
-                last_date = df['date'].iloc[-1]
+                last_date = df['Date'].iloc[-1]
                 
                 # 設定檔名: 代號_最後日期.csv
                 file_name = f"{stock_id}_{last_date}.csv"
