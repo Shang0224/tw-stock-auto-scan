@@ -348,4 +348,5 @@ def finmind_scan_ma240():
         cleanup_local_file(file_name)
 
 if __name__ == "__main__":
-    yfinance_Scan_ma240()
+    finmind_Scan_ma240()
+    #yfinance_Scan_ma240()
