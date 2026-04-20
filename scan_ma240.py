@@ -79,7 +79,7 @@ def yfinance_Scan_ma240():
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
     
     # 1. 先獲取完整的大表
-    all_df = yf_fetch_all_stocks(dl, stock_ids, start_date, end_date)
+    all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)
 
     # 2. 檢查大表內容
     if not all_df.empty and not all_df.empty:
