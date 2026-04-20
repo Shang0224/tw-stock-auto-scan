@@ -116,7 +116,7 @@ def yfinance_scan_ma240():
     # 取得目前時間並格式化
     # %Y:年, %m:月, %d:日, %H:時, %M:分
     current_time = tw_time.now().strftime("%Y%m%d_%H%M")
-    file_name = f'data/yfinance/scan_report_yf_{current_time}.csv'
+    file_name = f'data/yfinance/yf_scan_report_{current_time}.csv'
 
     if results:
         report = pd.DataFrame(results)
@@ -289,7 +289,7 @@ def finmind_scan_ma240():
     # 取得目前時間並格式化
     # %Y:年, %m:月, %d:日, %H:時, %M:分
     current_time = tw_time.now().strftime("%Y%m%d_%H%M")
-    file_name = f'data/finmind/scan_report_fm_{current_time}.csv'
+    file_name = f'data/finmind/fm_scan_report_{current_time}.csv'
 
     if results:
         report = pd.DataFrame(results)
