@@ -176,8 +176,8 @@ def yfinance_scan_ma240():
 
 def finmind_scan_ma240():
     #起始資料設定
-    files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
-    #files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
+    #files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
+    files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
 
     #my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
     my_strategies = [st_advanced_ma240_df_up]
