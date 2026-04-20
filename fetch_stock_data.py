@@ -67,12 +67,11 @@ def fetch_yfinance_data():
     # 去除重複項
     stock_ids = list(set(stock_ids))   
 
-    print(f"🔍 正在透過 Fugle 取得 {len(stock_ids)} 檔成分股 (原始數據)...") 
+    print(f"🔍 正在透過 yfinance 取得 {len(stock_ids)} 檔成分股 (原始數據)...") 
 
     # 1. 計算日期區間
     end_date = tw_time.strftime("%Y-%m-%d")
     start_date = (tw_time.replace(year=tw_time.year - 20)).strftime("%Y-01-01")
-
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
 
@@ -87,7 +86,7 @@ def fetch_yfinance_data():
                 print(f"⏩ [{i+1}/{len(stock_ids)}] {stock_id} 已存在，跳過。")
                 continue
 
-            print(f"🚀 [{i+1}/{len(stock_ids)}] 正在抓取 {stock_id} (從 {from_date} 起)...")
+            print(f"🚀 [{i+1}/{len(stock_ids)}] 正在抓取 {stock_id} (從 {start_date} 起)...")
             
         
             # 2. 呼叫歷史 K 線接口
