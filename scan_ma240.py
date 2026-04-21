@@ -12,7 +12,7 @@ from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
 
 # 宣告控制測試資料的開關 (True: 執行測試資料 / False: 執行正式資料)
-RUN_TEST_DATA = True
+RUN_TEST_DATA = False
 
 def yfinance_scan_ma240():
     #資料設定, 決定是否執行測試資料
@@ -84,8 +84,8 @@ def yfinance_scan_ma240():
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
 
-    if event_name != 'schedule':
-        stock_ids = ['2324', '2845', '6526']
+    #if event_name != 'schedule':
+     #   stock_ids = ['2324', '2845', '6526']
     
     # 1. 先獲取完整的大表
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
