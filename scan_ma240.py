@@ -360,7 +360,7 @@ def testPrint():
     target_date = "2026-04-17"
     
     # 為了計算 MA240，我們需要抓取比目標日期更早的資料 (大約提前一年)
-    start_date = "2025-04-01"
+    start_date = "2024-10-01"
     end_date = "2026-04-20" # 稍微多抓幾天確保包含 4/17
     
     print(f"--- 執行測試模式: {data_testing } ---")
