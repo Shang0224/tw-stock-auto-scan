@@ -82,6 +82,9 @@ def yfinance_scan_ma240():
     start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
+
+    if event_name != 'schedule':
+        stock_ids = ['2324', '2845', '6526']
     
     # 1. 先獲取完整的大表
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)
@@ -411,7 +414,7 @@ if __name__ == "__main__":
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
 
-    data_testing = True
+    data_testing = False
     
     # 邏輯判定：只有在「定時排程」時才切換到今日時間
     if event_name == 'schedule':    
