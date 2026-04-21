@@ -420,6 +420,7 @@ if __name__ == "__main__":
     # 邏輯判定：只有在「定時排程」時才切換到今日時間
     if event_name == 'schedule':    
         finmind_scan_ma240()
+        yfinance_scan_ma240()
     elif data_testing :
         testPrint()
     else:
