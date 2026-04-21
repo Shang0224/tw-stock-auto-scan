@@ -38,7 +38,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             
             print(f"yf.download ticker_id:{ticker_id}  start:{start_date}  end:{end_date}\n")
             df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
-            
+            print(f"df.empty = {df.empty}\n")
             if not df.empty:
                 
                 df.index = df.index.strftime('%Y-%m-%d') # 先把 Index 轉成字串
