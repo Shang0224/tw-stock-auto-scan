@@ -180,9 +180,11 @@ def yfinance_scan_ma240():
         cleanup_local_file(file_name)
 
 def finmind_scan_ma240():
-    #起始資料設定
-    #files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
-    files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')
+    #資料設定, 決定是否執行測試資料
+    if RUN_TEST_DATA :
+        files_env = os.getenv('STOCK_FILES_TEST', 'data/TW50_Test.csv')    
+    else :
+        files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
 
     #my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
     my_strategies = [st_advanced_ma240_df_up]
