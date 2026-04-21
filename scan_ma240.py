@@ -78,7 +78,8 @@ def yfinance_scan_ma240():
     print(f"🔍 正在透過 yfinance 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
     # 1. 計算日期區間
-    end_date = (tw_time + timedelta(days=1)) .strftime("%Y-%m-%d") #end_date必須多加1天, 否則yfinance預設抓到end_date的前一天,
+    #end_date = (tw_time + timedelta(days=1)) .strftime("%Y-%m-%d") #end_date必須多加1天, 否則yfinance預設抓到end_date的前一天,
+    end_date = tw_time.strftime("%Y-%m-%d") 
     start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
