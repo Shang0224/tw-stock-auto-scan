@@ -12,7 +12,7 @@ from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
 
 # 宣告控制測試資料的開關 (True: 執行測試資料 / False: 執行正式資料)
-RUN_TEST_DATA = False
+RUN_TEST_DATA = True
 
 def yfinance_scan_ma240():
     #資料設定, 決定是否執行測試資料
