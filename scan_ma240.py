@@ -179,7 +179,7 @@ def yfinance_scan_ma240():
             username=os.getenv("NAS_ACCOUNT"),
             password=os.getenv("NAS_PASSWORD"),
             local_path=file_name,
-            remote_path=f"{os.getenv('NAS_SFTP_PATH')}/scan_report_{current_time}.csv")
+            remote_path=f"{os.getenv('NAS_SFTP_PATH')}/yfinance/yf_scan_report_{current_time}.csv")
 
         cleanup_local_file(file_name)
 
@@ -354,7 +354,7 @@ def finmind_scan_ma240():
             username=os.getenv("NAS_ACCOUNT"),
             password=os.getenv("NAS_PASSWORD"),
             local_path=file_name,
-            remote_path=f"{os.getenv('NAS_SFTP_PATH')}/scan_report_{current_time}.csv")
+            remote_path=f"{os.getenv('NAS_SFTP_PATH')}/finmind/fm_scan_report_{current_time}.csv")
 
         cleanup_local_file(file_name)
 
