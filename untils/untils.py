@@ -38,13 +38,14 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             
             print(f"yf.download ticker_id:{ticker_id}  start:{start_date}  end:{end_date}\n")
             df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
-            print(f"df.loc[-1] : {df.loc[-1]}\n")  # 此時 loc[end_date] 還是有效的！
+            print(f"df.df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
+            print(f"df.iloc[-1] : {df.iloc[-1]}\n") # 此時 loc[end_date] 還是有效的！
             print(f"df.empty = {df.empty}\n")
             
             if not df.empty:
                 
                 df.index = df.index.strftime('%Y-%m-%d') # 先把 Index 轉成字串
-                print(f"df.loc[-1] : {df.loc[-1]}\n")  # 此時 loc[end_date] 還是有效的！
+                print(f"df.iloc[-1] : {df.iloc[-1]}\n")  # 此時 loc[end_date] 還是有效的！
                 
                 if end_date in df.index:
                     print(f"--- {end_date} 的完整資料 ---")
