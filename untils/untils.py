@@ -38,9 +38,17 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
             
             if not df.empty:
+                
+                df.index = df.index.strftime('%Y-%m-%d') # 先把 Index 轉成字串
+
+                if end_date in df.index:
+                    print(f"--- {end_date} 的完整資料 ---")
+                    print(df.loc[end_date])  # 此時 loc[end_date] 還是有效的！
+                else:
+                    print(f"找不到 {end_date}")
+                
                 # 重整格式：yfinance 預設 index 是 Date，轉換成欄位方便合併
-                df = df.reset_index()
-          
+                df = df.reset_index()          
                 
                 # 加入股票代碼欄位以便後續辨識
                 df['stock_id'] = sid
@@ -50,13 +58,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 df.rename(columns={'volume': 'Trading_Volume'}, inplace=True)
                 df.rename(columns={'high': 'max'}, inplace=True)
                 df.rename(columns={'low': 'min'}, inplace=True)
-
-                if end_date in df['date'].values:
-                    print(f"--- {end_date} 的完整資料 ---")
-                    print(df.loc[end_date])
-                else:
-                    print(f"找不到 {end_date} 的資料，請檢查交易日或日期範圍。")
-                
+        
                 all_data.append(df)
             
             # 延遲避免請求過於頻繁
