@@ -26,13 +26,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
     all_data = []
     
     print(f"📡 正在透過 yfinance 抓取 {len(stock_ids)} 檔股票...")
-
-    # 建立一個 session 並偽裝成一般的瀏覽器
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
-    })
-    
+  
     for sid in stock_ids:
         # 自動補齊台股後綴 (若使用者只輸入 2330)
         ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
@@ -41,8 +35,9 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
         try:
             # yfinance 下載資料
             # auto_adjust=True 會自動處理除權息調整價
-            #df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
-            df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False, session=session)
+            
+            print(f"yf.download ticker_id:{ticker_id}  start:{start_date}  end:{end_date}\n")
+            df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
             
             if not df.empty:
                 
