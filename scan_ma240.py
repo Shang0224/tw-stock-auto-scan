@@ -87,7 +87,7 @@ def yfinance_scan_ma240():
         stock_ids = ['2324', '2845', '6526']
     
     # 1. 先獲取完整的大表
-    all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)
+    all_df = yf_fetch_all_stocks(stock_ids, start_date, (end_date + timedelta(days=1))) #end_date必須多加1天, 否則yfinance預設抓到end_date的前一天
 
     # 2. 檢查大表內容
     if not all_df.empty and not all_df.empty:
