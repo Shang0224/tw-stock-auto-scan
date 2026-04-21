@@ -354,13 +354,70 @@ def finmind_scan_ma240():
 
         cleanup_local_file(file_name)
 
+def testPrint():
+    # 設定目標股票與日期
+    stocks = ['2324.TW', '2845.TW', '6526.TW']
+    target_date = "2026-04-17"
+    
+    # 為了計算 MA240，我們需要抓取比目標日期更早的資料 (大約提前一年)
+    start_date = "2025-04-01"
+    end_date = "2026-04-20" # 稍微多抓幾天確保包含 4/17
+    
+    print(f"--- 執行測試模式: {IS_TEST_MODE} ---")
+    
+    for symbol in stocks:
+        try:
+            # 取得歷史資料
+            df = yf.download(symbol, start=start_date, end=end_date, progress=False)
+            
+            if df.empty:
+                print(f"找不到 {symbol} 的資料")
+                continue
+                
+            # 1. 欄位更名: Volume -> Trading_Volume
+            df = df.rename(columns={'Volume': 'Trading_Volume'})
+            
+            # 2. 計算移動平均線 (MA)
+            # yfinance 回傳的 Close 若是 MultiIndex 則取法不同，這裡假設是單一檔抓取
+            df['MA240'] = df['Close'].rolling(window=240).mean()
+            df['MA60'] = df['Close'].rolling(window=60).mean()
+            df['MA20'] = df['Close'].rolling(window=20).mean()
+            df['MA10'] = df['Close'].rolling(window=10).mean()
+            
+            # 3. 篩選出 2026-04-17 當日的資料
+            # 將 Index 轉為字串格式方便比對
+            df.index = df.index.strftime('%Y-%m-%d')
+            
+            if target_date in df.index:
+                day_data = df.loc[target_date]
+                
+                print(f"\n股票代碼: {symbol} (日期: {target_date})")
+                print(f"開盤價: {day_data['Open']:.2f}")
+                print(f"收盤價: {day_data['Close']:.2f}")
+                print(f"成交量: {day_data['Trading_Volume']:.0f}")
+                print("-" * 30)
+                print(f"MA10 : {day_data['MA10']:.2f}")
+                print(f"MA20 : {day_data['MA20']:.2f}")
+                print(f"MA60 : {day_data['MA60']:.2f}")
+                print(f"MA240: {day_data['MA240']:.2f}")
+            else:
+                print(f"{symbol} 在 {target_date} 可能為非交易日或無資料。")
+                
+        except Exception as e:
+            print(f"抓取 {symbol} 時發生錯誤: {e}")
+
+
 if __name__ == "__main__":
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
+
+    data_testing = True
     
     # 邏輯判定：只有在「定時排程」時才切換到今日時間
     if event_name == 'schedule':    
         finmind_scan_ma240()
+    elif data_testing
+        test_data()
     else:
         yfinance_scan_ma240()
         finmind_scan_ma240()
