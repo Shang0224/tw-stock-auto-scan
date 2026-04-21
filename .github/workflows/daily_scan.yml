@@ -3,7 +3,7 @@ name: 每日掃描突破年線
 on:
   schedule:
     # 分 時 日 月 週 (UTC 時間 09:00 = 台北時間 17:00)
-    - cron: '42 10 * * 1-5'
+    - cron: '44 9 * * 1-5'
   workflow_dispatch: # 允許手動測試
 
 jobs:
