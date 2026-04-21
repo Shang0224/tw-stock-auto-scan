@@ -52,7 +52,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 df.rename(columns={'high': 'max'}, inplace=True)
                 df.rename(columns={'low': 'min'}, inplace=True)
 
-                if end_date in df.index:
+                if end_date in df['date'].values:
                     print(f"--- {end_date} 的完整資料 ---")
                     print(df.loc[end_date])
                 else:
