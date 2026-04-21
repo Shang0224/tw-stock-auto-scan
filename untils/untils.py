@@ -40,8 +40,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             if not df.empty:
                 # 重整格式：yfinance 預設 index 是 Date，轉換成欄位方便合併
                 df = df.reset_index()
-
-                df.index = df.index.strftime('%Y-%m-%d')
+          
                 
                 # 加入股票代碼欄位以便後續辨識
                 df['stock_id'] = sid
