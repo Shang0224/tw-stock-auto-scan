@@ -395,14 +395,14 @@ def testPrint():
                 day_data = df.loc[target_date]
                 
                 print(f"\n股票代碼: {symbol} (日期: {target_date})")
-                print(f"開盤價: {float(day_data['Open']):.2f}")
-                print(f"收盤價: {float(day_data['Close']):.2f}")
-                print(f"成交量: {float(day_data['Trading_Volume']):.0f}")
+                print(f"開盤價: {float(day_data['Open'].iloc[0]):.2f}")
+                print(f"收盤價: {float(day_data['Close'].iloc[0]):.2f}")
+                print(f"成交量: {float(day_data['Trading_Volume'].iloc[0]):.0f}")
                 print("-" * 30)
-                print(f"MA10 : {float(day_data['MA10']):.2f}")
-                print(f"MA20 : {float(day_data['MA20']):.2f}")
-                print(f"MA60 : {float(day_data['MA60']):.2f}")
-                print(f"MA240: {float(day_data['MA240']):.2f}")
+                print(f"MA10 : {float(day_data['MA10'].iloc[0]):.2f}")
+                print(f"MA20 : {float(day_data['MA20'].iloc[0]):.2f}")
+                print(f"MA60 : {float(day_data['MA60'].iloc[0]):.2f}")
+                print(f"MA240: {float(day_data['MA240'].iloc[0]):.2f}")
             else:
                 print(f"{symbol} 在 {target_date} 可能為非交易日或無資料。")
                 
