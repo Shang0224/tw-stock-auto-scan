@@ -29,7 +29,7 @@ def yfinance_scan_ma240():
 
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
-    tw_time = datetime(2026, 4, 17, tzinfo=tz_tw)
+    tw_time = datetime(2026, 4, 17, tzinfo=tz_tw) 
    
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
@@ -78,7 +78,7 @@ def yfinance_scan_ma240():
     print(f"🔍 正在透過 yfinance 掃描 {len(stock_ids)} 檔成分股 (原始數據)...")
 
     # 1. 計算日期區間
-    end_date = tw_time.strftime("%Y-%m-%d")
+    end_date = (tw_time + timedelta(days=1)) .strftime("%Y-%m-%d") #end_date必須多加1天, 否則yfinance預設抓到end_date的前一天,
     start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
 
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
@@ -87,7 +87,7 @@ def yfinance_scan_ma240():
         stock_ids = ['2324', '2845', '6526']
     
     # 1. 先獲取完整的大表
-    all_df = yf_fetch_all_stocks(stock_ids, start_date, (end_date + timedelta(days=1))) #end_date必須多加1天, 否則yfinance預設抓到end_date的前一天
+    all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
 
     # 2. 檢查大表內容
     if not all_df.empty and not all_df.empty:
