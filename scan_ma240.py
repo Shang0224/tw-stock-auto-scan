@@ -363,7 +363,7 @@ def testPrint():
     start_date = "2025-04-01"
     end_date = "2026-04-20" # 稍微多抓幾天確保包含 4/17
     
-    print(f"--- 執行測試模式: {IS_TEST_MODE} ---")
+    print(f"--- 執行測試模式: {data_testing } ---")
     
     for symbol in stocks:
         try:
