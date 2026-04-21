@@ -414,7 +414,7 @@ if __name__ == "__main__":
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
 
-    data_testing = False
+    data_testing = True
     
     # 邏輯判定：只有在「定時排程」時才切換到今日時間
     if event_name == 'schedule':    
