@@ -35,21 +35,16 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
         try:
             # yfinance 下載資料
             # auto_adjust=True 會自動處理除權息調整價
-            
-            print(f"yf.download ticker_id:{ticker_id}  start:{start_date}  end:{end_date}\n")
 
-            end_date_plus_one = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+            #因為yfinance抓資料時, 只會抓到end_date的前一天, 故傳入的end_date必須加1天, 再傳入download
+            end_date_plus_one = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d") 
             
             df = yf.download(ticker_id, start=start_date, end=end_date_plus_one, progress=False, multi_level_index=False)
-           
-            print(f"df.iloc[-1] : {df.iloc[-1]}\n") # 此時 loc[end_date] 還是有效的！
-            print(f"df.empty = {df.empty}\n")
-            
+     
             if not df.empty:
                 
                 df.index = df.index.strftime('%Y-%m-%d') # 先把 Index 轉成字串
-                print(f"df.iloc[-1] : {df.iloc[-1]}\n")  # 此時 loc[end_date] 還是有效的！
-                
+                                
                 if end_date in df.index:
                     print(f"--- {end_date} 的完整資料 ---")
                     print(df.loc[end_date])  # 此時 loc[end_date] 還是有效的！
