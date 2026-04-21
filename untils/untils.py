@@ -40,7 +40,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             if not df.empty:
                 
                 df.index = df.index.strftime('%Y-%m-%d') # 先把 Index 轉成字串
-                print(f"df.loc[-1] : {df.loc[-1]}]\n")  # 此時 loc[end_date] 還是有效的！
+                print(f"df.loc[-1] : {df.loc[-1]}\n")  # 此時 loc[end_date] 還是有效的！
                 
                 if end_date in df.index:
                     print(f"--- {end_date} 的完整資料 ---")
