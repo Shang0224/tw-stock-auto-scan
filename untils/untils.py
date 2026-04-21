@@ -41,6 +41,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
         try:
             # yfinance 下載資料
             # auto_adjust=True 會自動處理除權息調整價
+            #df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False)
             df = yf.download(ticker_id, start=start_date, end=end_date, progress=False, multi_level_index=False, session=session)
             
             if not df.empty:
