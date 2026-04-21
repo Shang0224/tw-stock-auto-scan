@@ -423,4 +423,4 @@ if __name__ == "__main__":
         testPrint()
     else:
         yfinance_scan_ma240()
-        finmind_scan_ma240()
+        #finmind_scan_ma240()
