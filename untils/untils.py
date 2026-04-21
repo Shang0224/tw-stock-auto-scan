@@ -46,6 +46,9 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 
                 # 統一欄位名稱為小寫 (符合原本 FinMind 習慣，自由選用)
                 df.columns = [col.lower().replace(' ', '_') for col in df.columns]
+                df.rename(columns={'volume': 'Trading_Volume'}, inplace=True)
+                df.rename(columns={'high': 'max'}, inplace=True)
+                df.rename(columns={'low': 'min'}, inplace=True)
                 
                 all_data.append(df)
             
