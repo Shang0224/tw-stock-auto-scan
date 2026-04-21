@@ -417,7 +417,7 @@ if __name__ == "__main__":
     if event_name == 'schedule':    
         finmind_scan_ma240()
     elif data_testing :
-        test_data()
+        testPrint()
     else:
         yfinance_scan_ma240()
         finmind_scan_ma240()
