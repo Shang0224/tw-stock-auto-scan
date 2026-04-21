@@ -30,8 +30,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
     for sid in stock_ids:
         # 自動補齊台股後綴 (若使用者只輸入 2330)
         ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
-        print(f"yf_fetch_all_stocks ticker_id : {ticker_id} \n")
-        
+               
         try:
             # yfinance 下載資料
             # auto_adjust=True 會自動處理除權息調整價
@@ -46,7 +45,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 df.index = df.index.strftime('%Y-%m-%d') # 先把 Index 轉成字串
                                 
                 if end_date in df.index:
-                    print(f"--- {end_date} 的完整資料 ---")
+                    print(f"---{ticker_id} 在 {end_date} 的完整資料 ---")
                     print(df.loc[end_date])  # 此時 loc[end_date] 還是有效的！
                 else:
                     print(f"找不到 {end_date}")
