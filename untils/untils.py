@@ -49,6 +49,12 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 df.rename(columns={'volume': 'Trading_Volume'}, inplace=True)
                 df.rename(columns={'high': 'max'}, inplace=True)
                 df.rename(columns={'low': 'min'}, inplace=True)
+
+                if end_date in df.index:
+                    print(f"--- {end_date} 的完整資料 ---")
+                    print(df.loc[end_date])
+                else:
+                    print(f"找不到 {end_date} 的資料，請檢查交易日或日期範圍。")
                 
                 all_data.append(df)
             
