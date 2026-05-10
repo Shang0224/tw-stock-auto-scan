@@ -364,8 +364,7 @@ def fetch_fugle_data():
             # from_date：富果個股資料最遠支援至 2010-01-01
             raw_data = stock.historical.candles(
                 symbol=stock_id,
-                from_date=from_date,
-                to_date=to_date,
+                **{"from": "2025-01-03", "to": "2025-01-10"},
                 fields="open,high,low,close,volume,change",
                 is_adjusted=True 
             )
@@ -411,6 +410,6 @@ def fetch_fugle_data():
     print("\n✨ 所有任務執行完畢！")
 
 if __name__ == "__main__":
-    fetch_yfinance_data()
-    #fetch_fugle_data()
+    #fetch_yfinance_data()
+    fetch_fugle_data()
     #fetch_finmind_data()
