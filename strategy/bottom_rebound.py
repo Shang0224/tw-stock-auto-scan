@@ -5,7 +5,7 @@ import time
 
 def st_bottom_rebound(df_single):
     """
-    ***底部轉強*** 負乖離>20%, 年線下跌趨緩接近走平
+    ***底部篩選***年線以下左側錯殺V轉模式或右側突破打底模式
     """
     if df_single.empty or len(df_single) < 260:
         return False, {}
