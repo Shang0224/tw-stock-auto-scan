@@ -10,6 +10,7 @@ from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_s
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
+from strategy.bottom_rebound import st_bottom_rebound
 
 # 宣告控制測試資料的開關 (True: 執行測試資料 / False: 執行正式資料)
 RUN_TEST_DATA = False
@@ -22,14 +23,14 @@ def yfinance_scan_ma240():
         files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
         
     #my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
-    my_strategies = [st_advanced_ma240_df_up]
+    my_strategies = [st_bottom_rebound]
    
     # 1. 建立台灣時區 (UTC+8)
     tz_tw = timezone(timedelta(hours=8))
 
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
-    tw_time = datetime(2026, 4, 16, tzinfo=tz_tw) 
+    tw_time = datetime(2026, 6, 19, tzinfo=tz_tw) 
    
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
