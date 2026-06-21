@@ -3,8 +3,8 @@ name: 錢塘潮七合一自動選股排程
 on:
   # 1. 自動排程：台股盤後籌碼約在 15:30~16:00 全數更新完畢
   # 設定在每週一至週五的台北時間 16:30 (國際標準時 UTC 08:30) 自動執行
-  schedule:
-    - cron: '30 8 * * 1-5'
+  #schedule:
+     #- cron: '30 8 * * 1-5'
   
   # 2. 手動觸發：允許您隨時在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
   workflow_dispatch:
