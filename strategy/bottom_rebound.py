@@ -35,7 +35,7 @@ def st_bottom_rebound(df_single):
 
     # 綜合判斷：三個條件必須同時成立 (左側超跌且築底跡象顯現)
     #is_hit = is_below_ma240 and is_oversold and is_flattening
-    is_hit = is_below_ma240
+    is_hit = is_below_ma240 and is_flattening
     
     # 動態判斷狀態描述
     if is_flattening:
