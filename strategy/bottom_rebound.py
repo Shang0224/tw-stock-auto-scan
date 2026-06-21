@@ -23,7 +23,20 @@ def st_bottom_rebound(df_single):
     # 1. 條件 1: 股價必須在年線下方
     is_below_ma240 = today['close'] < today['MA240']
     
-    # 2. 條件 2: 負乖離率大於等於 20% (即 dist_ratio <= -20%)
+    # 2. 條件 2:計算年線與歷史標準差
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['std240'] = df_single['close'].rolling(240).std()
+
+    # 計算動態的「恐慌下軌」（這裡設定 1.5 倍標準差，可依回測自行調整）
+    # 這相當於布林通道的下軌概念
+    df_single['Dynamic_Lower_Band'] = df_single['MA240'] - (1.5 * df_single['std240'])
+    today = df_single.iloc[-1]
+
+    # 取代原本的乖離率 -20% 固定限制
+    # 只要今日收盤價「跌破動態下軌」，就視為超跌
+    is_oversold = today['close'] <= today['Dynamic_Lower_Band']
+    
+    
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
     is_oversold = dist_ratio <= -0.20
     
@@ -34,8 +47,8 @@ def st_bottom_rebound(df_single):
     is_flattening = ma_slope_20d > -0.005  # -0.5% 以內視為趨緩或走平
 
     # 綜合判斷：三個條件必須同時成立 (左側超跌且築底跡象顯現)
-    #is_hit = is_below_ma240 and is_oversold and is_flattening
-    is_hit = is_below_ma240 and is_flattening
+    is_hit = is_below_ma240 and is_oversold and is_flattening
+    #is_hit = is_below_ma240 and is_flattening
     
     # 動態判斷狀態描述
     if is_flattening:
