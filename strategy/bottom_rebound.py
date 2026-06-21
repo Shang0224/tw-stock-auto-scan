@@ -5,63 +5,52 @@ import time
 
 def st_bottom_rebound(df_single):
     """
-    實戰強化版：年線扣抵預判 + 趨勢斜率 + 帶量轉強
-    適用於：台灣 50、中型 100 等權值股
+    ***底部轉強*** 負乖離>20%, 年線下跌趨緩接近走平
     """
-    # 基礎檢查：計算 MA240 需要 240 筆，判斷斜率與扣抵需要更多資料
-    # 建議傳入至少 260 筆資料
-    if df_single.empty or len(df_single) < 241:
+      
+   # 基礎檢查：資料量需足夠計算年線 (240日) 與年線斜率 (需額外20日觀察期，共260日最安全)
+    if df_single.empty or len(df_single) < 260:
         return False, {}
 
-    # 1. 計算技術指標
-    df_single['MA5'] = df_single['close'].rolling(5).mean()
-    df_single['MA20'] = df_single['close'].rolling(20).mean()
-    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    # 計算技術指標
     df_single['MA240'] = df_single['close'].rolling(240).mean()
     
+    # 取出今日與歷史資料
     today = df_single.iloc[-1]
-    yesterday = df_single.iloc[-2]
     
-    # 240 天前的價格 (即將被踢除的舊資料)
-    price_240_ago = df_single['close'].iloc[-240]
-
-    # --- 核心邏輯：扣抵與斜率判斷 ---
+    # --- Bottom Breakout 核心篩選邏輯 ---
     
-    # 條件 A: 扣抵翻揚 (今日收盤 > 240 天前收盤)
-    # 這是確保「年線不下墜」的數學保證
-    is_tipping_up = today['close'] > price_240_ago
+    # 1. 條件 1: 股價必須在年線下方
+    is_below_ma240 = today['close'] < today['MA240']
     
-    # 條件 B: 年線斜率不為負 (今日 MA240 >= 昨日 MA240)
-    is_ma240_not_falling = today['MA240'] >= yesterday['MA240']
-
-    # --- 輔助篩選條件 ---
-    
-    # 條件 C: 距離年線 3% 以內 (位階不可過高)
+    # 2. 條件 2: 負乖離率大於等於 20% (即 dist_ratio <= -20%)
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
-    is_near_ma240 = abs(dist_ratio) <= 0.03
+    is_oversold = dist_ratio <= -0.20
     
-    # 條件 D: 帶量轉強 (今日量 > 5日均量 1.5 倍)
-    # 對於大型股，1.5 倍以上的量更有代表性
-    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
-    is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.5 if vol_ma5 > 0 else False
+    # 3. 條件 3: 年線下跌趨緩 (計算過去 20 個交易日的年線變動百分比)
+    # 若變動率大於 -0.5%，代表下墜慣性已踩煞車，開始接近水平橫盤
+    ma240_20d_ago = df_single['MA240'].iloc[-21] # 20天前的年線位置
+    ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
+    is_flattening = ma_slope_20d > -0.005  # -0.5% 以內視為趨緩或走平
 
-    # --- 綜合判斷 (Hit Logic) ---
-    # 核心：必須符合「扣抵翻揚」且「年線不下彎」，且在「年線附近」有「攻擊量」
-    is_hit = is_tipping_up and is_ma240_not_falling and is_near_ma240 and is_volume_up
+    # 綜合判斷：三個條件必須同時成立 (左側超跌且築底跡象顯現)
+    is_hit = is_below_ma240 and is_oversold and is_flattening
     
-    # --- 輸出資訊整理 ---
-    # 計算扣抵差幅 (越高代表年線往上拉的力道越猛)
-    diff_240_ratio = (today['close'] - price_240_ago) / price_240_ago
+    # 動態判斷狀態描述
+    if is_flattening:
+        status = "年線走平築底中"
+    else:
+        status = "年線仍持續下跌"
     
-    status = "真突破/回測" if is_tipping_up else "假突破(扣抵壓力大)"
-    
+    # 組裝回傳資訊
     info = {
         "收盤": today['close'],
-        "扣抵差幅": f"{round(diff_240_ratio*100, 2)}%",
-        "年線斜率": "上揚/平穩" if is_ma240_not_falling else "下彎",
-        "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
+        "年線位置": round(today['MA240'], 2),
+        "負乖離率": f"{round(dist_ratio * 100, 2)}%",
+        "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
         "狀態": status
     }
 
-    print(f"is_hit:{is_hit}, info:{info}\n")
+    # print(f"st_bottom_breakout( df_single ) is_hit:{is_hit} info:{info}")
+    
     return is_hit, info
