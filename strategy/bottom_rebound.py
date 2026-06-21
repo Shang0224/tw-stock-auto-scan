@@ -51,6 +51,6 @@ def st_bottom_rebound(df_single):
         "狀態": status
     }
 
-    # print(f"st_bottom_breakout( df_single ) is_hit:{is_hit} info:{info}")
+    print(f"st_bottom_breakout( df_single ) is_hit:{is_hit} info:{info}")
     
     return is_hit, info
