@@ -98,7 +98,7 @@ def st_bottom_breakout(df_single):
 
 
 
-
+#以下可以刪除, 已經沒有使用
 def st_bottom_rebound(df_single):
     """
     ***底部篩選***年線以下左側錯殺V轉模式或右側突破打底模式
