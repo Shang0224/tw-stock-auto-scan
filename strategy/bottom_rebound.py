@@ -74,65 +74,77 @@ def st_bottom_v_turn(df_single):
 
 def st_bottom_consolidation(df_single):
     """
-    ***底部篩選 - 左側橫盤沉澱模式 (被動收斂)***
-    條件：股價在年線下、價格已實質止跌震盪（波動度壓縮）、但年線仍下彎（靠時間扣抵被動收斂）
-    適合捕捉：公司實施庫藏股、大戶暗中吸籌定錨、或法人砍倉完畢後的沉澱期。
+    ***底部篩選 - 左側橫盤沉澱模式 (含未來 20 日扣抵預測)***
+    特徵：股價止跌橫盤，但年線因扣抵高價區而持續下彎。
     """
     if df_single.empty or len(df_single) < 260:
         return False, {}
 
     # 計算技術指標
     df_single['MA240'] = df_single['close'].rolling(240).mean()
-    
     today = df_single.iloc[-1]
     
-    # 基底檢查：股價在年線下方
+    # 基底檢查
     is_below_ma240 = today['close'] < today['MA240']
     
-    # 計算年線 20 日斜率
+    # 當前年線 20 日斜率
     ma240_20d_ago = df_single['MA240'].iloc[-21]
     ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
     
-    # ---- 軌道 C：左側橫盤沉澱 (被動收斂) ----
-    
-    # 條件 1：年線仍在下彎階段（與右側改平的 breakout 做出區隔）
+    # 條件 1：年線仍在下彎階段
     is_downward_slope = ma_slope_20d < -0.002
     
-    # 條件 2：近 10 個交易日價格實質止跌（用標準差/平均值計算變異係數，小於 1.5% 代表橫盤箱型）
+    # 條件 2：近 10 日價格實質止跌 (變異係數 < 1.5%)
     recent_10d = df_single['close'].iloc[-10:]
     price_cv = recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 1
-    is_price_stabilized = price_cv < 0.015  # 參數可依中型股波動度微調（1.5% 內算極度壓縮）
+    is_price_stabilized = price_cv < 0.015 
     
-    # 條件 3：維持足夠的負乖離空間（確保股價夠便宜，且年線還沒完全壓到頭頂）
+    # 條件 3：維持中型股安全負乖離空間（確保股價夠便宜，且年線還沒完全壓到頭頂）
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+   
     # 適用於台灣50, 乖離率在5%~15%間
     # is_discounted = -0.15 <= dist_ratio <= -0.05
 
-    # 經歷過一段暴跌後，它現在在年線下方約 10% 到 15% 的空間開始橫盤。中型股如果只跌 5% 就橫盤，通常沉澱得不夠乾淨，上面解套賣壓還很重。
+    # 適用中型100經歷過一段暴跌後，它現在在年線下方約 10% 到 15% 的空間開始橫盤。中型股如果只跌 5% 就橫盤，通常沉澱得不夠乾淨，上面解套賣壓還很重。
     is_discounted = -0.20 <= dist_ratio <= -0.08
     
-    # 綜合判定
-    is_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted
+    # ==================== 【核心升級：未來 20 日扣抵分析】 ====================
+    # 接下來 20 天年線即將丟棄的一年前歷史價格
+    future_deduct_series = df_single['close'].iloc[-240:-220]
+    avg_deduct_price = future_deduct_series.mean()
     
-    status = "【左側沉澱】價格已實質止跌，等待年線被動收斂與均線糾結" if is_hit else "未觸發訊號"
+    # 扣抵坡度：如果 < 0，代表未來的扣抵牆正在「往下墜落」，壓力將減輕
+    deduct_slope = (future_deduct_series.iloc[-1] - future_deduct_series.iloc[0]) / future_deduct_series.iloc[0]
+    
+    # 判斷需要熬多久（時間矩陣）
+    if today['close'] < avg_deduct_price * 0.85:
+        time_to_wait = "扣抵高價壁壘仍重，預估至少仍需橫盤 20 天以上"
+    elif deduct_slope < -0.05:
+        time_to_wait = "高價扣抵即將墜落，年線即將減速，隨時注意右側突破"
+    else:
+        time_to_wait = "橫盤扣抵中，靜待均線糾結"
+    # =====================================================================
+    
+    is_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted
+    status = f"【左側沉澱】價格已止跌 | 備註: {time_to_wait}" if is_hit else "未觸發訊號"
     
     info = {
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio * 100, 2)}%",
         "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
         "近10日價格波動度": f"{round(price_cv * 100, 2)}%",
+        "未來20日扣抵均價": f"{round(avg_deduct_price, 2)}元",
+        "預估沉澱時間": time_to_wait,
         "策略狀態": status
     }
 
     print(f"st_bottom_consolidation is_hit:{is_hit} info:{info}")
     return is_hit, info
 
-
-
 def st_bottom_breakout(df_single):
     """
-    ***底部篩選 - 右側打底壓縮突破模式***
-    條件：股價在年線下、中短期均線糾結 ＋ 帶量轉強 ＋ 年線真正「減速改平或上揚」
+    ***底部篩選 - 右側打底壓縮突破模式 (含扣抵重力釋放後門)***
+    特徵：中短期均線糾結 ＋ 帶量轉強 ＋ 年線減速改平 (或扣抵牆即將崩塌)
     """
     if df_single.empty or len(df_single) < 260:
         return False, {}
@@ -145,36 +157,55 @@ def st_bottom_breakout(df_single):
     
     today = df_single.iloc[-1]
     
-    # 基底檢查：股價在年線下方
+    # 基底檢查
     is_below_ma240 = today['close'] < today['MA240']
     
-    # 計算年線 20 日斜率（百分比變動）
+    # 當前年線 20 日斜率
     ma240_20d_ago = df_single['MA240'].iloc[-21]
     ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
     
-    # ---- 軌道 B：右側打底壓縮 (突破模式) ----
+    # 均線糾結度檢查
     ma_list = [today['MA5'], today['MA20'], today['MA60']]
     dispersion = (max(ma_list) - min(ma_list)) / min(ma_list)
     is_converged = dispersion < 0.05
     
+    # 帶量轉強檢查
     vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
     is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
     
+    # ==================== 【核心升級：扣抵重力釋放檢查】 ====================
+    # 檢查未來 20 天年線丟棄的價格趨勢
+    future_deduct_series = df_single['close'].iloc[-240:-220]
+    deduct_slope = (future_deduct_series.iloc[-1] - future_deduct_series.iloc[0]) / future_deduct_series.iloc[0]
+    
+    # 標準條件：橫盤打底的突破, 年線需要極度接近水平（介於 -0.5% 到 +0.5% 之間）
     # 因為右側策略的核心是看「均線糾結度（dispersion < 5%）」和「年線改平（-0.5% 到 +0.5%）」。
-    # 此時均線都已經靠攏了，股價自然會離年線非常近，所以負乖離率不需要設得太嚴格，交給均線糾結度去控管即可。
+    # 此時均線都已經靠攏了，股價自然會離年線非常近，所以負乖離率不需要設得太嚴格，交給均線糾結度去控管即可。        
+    is_standard_flattening = -0.005 <= ma_slope_20d <= 0.005
     
-    # 橫盤打底的突破：年線需要極度接近水平（介於 -0.5% 到 +0.5% 之間）
-    is_flattening_slope = -0.005 <= ma_slope_20d <= 0.005
-  
+    # 扣抵後門：雖然目前年線下彎稍陡 (例如 -0.77%)，但未來 20 天扣抵高價牆正在崩塌 (下墜超過 3%)
+    is_deduct_override = (ma_slope_20d > -0.01) and (deduct_slope < -0.03)
+    
+    if is_standard_flattening:
+        is_flattening_slope = True
+        status_tag = "【右側突破】均線糾結＋量能表態，年線已實質改平"
+    elif is_deduct_override:
+        is_flattening_slope = True
+        status_tag = "【右側突破】均線糾結＋量能表態！年線雖微彎但未來扣抵重力牆已崩塌"
+    else:
+        is_flattening_slope = False
+        status_tag = "未觸發訊號"
+    # =====================================================================
+    
     is_hit = is_below_ma240 and is_converged and is_volume_up and is_flattening_slope
-    
-    status = "【右側突破】均線糾結＋量能表態，年線已改平" if is_hit else "未觸發訊號"
+    status = status_tag if is_hit else "未觸發訊號"
     
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
     info = {
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio * 100, 2)}%",
         "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
+        "未來20日扣抵坡度": f"{round(deduct_slope * 100, 2)}%",
         "中短期糾結度": f"{round(dispersion * 100, 2)}%",
         "今日量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
         "策略狀態": status
