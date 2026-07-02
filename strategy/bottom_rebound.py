@@ -27,8 +27,8 @@ def st_bottom_v_turn(df_single):
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
     is_oversold_zone = -0.15 <= dist_ratio <= -0.08
     
-    # 年線斜率大於 -1%（代表長線趨勢未完全走壞，屬於多頭拉回錯殺）
-    is_v_turn_slope = ma_slope_20d > -0.01 
+    # 年線斜率大於 -0.2%（代表長線趨勢未完全走壞，屬於多頭拉回錯殺）
+    is_v_turn_slope = ma_slope_20d > -0.002 
     
     is_hit = is_below_ma240 and is_oversold_zone and is_v_turn_slope
     
@@ -94,6 +94,57 @@ def st_bottom_breakout(df_single):
     }
 
     print(f"st_bottom_breakout is_hit:{is_hit} info:{info}")
+    return is_hit, info
+
+def st_bottom_consolidation(df_single):
+    """
+    ***底部篩選 - 左側橫盤沉澱模式 (被動收斂)***
+    條件：股價在年線下、價格已實質止跌震盪（波動度壓縮）、但年線仍下彎（靠時間扣抵被動收斂）
+    適合捕捉：公司實施庫藏股、大戶暗中吸籌定錨、或法人砍倉完畢後的沉澱期。
+    """
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
+
+    # 計算技術指標
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    
+    today = df_single.iloc[-1]
+    
+    # 基底檢查：股價在年線下方
+    is_below_ma240 = today['close'] < today['MA240']
+    
+    # 計算年線 20 日斜率
+    ma240_20d_ago = df_single['MA240'].iloc[-21]
+    ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
+    
+    # ---- 軌道 C：左側橫盤沉澱 (被動收斂) ----
+    
+    # 條件 1：年線仍在下彎階段（與右側改平的 breakout 做出區隔）
+    is_downward_slope = ma_slope_20d < -0.002
+    
+    # 條件 2：近 10 個交易日價格實質止跌（用標準差/平均值計算變異係數，小於 1.5% 代表橫盤箱型）
+    recent_10d = df_single['close'].iloc[-10:]
+    price_cv = recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 1
+    is_price_stabilized = price_cv < 0.015  # 參數可依中型股波動度微調（1.5% 內算極度壓縮）
+    
+    # 條件 3：維持足夠的負乖離空間（確保股價夠便宜，且年線還沒完全壓到頭頂）
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    is_discounted = -0.15 <= dist_ratio <= -0.05
+    
+    # 綜合判定
+    is_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted
+    
+    status = "【左側沉澱】價格已實質止跌，等待年線被動收斂與均線糾結" if is_hit else "未觸發訊號"
+    
+    info = {
+        "收盤": today['close'],
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
+        "近10日價格波動度": f"{round(price_cv * 100, 2)}%",
+        "策略狀態": status
+    }
+
+    print(f"st_bottom_consolidation is_hit:{is_hit} info:{info}")
     return is_hit, info
 
 
