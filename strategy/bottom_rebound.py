@@ -46,10 +46,10 @@ def st_bottom_v_turn(df_single):
     # ==================== 【天量催化劑動態門檻】 ====================
     if is_huge_volume:
         slope_threshold = -0.01  # 爆量時，放寬年線限制到 -1.0% (群光的 -0.77% 可安全過關)
-        status_tag = "【左側天量V轉】大多頭催化劑發動！主力/庫藏股爆量硬拉，破例放寬年線限制"
+        status_tag = "[左側天量V轉]大多頭催化劑發動! 主力/庫藏股爆量硬拉, 破例放寬年線限制"
     else:
         slope_threshold = -0.002  # 平常無量時，嚴格鎖死在 -0.2% 進行安全防禦
-        status_tag = "【左側超跌】多頭拉回錯殺，年線維持標準多頭慣性"
+        status_tag = "[左側超跌]多頭拉回錯殺, 年線維持標準多頭慣性"
         
     is_v_turn_slope = ma_slope_20d > slope_threshold
     # ===============================================================
@@ -118,15 +118,15 @@ def st_bottom_consolidation(df_single):
     
     # 判斷需要熬多久（時間矩陣）
     if today['close'] < avg_deduct_price * 0.85:
-        time_to_wait = "扣抵高價壁壘仍重，預估至少仍需橫盤 20 天以上"
+        time_to_wait = "扣抵高價壁壘仍重, 預估至少仍需橫盤20天以上"
     elif deduct_slope < -0.05:
-        time_to_wait = "高價扣抵即將墜落，年線即將減速，隨時注意右側突破"
+        time_to_wait = "高價扣抵即將墜落, 年線即將減速, 隨時注意右側突破"
     else:
-        time_to_wait = "橫盤扣抵中，靜待均線糾結"
+        time_to_wait = "橫盤扣抵中, 靜待均線糾結"
     # =====================================================================
     
     is_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted
-    status = f"【左側沉澱】價格已止跌 | 備註: {time_to_wait}" if is_hit else "未觸發訊號"
+    status = f"[左側沉澱] 價格已止跌 | {time_to_wait}" if is_hit else "未觸發訊號"
     
     info = {
         "收盤": today['close'],
@@ -188,10 +188,10 @@ def st_bottom_breakout(df_single):
     
     if is_standard_flattening:
         is_flattening_slope = True
-        status_tag = "【右側突破】均線糾結＋量能表態，年線已實質改平"
+        status_tag = "[右側突破] 均線糾結+量能表態, 年線已實質改平"
     elif is_deduct_override:
         is_flattening_slope = True
-        status_tag = "【右側突破】均線糾結＋量能表態！年線雖微彎但未來扣抵重力牆已崩塌"
+        status_tag = "[右側突破] 均線糾結+量能表態! 年線雖微彎但未來扣抵重力牆已崩塌"
     else:
         is_flattening_slope = False
         status_tag = "未觸發訊號"
