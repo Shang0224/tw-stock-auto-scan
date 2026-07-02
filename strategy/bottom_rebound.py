@@ -33,7 +33,8 @@ def st_bottom_rebound(df_single):
     is_oversold_zone = -0.15 <= dist_ratio <= -0.08
     
     # 多頭拉回的 V 轉：年線斜率只要大於 -0.2% 即可（通常是正數，代表長線趨勢仍向上）
-    is_v_turn_slope = ma_slope_20d > -0.002 
+    #is_v_turn_slope = ma_slope_20d > -0.002 
+    is_v_turn_slope = ma_slope_20d > -0.01 
     is_track_a_hit = is_oversold_zone and is_v_turn_slope
     
     # ---- 軌道 B：右側打底壓縮 (突破模式) ----
@@ -46,8 +47,7 @@ def st_bottom_rebound(df_single):
     is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
     
     # 橫盤打底的突破：年線需要極度接近水平（介於 -0.5% 到 +0.5% 之間）
-    # is_flattening_slope = -0.005 <= ma_slope_20d <= 0.005
-    is_flattening_slope = -1.000 <= ma_slope_20d <= 0.005
+    is_flattening_slope = -0.005 <= ma_slope_20d <= 0.005
     is_track_b_hit = is_converged and is_volume_up and is_flattening_slope
 
     # ==================== 【綜合策略決策】 ====================
