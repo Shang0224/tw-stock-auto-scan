@@ -174,6 +174,7 @@ def yfinance_scan_ma240():
 
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
     if event_name == 'schedule':
+    else:
         # 使用 Tailscale 分配給 NAS 的私有 IP
         upload_to_nas(
             host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
@@ -349,7 +350,6 @@ def finmind_scan_ma240():
 
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
     if event_name == 'schedule':
-    else
         # 使用 Tailscale 分配給 NAS 的私有 IP
         upload_to_nas(
             host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
