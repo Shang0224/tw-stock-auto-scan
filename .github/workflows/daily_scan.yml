@@ -53,4 +53,8 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add .
           git commit -m "Daily 240MA scan results update" || echo "No changes to commit"
+
+          # 在 push 之前，先拉取遠端變更並用 rebase 線性整合
+          git pull --rebase origin main
+          
           git push
