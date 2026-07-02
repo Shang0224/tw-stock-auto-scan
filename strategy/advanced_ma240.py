@@ -10,7 +10,7 @@ def st_advanced_ma240_df_up(df_single):
     """
     # 基礎檢查：計算 MA240 需要 240 筆，判斷斜率與扣抵需要更多資料
     # 建議傳入至少 260 筆資料
-    if df_single.empty or len(df_single) < 241:
+    if df_single.empty or len(df_single) < 261:
         return False, {}
 
     # 1. 計算技術指標
