@@ -138,7 +138,7 @@ def yfinance_scan_ma240():
         # 2. 【核心步驟】選取你想傳送到 LINE 的欄位
         # 假設你只想傳：代號、名稱、收盤價、觸發策略
         #short_report = report[['代號', '名稱', '收盤', '年線位置', '觸發策略']]
-        short_report = report[['代號', '名稱', '收盤', '觸發策略']]
+        short_report = report[['代號', '名稱', '收盤', '策略狀態']]
 
         # 3. 建立訊息標頭
         message_text = f"📅 yfinance 掃描完成: {now_str}\n"
@@ -315,7 +315,7 @@ def finmind_scan_ma240():
         # 2. 【核心步驟】選取你想傳送到 LINE 的欄位
         # 假設你只想傳：代號、名稱、收盤價、觸發策略
         #short_report = report[['代號', '名稱', '收盤', '觸發策略']]
-        short_report = report[['代號', '名稱', '收盤', '策略狀態']]
+        short_report = report[['代號', '名稱', '收盤', '觸發策略']]
 
         # 3. 建立訊息標頭
         message_text = f"📅 finmind 掃描完成: {now_str}\n"
