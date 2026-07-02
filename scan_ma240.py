@@ -174,7 +174,7 @@ def yfinance_scan_ma240():
 
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
     if event_name == 'schedule':
-        
+        print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
     else:
         # 使用 Tailscale 分配給 NAS 的私有 IP
         upload_to_nas(
