@@ -25,7 +25,13 @@ def st_bottom_v_turn(df_single):
     
     # ---- 軌道 A：左側急跌錯殺 (V轉模式) ----
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
-    is_oversold_zone = -0.15 <= dist_ratio <= -0.08
+
+    # 適用於台灣50, 乖離率在8%~15%間
+    #is_oversold_zone = -0.15 <= dist_ratio <= -0.08
+    
+    #中型100必須等到跌破年線 12% 以上，中型股的融資停損潮才剛開始浮現；
+    #跌到 20% 附近通常是斷頭潮高潮。這時配上年線斜率沒壞（> -0.2%），才是真正的「主力洗盤錯殺」。
+    is_oversold_zone = -0.25 <= dist_ratio <= -0.08
     
     # 年線斜率大於 -0.2%（代表長線趨勢未完全走壞，屬於多頭拉回錯殺）
     is_v_turn_slope = ma_slope_20d > -0.002 
@@ -44,57 +50,6 @@ def st_bottom_v_turn(df_single):
     print(f"st_bottom_v_turn is_hit:{is_hit} info:{info}")
     return is_hit, info
 
-
-def st_bottom_breakout(df_single):
-    """
-    ***底部篩選 - 右側打底壓縮突破模式***
-    條件：股價在年線下、中短期均線糾結 ＋ 帶量轉強 ＋ 年線真正「減速改平或上揚」
-    """
-    if df_single.empty or len(df_single) < 260:
-        return False, {}
-
-    # 計算技術指標
-    df_single['MA5'] = df_single['close'].rolling(5).mean()
-    df_single['MA20'] = df_single['close'].rolling(20).mean()
-    df_single['MA60'] = df_single['close'].rolling(60).mean()
-    df_single['MA240'] = df_single['close'].rolling(240).mean()
-    
-    today = df_single.iloc[-1]
-    
-    # 基底檢查：股價在年線下方
-    is_below_ma240 = today['close'] < today['MA240']
-    
-    # 計算年線 20 日斜率（百分比變動）
-    ma240_20d_ago = df_single['MA240'].iloc[-21]
-    ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
-    
-    # ---- 軌道 B：右側打底壓縮 (突破模式) ----
-    ma_list = [today['MA5'], today['MA20'], today['MA60']]
-    dispersion = (max(ma_list) - min(ma_list)) / min(ma_list)
-    is_converged = dispersion < 0.05
-    
-    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
-    is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
-    
-    # 橫盤打底的突破：年線需要極度接近水平（介於 -0.5% 到 +0.5% 之間）
-    is_flattening_slope = -0.005 <= ma_slope_20d <= 0.005
-    
-    is_hit = is_below_ma240 and is_converged and is_volume_up and is_flattening_slope
-    
-    status = "【右側突破】均線糾結＋量能表態，年線已改平" if is_hit else "未觸發訊號"
-    
-    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
-    info = {
-        "收盤": today['close'],
-        "距離年線": f"{round(dist_ratio * 100, 2)}%",
-        "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
-        "中短期糾結度": f"{round(dispersion * 100, 2)}%",
-        "今日量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
-        "策略狀態": status
-    }
-
-    print(f"st_bottom_breakout is_hit:{is_hit} info:{info}")
-    return is_hit, info
 
 def st_bottom_consolidation(df_single):
     """
@@ -129,7 +84,11 @@ def st_bottom_consolidation(df_single):
     
     # 條件 3：維持足夠的負乖離空間（確保股價夠便宜，且年線還沒完全壓到頭頂）
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
-    is_discounted = -0.15 <= dist_ratio <= -0.05
+    # 適用於台灣50, 乖離率在5%~15%間
+    # is_discounted = -0.15 <= dist_ratio <= -0.05
+
+    # 經歷過一段暴跌後，它現在在年線下方約 10% 到 15% 的空間開始橫盤。中型股如果只跌 5% 就橫盤，通常沉澱得不夠乾淨，上面解套賣壓還很重。
+    is_discounted = -0.20 <= dist_ratio <= -0.08
     
     # 綜合判定
     is_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted
@@ -145,6 +104,62 @@ def st_bottom_consolidation(df_single):
     }
 
     print(f"st_bottom_consolidation is_hit:{is_hit} info:{info}")
+    return is_hit, info
+
+
+
+def st_bottom_breakout(df_single):
+    """
+    ***底部篩選 - 右側打底壓縮突破模式***
+    條件：股價在年線下、中短期均線糾結 ＋ 帶量轉強 ＋ 年線真正「減速改平或上揚」
+    """
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
+
+    # 計算技術指標
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    
+    today = df_single.iloc[-1]
+    
+    # 基底檢查：股價在年線下方
+    is_below_ma240 = today['close'] < today['MA240']
+    
+    # 計算年線 20 日斜率（百分比變動）
+    ma240_20d_ago = df_single['MA240'].iloc[-21]
+    ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
+    
+    # ---- 軌道 B：右側打底壓縮 (突破模式) ----
+    ma_list = [today['MA5'], today['MA20'], today['MA60']]
+    dispersion = (max(ma_list) - min(ma_list)) / min(ma_list)
+    is_converged = dispersion < 0.05
+    
+    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
+    is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
+    
+    # 因為右側策略的核心是看「均線糾結度（dispersion < 5%）」和「年線改平（-0.5% 到 +0.5%）」。
+    # 此時均線都已經靠攏了，股價自然會離年線非常近，所以負乖離率不需要設得太嚴格，交給均線糾結度去控管即可。
+    
+    # 橫盤打底的突破：年線需要極度接近水平（介於 -0.5% 到 +0.5% 之間）
+    is_flattening_slope = -0.005 <= ma_slope_20d <= 0.005
+  
+    is_hit = is_below_ma240 and is_converged and is_volume_up and is_flattening_slope
+    
+    status = "【右側突破】均線糾結＋量能表態，年線已改平" if is_hit else "未觸發訊號"
+    
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    info = {
+        "收盤": today['close'],
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
+        "中短期糾結度": f"{round(dispersion * 100, 2)}%",
+        "今日量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
+        "策略狀態": status
+    }
+
+    print(f"st_bottom_breakout is_hit:{is_hit} info:{info}")
     return is_hit, info
 
 
