@@ -312,8 +312,8 @@ def finmind_scan_ma240():
 
         # 2. 【核心步驟】選取你想傳送到 LINE 的欄位
         # 假設你只想傳：代號、名稱、收盤價、觸發策略
-        #short_report = report[['代號', '名稱', '收盤', '年線位置', '觸發策略']]
-        short_report = report[['代號', '名稱', '收盤', '觸發策略']]
+        #short_report = report[['代號', '名稱', '收盤', '觸發策略']]
+        short_report = report[['代號', '名稱', '收盤', '策略狀態']]
 
         # 3. 建立訊息標頭
         message_text = f"📅 finmind 掃描完成: {now_str}\n"
@@ -349,6 +349,7 @@ def finmind_scan_ma240():
 
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
     if event_name == 'schedule':
+    else
         # 使用 Tailscale 分配給 NAS 的私有 IP
         upload_to_nas(
             host=os.getenv("NAS_VPN_IP"),  # 填入你 NAS 的 Tailscale IP
