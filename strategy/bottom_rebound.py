@@ -5,16 +5,22 @@ import time
 
 def st_bottom_v_turn(df_single):
     """
-    ***底部篩選 - 左側超跌 V 轉模式***
-    條件：股價在年線下、負乖離滿足 且 年線不能陡峭下跌（仍維持多頭慣性或僅微幅下跌）
+    ***底部篩選 - 左側超跌 V 轉模式 (含天量催化劑後門)***
+    
+    邏輯設計：
+    1. 平常時期 (無量)：嚴格執行 -0.2% 斜率限制，確保長線多頭慣性完好。
+    2. 天量時期 (爆量)：今日量比 >= 2.5x，代表多頭市場主力/庫藏股強力介入，
+       破例啟動後門，放寬年線斜率限制至 -1.0%，用以捕捉群光 (-0.77%) 這類的暴力 V 轉股。
     """
     if df_single.empty or len(df_single) < 260:
         return False, {}
 
     # 計算技術指標
     df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
     
     today = df_single.iloc[-1]
+    vol_ma5 = today['Vol_MA5']
     
     # 基底檢查：股價在年線下方
     is_below_ma240 = today['close'] < today['MA240']
@@ -23,36 +29,37 @@ def st_bottom_v_turn(df_single):
     ma240_20d_ago = df_single['MA240'].iloc[-21]
     ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
     
-    # ---- 軌道 A：左側急跌錯殺 (V轉模式) ----
+    # 計算負乖離率
     dist_ratio = (today['close'] - today['MA240']) / today['MA240']
-
-    # 適用於台灣50, 乖離率在8%~15%間
-    #is_oversold_zone = -0.15 <= dist_ratio <= -0.08
+    # 微調空間參數：放寬到 -5% ~ -20%，以便納入有在庫藏股定錨、未極度超跌的標的
+    is_oversold_zone = -0.20 <= dist_ratio <= -0.05
     
-    #中型100必須等到跌破年線 12% 以上，中型股的融資停損潮才剛開始浮現；
-    #跌到 20% 附近通常是斷頭潮高潮。這時配上年線斜率沒壞（> -0.2%），才是真正的「主力洗盤錯殺」。
-    is_oversold_zone = -0.25 <= dist_ratio <= -0.08
+    # 計算今日量比
+    vol_ratio = today['Trading_Volume'] / vol_ma5 if vol_ma5 > 0 else 0
+    is_huge_volume = vol_ratio >= 2.5
     
-    # 年線斜率大於 -0.2%（代表長線趨勢未完全走壞，屬於多頭拉回錯殺）
-    is_v_turn_slope = ma_slope_20d > -0.002 
-
-    # 新增：大多頭市場的「庫藏股/主力強拉」後門
-    # 如果今天突然爆出驚人天量（例如大於 5 日均量的 2.5 倍），代表有大資金強力介入
-    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
-    is_huge_volume = today['Trading_Volume'] > vol_ma5 * 2.5 if vol_ma5 > 0 else False
-
-    # 在大多頭市場中，如果爆出天量表態，我們可以放寬年線斜率限制到 -1% (容忍群光的 -0.77%)
-    if is_huge_volume and ma_slope_20d > -0.01:
-        is_v_turn_slope = True    
+    # ==================== 【天量催化劑動態門檻】 ====================
+    if is_huge_volume:
+        slope_threshold = -0.01  # 爆量時，放寬年線限制到 -1.0% (群光的 -0.77% 可安全過關)
+        status_tag = "【左側天量V轉】大多頭催化劑發動！主力/庫藏股爆量硬拉，破例放寬年線限制"
+    else:
+        slope_threshold = -0.002  # 平常無量時，嚴格鎖死在 -0.2% 進行安全防禦
+        status_tag = "【左側超跌】多頭拉回錯殺，年線維持標準多頭慣性"
+        
+    is_v_turn_slope = ma_slope_20d > slope_threshold
+    # ===============================================================
     
+    # 綜合判定
     is_hit = is_below_ma240 and is_oversold_zone and is_v_turn_slope
     
-    status = "【左側超跌】多頭拉回錯殺，年線仍維持多頭慣性" if is_hit else "未觸發訊號"
+    status = status_tag if is_hit else "未觸發訊號"
     
     info = {
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio * 100, 2)}%",
         "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
+        "今日量比": f"{round(vol_ratio, 2)}x",
+        "動態斜率門檻": f"{round(slope_threshold * 100, 2)}%",
         "策略狀態": status
     }
 
