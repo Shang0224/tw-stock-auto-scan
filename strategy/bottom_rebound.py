@@ -46,7 +46,7 @@ def st_bottom_rebound(df_single):
     is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
     
     # 橫盤打底的突破：年線需要極度接近水平（介於 -0.5% 到 +0.5% 之間）
-    is_flattening_slope = -0.005 <= ma_slope_20d <= 0.005
+    is_flattening_slope = -0.01 <= ma_slope_20d <= 0.005
     is_track_b_hit = is_converged and is_volume_up and is_flattening_slope
 
     # ==================== 【綜合策略決策】 ====================
