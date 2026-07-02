@@ -35,6 +35,15 @@ def st_bottom_v_turn(df_single):
     
     # 年線斜率大於 -0.2%（代表長線趨勢未完全走壞，屬於多頭拉回錯殺）
     is_v_turn_slope = ma_slope_20d > -0.002 
+
+    # 新增：大多頭市場的「庫藏股/主力強拉」後門
+    # 如果今天突然爆出驚人天量（例如大於 5 日均量的 2.5 倍），代表有大資金強力介入
+    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
+    is_huge_volume = today['Trading_Volume'] > vol_ma5 * 2.5 if vol_ma5 > 0 else False
+
+    # 在大多頭市場中，如果爆出天量表態，我們可以放寬年線斜率限制到 -1% (容忍群光的 -0.77%)
+    if is_huge_volume and ma_slope_20d > -0.01:
+        is_v_turn_slope = True    
     
     is_hit = is_below_ma240 and is_oversold_zone and is_v_turn_slope
     
