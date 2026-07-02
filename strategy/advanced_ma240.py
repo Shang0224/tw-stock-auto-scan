@@ -60,7 +60,7 @@ def st_advanced_ma240_df_up(df_single):
         "扣抵差幅": f"{round(diff_240_ratio*100, 2)}%",
         "年線斜率": "上揚/平穩" if is_ma240_not_falling else "下彎",
         "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
-        "狀態": status
+        "策略狀態": status
     }
 
     print(f"is_hit:{is_hit}, info:{info}\n")
@@ -107,7 +107,7 @@ def st_advanced_ma240_df(df_single):
     info = {
         "收盤": today['close'],
         "距離年線": f"{round(dist_ratio*100, 2)}%",
-        "狀態": status,
+        "策略狀態": status,
         "糾結度": f"{round(dispersion*100, 2)}%",
         "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x"
     }
@@ -169,7 +169,7 @@ def st_advanced_ma240(sid, dl, name_map):
         "距離年線": f"{round(dist_ratio*100, 2)}%",
         "糾結度": f"{round(dispersion*100, 2)}%",
         "量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
-        "狀態": status
+        "策略狀態": status
     }
 
     print(f"st_advanced_ma240 is_hit:{is_hit}   info:{info}")
