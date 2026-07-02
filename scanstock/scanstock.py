@@ -39,8 +39,8 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
         
         if any_hit:
             # 將串列轉為字串方便 CSV 儲存
-            hit_row["觸發策略"] = "; ".join(hit_row["觸發策略"])
-            hit_row["策略狀態"] = "; ".join(hit_row["策略狀態"])
+            hit_row["觸發策略"] = ", ".join(hit_row["觸發策略"])
+            hit_row["策略狀態"] = ", ".join(hit_row["策略狀態"])
             final_hits.append(hit_row)
             
     return final_hits
