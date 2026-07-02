@@ -10,7 +10,7 @@ from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_s
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df, scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
-from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_breakout
+from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation
 #from strategy.bottom_rebound import st_bottom_rebound
 
 # 宣告控制測試資料的開關 (True: 執行測試資料 / False: 執行正式資料)
@@ -24,7 +24,7 @@ def yfinance_scan_ma240():
         files_env = os.getenv('STOCK_FILES', 'data/TW50.csv')
         
     #my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_advanced_ma240_df_up]
-    my_strategies = [st_bottom_v_turn, st_bottom_breakout]
+    my_strategies = [st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation]
    
     # 1. 建立台灣時區 (UTC+8)
     tz_tw = timezone(timedelta(hours=8))
@@ -42,7 +42,7 @@ def yfinance_scan_ma240():
         # 2. 讀取.csv檔
         # 從系統環境變數讀取，若讀不到則給予預設值
         files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
-        my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_bottom_v_turn, st_bottom_breakout]
+        my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation]
         print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
     else:
         print(type(files_env), files_env)
