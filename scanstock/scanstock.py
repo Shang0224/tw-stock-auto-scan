@@ -11,9 +11,6 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
     grouped = all_df.groupby('stock_id')
 
     for sid in stock_ids:
-
-        if sid == "2377":
-            print("微星-----------------------------------")
         
         if sid not in grouped.groups: continue
         df_single = grouped.get_group(sid).sort_values('date')
@@ -30,6 +27,11 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
             
             is_hit, detail_info = algo_func(df_single=df_single)
             if is_hit:
+                
+                if sid == "2377":
+                    print("*******************************************--------------")
+                    print("微星-----------------------------------")
+                    
                 any_hit = True
                 # 紀錄策略名稱
                 hit_row["觸發策略"].append(algo_func.__doc__.strip().split('\n')[0])
