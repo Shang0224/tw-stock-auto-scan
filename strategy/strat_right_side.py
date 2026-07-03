@@ -1,5 +1,99 @@
 import pandas as pd
 
+def st_bottom_u_turn(df_single):
+    """
+    ***策略 A-2：題材破滅 U 型碗底翻揚系統 (純結構動能＋中長線雙扣抵預報版)***
+    """
+    # 確保資料量足夠計算 240MA (加上緩衝至少需 260 筆)
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
+
+    # 1. 計算核心技術指標
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA10'] = df_single['close'].rolling(10).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
+    
+    today = df_single.iloc[-1]
+    yesterday = df_single.iloc[-2]
+    
+    # 2. 基底檢查：季線仍在年線下方
+    is_below_ma240 = today['MA60'] < today['MA240']
+    
+    # 3. 年線減速檢查：限制 5 日變動率放寬至 1.0%
+    ma240_5d_ago = df_single['MA240'].iloc[-6]
+    ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago if ma240_5d_ago > 0 else 0
+    is_ma240_stable = ma240_slope_5d >= -0.01 
+    
+    # 4. 中線定海神針：季線（60MA）扭轉向上
+    is_ma60_turning_up = today['MA60'] > yesterday['MA60']
+    
+    # 🌟 5-A. 季線未來 5 日扣抵值走勢預報 (看短期發動續航力)
+    ma60_deduct_today = df_single['close'].iloc[-60]
+    ma60_deduct_5d_later = df_single['close'].iloc[-55]
+    if ma60_deduct_5d_later < ma60_deduct_today:
+        ma60_forecast = "輕鬆助漲 (扣抵走低)"
+    else:
+        ma60_forecast = "壓力引力 (扣抵走高)"
+
+    # 🌟 5-B. 新增：年線未來 20 日 (一個月) 扣抵值走勢預報 (看大結構轉骨潛力)
+    ma240_deduct_today = df_single['close'].iloc[-240]
+    ma240_deduct_20d_later = df_single['close'].iloc[-220] # 20天後扣抵的位置
+    if ma240_deduct_20d_later < ma240_deduct_today:
+        ma240_forecast = "🔥 大吉！一年前股價正崩盤溜滑梯，有利突破年線後「長線轉骨」成主升段"
+    else:
+        ma240_forecast = "⏳ 橫盤！一年前股價在高檔死盤，年線下彎引力仍重，過年線後震盪難免"
+
+    # 6. 趨勢成形：短中期均線在年線下方展現標準多頭排列
+    is_short_trend_bullish = today['MA5'] > today['MA10'] > today['MA20'] > today['MA60']
+    
+    # 7. 【安全保險絲】當日必須收紅K
+    is_triggered = today['close'] > today['open']
+    
+    # 計算量能比例（純資訊描述）
+    vol_ratio = today['Trading_Volume'] / today['Vol_MA5'] if today['Vol_MA5'] > 0 else 0
+    is_vol_type_A = vol_ratio >= 1.5
+    is_vol_type_B = (today['Trading_Volume'] > yesterday['Trading_Volume']) and (today['Trading_Volume'] > today['Vol_MA5'])
+    
+    vol_style = "無量空漲 / 籌碼真空"
+    if is_vol_type_A and is_vol_type_B:
+        vol_style = "雙重觸發【暴發攻擊量】與【溫和遞增量】"
+    elif is_vol_type_A:
+        vol_style = "型態 A：底部暴發攻擊量(>=1.5x)"
+    elif is_vol_type_B:
+        vol_style = "型態 B：溫和放量遞增"
+    
+    # 8. 綜合獨立判定
+    is_hit = is_below_ma240 and is_ma240_stable and is_ma60_turning_up and is_short_trend_bullish and is_triggered
+    status = f"[A-2 碗底翻揚] 季線轉正＋均線小多頭！紅K點火確認 ({vol_style})" if is_hit else "未觸發訊號"
+    
+    # 9. 計算與年線的距離並產生操作策略建議
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    if dist_ratio < -0.05:
+        action_strategy = "地下室反彈，年線附近停利"
+    elif dist_ratio <= 0:
+        action_strategy = "決戰天花板，注意年線反壓"
+    else:
+        action_strategy = "破繭而出，站穩年線看長線"
+        
+    info = {
+        "收盤": today['close'],
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "年線5日變動": f"{round(ma240_slope_5d * 100, 2)}%",
+        "季線趨勢": f"翻揚向上 ({ma60_forecast})",
+        "長線年線扣抵預報": ma240_forecast,  # 新增年線大預報
+        "今日量比": f"{round(vol_ratio, 2)}x",
+        "策略操作": action_strategy,
+        "策略狀態": status
+    }
+    
+    if is_hit:
+        print(f"st_bottom_u_turn is_hit:{is_hit} info:{info}")
+        
+    return is_hit, info
+
 def st_bottom_u_turn_v2026070301(df_single):
     """
     ***策略 A-2：題材破滅 U 型碗底翻揚系統 (雙扣抵結構硬過濾版)***
