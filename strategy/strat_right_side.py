@@ -84,7 +84,8 @@ def st_bottom_u_turn(df_single):
         "策略狀態": status
     }
     
-    if is_hit:
-        print(f"st_bottom_u_turn is_hit:{is_hit} info:{info}")
+    #if is_hit:
+    #   print(f"st_bottom_u_turn is_hit:{is_hit} info:{info}")
+    print(f"st_bottom_u_turn is_hit:{is_hit} info:{info}")
         
     return is_hit, info
