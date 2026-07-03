@@ -1,6 +1,71 @@
-import pandas as pd
+def st_bottom_u_turn_v20260703_perfect(df_single):
+    """
+    ***策略 A-2：題材破滅 U 型碗底翻揚系統 (20260703 究極嚴選版)***
+    優化重點：
+    1. 雙扣抵容許區間 ➡️ 留下華碩，洗掉結構不穩股。
+    2. 均線發散度限制 ➡️ 洗掉短線暴衝、均線拉太開的精銳與祥碩。
+    """
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
 
-def st_bottom_u_turn(df_single):
+    # 1. 技術指標計算
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA10'] = df_single['close'].rolling(10).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
+    
+    today = df_single.iloc[-1]
+    yesterday = df_single.iloc[-2]
+    
+    # 2. 基本位階與趨勢檢查
+    is_below_ma240 = today['MA60'] < today['MA240']
+    
+    ma240_5d_ago = df_single['MA240'].iloc[-6]
+    ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago if ma240_5d_ago > 0 else 0
+    is_ma240_stable = ma240_slope_5d >= -0.01 
+    
+    is_ma60_turning_up = today['MA60'] > yesterday['MA60']
+    is_short_trend_bullish = today['MA5'] > today['MA10'] > today['MA20'] > today['MA60']
+    
+    # 🌟 優化一：扣抵值智能容許過濾 (避免誤殺華碩)
+    ma60_deduct_today = df_single['close'].iloc[-60]
+    ma60_deduct_5d_later = df_single['close'].iloc[-55]
+    ma60_deduct_change = (ma60_deduct_5d_later - ma60_deduct_today) / ma60_deduct_today if ma60_deduct_today > 0 else 0
+    is_ma60_deduct_ok = ma60_deduct_change <= 0.015
+
+    ma240_deduct_today = df_single['close'].iloc[-240]
+    ma240_deduct_20d_later = df_single['close'].iloc[-220]
+    ma240_deduct_change = (ma240_deduct_20d_later - ma240_deduct_today) / ma240_deduct_today if ma240_deduct_today > 0 else 0
+    is_ma240_deduct_ok = ma240_deduct_change <= 0.02
+
+    # 🌟 優化二：均線發散度過濾 (精銳、祥碩殺手)
+    ma_list = [today['MA5'], today['MA10'], today['MA20']]
+    ma_dispersion = (max(ma_list) - min(ma_list)) / today['MA20'] if today['MA20'] > 0 else 0
+    is_ma_not_overheated = ma_dispersion <= 0.06  # 限制短中期均線乖離在 6% 以內
+
+    # 3. 量能與觸發判定
+    is_triggered = today['close'] > today['open']
+    
+    # 4. 綜合判定
+    is_hit = (is_below_ma240 and is_ma240_stable and is_ma60_turning_up and 
+              is_short_trend_bullish and is_triggered and 
+              is_ma60_deduct_ok and is_ma240_deduct_ok and is_ma_not_overheated)
+              
+    status = "[A-2 鑽石碗底] 均線溫和凝聚＋雙扣抵大吉！" if is_hit else "未觸發訊號"
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    
+    info = {
+        "收盤": today['close'],
+        "均線發散度": f"{round(ma_dispersion * 100, 2)}%",
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "策略狀態": status
+    }
+        
+    return is_hit, info
+
+def st_bottom_u_turn_2026070302(df_single):
     """
     ***策略 A-2：題材破滅 U 型碗底翻揚系統 (純結構動能＋中長線雙扣抵預報版)***
     """
