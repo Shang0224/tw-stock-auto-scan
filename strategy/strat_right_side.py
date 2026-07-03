@@ -42,6 +42,8 @@ def st_bottom_u_turn(df_single):
     ma240_deduct_change = (ma240_deduct_20d_later - ma240_deduct_today) / ma240_deduct_today if ma240_deduct_today > 0 else 0
     is_ma240_deduct_ok = ma240_deduct_change <= 0.02
 
+    print(f"ma240_deduct_today: {ma240_deduct_today} | ma240_deduct_20d_later: {ma240_deduct_20d_later} | ma240_deduct_change: {ma240_deduct_change}")
+    
     # 🌟 優化二：均線發散度過濾 (精銳、祥碩殺手)
     ma_list = [today['MA5'], today['MA10'], today['MA20']]
     ma_dispersion = (max(ma_list) - min(ma_list)) / today['MA20'] if today['MA20'] > 0 else 0
