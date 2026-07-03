@@ -12,8 +12,8 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
 
     for sid in stock_ids:
 
-        if sid == "2385":
-            print("群光-----------------------------------")
+        if sid == "2377":
+            print("微星-----------------------------------")
         
         if sid not in grouped.groups: continue
         df_single = grouped.get_group(sid).sort_values('date')
