@@ -31,7 +31,9 @@ def st_bottom_u_turn(df_single):
     # 3. 年線減速檢查：限制 5 日變動率，確保年線已高度走緩，拒絕急墜股
     ma240_5d_ago = df_single['MA240'].iloc[-6]
     ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago if ma240_5d_ago > 0 else 0
-    is_ma240_stable = ma240_slope_5d >= -0.005  # 5天內下彎不超過 0.5%
+    #is_ma240_stable = ma240_slope_5d >= -0.005  # 5天內下彎不超過 0.5%
+
+    is_ma240_stable = ma240_slope_5d >= -0.01  # 5天內下彎不超過 0.5%
     
     # 4. 【核心靈魂】中線定海神針：季線（60MA）必須止跌翻揚轉向向上
     is_ma60_turning_up = today['MA60'] > yesterday['MA60']
