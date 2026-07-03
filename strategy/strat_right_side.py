@@ -40,6 +40,8 @@ def st_bottom_u_turn(df_single):
     
     # 5. 趨勢成形：短中期均線在年線下方展現標準多頭排列
     is_short_trend_bullish = today['MA5'] > today['MA10'] > today['MA20'] > today['MA60']
+    print(f"today['MA5']: {today['MA5']} | today['MA10']: {today['MA10']} | today['MA20']: {today['MA20']} | today['MA60']: {today['MA60']} ")
+
     
     # 6. 右側發動表態：量能雙軌判定
     vol_ratio = today['Trading_Volume'] / today['Vol_MA5'] if today['Vol_MA5'] > 0 else 0
