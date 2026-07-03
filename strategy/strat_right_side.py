@@ -59,6 +59,8 @@ def st_bottom_u_turn(df_single):
         vol_style = "型態 A：底部暴發攻擊量(>=1.5x)"
     elif is_vol_type_B:
         vol_style = "型態 B：溫和放量遞增"
+
+    print(f"Below240: {is_below_ma240} | Stable240: {is_ma240_stable} | MA60Up: {is_ma60_turning_up} | ShortBull: {is_short_trend_bullish} | Triggered: {is_triggered}")
     
     # 7. 綜合獨立判定
     is_hit = is_below_ma240 and is_ma240_stable and is_ma60_turning_up and is_short_trend_bullish and is_triggered
