@@ -31,7 +31,7 @@ def yfinance_scan_ma240():
 
     # 2. 設定初始時間（預設為你的測試日期）
     # 當你在本機執行時，會直接採用這個時間
-    tw_time = datetime(2026, 4, 24, tzinfo=tz_tw) 
+    tw_time = datetime(2026, 5, 11, tzinfo=tz_tw) 
    
     # 3. 環境判定：取得觸發事件名稱
     event_name = os.getenv('GITHUB_EVENT_NAME')
