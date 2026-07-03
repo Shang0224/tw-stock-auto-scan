@@ -24,19 +24,19 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
         any_hit = False
 
         for algo_func in algo_func_list:
-            
+
+            if sid == "2377":
+                print("*******************************************--------------")
+                print("微星-----------------------------------")
+                    
             is_hit, detail_info = algo_func(df_single=df_single)
             
-            if is_hit:                
-                if sid == "2377":
-                    print("*******************************************--------------")
-                    print("微星-----------------------------------")
-                    
+            if is_hit:                                
                 any_hit = True
                 # 紀錄策略名稱
                 hit_row["觸發策略"].append(algo_func.__doc__.strip().split('\n')[0])
                 # 【關鍵】將詳細內容合併進這一列
-                print(f"{algo_func.__name__} - detail_info : {detail_info}")
+                #print(f"{algo_func.__name__} - detail_info : {detail_info}")
                 hit_row.update(detail_info)
         
         if any_hit:
