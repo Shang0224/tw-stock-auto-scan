@@ -13,6 +13,7 @@ from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_
 from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation
 from strategy.strat_right_side import ‎st_bottom_u_turn
 
+
 # 宣告控制測試資料的開關 (True: 執行測試資料 / False: 執行正式資料)
 RUN_TEST_DATA = False
 
