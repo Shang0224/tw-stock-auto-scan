@@ -1,6 +1,6 @@
 import pandas as pd
 
-def st_bottom_u_turn(df_single):
+def st_bottom_u_turn_v2026070301(df_single):
     """
     ***策略 A-2：題材破滅 U 型碗底翻揚系統 (雙扣抵結構硬過濾版)***
     
