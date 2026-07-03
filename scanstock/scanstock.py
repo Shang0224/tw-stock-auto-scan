@@ -25,9 +25,8 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
 
         for algo_func in algo_func_list:
 
-            if sid == "2377":
-                print("*******************************************--------------")
-                print("微星-----------------------------------")
+            print("*******************************************--------------")
+            print(sid)
                     
             is_hit, detail_info = algo_func(df_single=df_single)
             
