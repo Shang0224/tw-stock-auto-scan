@@ -87,7 +87,7 @@ def yfinance_scan_ma240():
     print(f"🚀 [Batch] 開始抓取 {len(stock_ids)} 檔股票資料 (從 {start_date} 起)...")
 
     if event_name != 'schedule':
-        stock_ids = ['2377', '4853', '5269']
+        stock_ids = ['2377', '4583', '2357', '5269']
     
     # 1. 先獲取完整的大表
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
