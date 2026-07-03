@@ -48,7 +48,8 @@ def st_bottom_u_turn(df_single):
     is_vol_type_B = (today['Trading_Volume'] > yesterday['Trading_Volume']) and (today['Trading_Volume'] > today['Vol_MA5'])
     
     is_volume_ok = is_vol_type_A or is_vol_type_B
-    is_triggered = today['close'] > today['open'] and is_volume_ok
+    #is_triggered = today['close'] > today['open'] and is_volume_ok
+    is_triggered = today['close'] > today['open']
     
     # 詳細型態文字描述
     vol_style = "未放量"
