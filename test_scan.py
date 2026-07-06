@@ -28,7 +28,7 @@ STOCK_MODE = 'csv'
 STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')  # 若想吃 單純的股票代號 請取消註解此行
 
 # 4. 勾選這次要加入測試的策略列表
-TEST_STRATEGIES = [st_bottom_u_turn, bottom_rebound]
+TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_v_turn]
 
 # =====================================================================
 
