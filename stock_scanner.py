@@ -46,11 +46,13 @@ def yfinance_scan_ma240():
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
     if all_df.empty: return
 
-    try:
+    source_name = 'yfinance'
+
+    try:        
         results = scan_stocks_df_list(stock_ids, my_strategies, all_df, stock_name_dict)
         
         # 🟢 步驟 1：產出報告、發 LINE、拿到本地產出的 CSV 檔案路徑
-        csv_path = send_report(results, 'yfinance', tw_time, status_col_name='策略狀態')
+        csv_path = send_report(results, source_name, tw_time, status_col_name='策略狀態')
         
         # 🟢 步驟 2：正式排程環境下，順著把檔案丟上 NAS 並清除本地暫存
         #archive_and_cleanup(csv_path, 'yfinance', tw_time)
@@ -83,6 +85,8 @@ def finmind_scan_ma240():
     
     all_df = fm_fetch_all_stocks(dl, stock_ids, start_date, end_date)
     if all_df.empty: return
+        
+    source_name = 'finmind'
 
     try:
         results = scan_stocks_df_list(stock_ids, my_strategies, all_df, stock_name_dict)
@@ -91,7 +95,7 @@ def finmind_scan_ma240():
         csv_path = send_report(results, 'finmind', tw_time, status_col_name='觸發策略')
         
         # 🟢 步驟 2：歸檔清理
-        #archive_and_cleanup(csv_path, 'finmind', tw_time)
+        #archive_and_cleanup(csv_path, source_name, tw_time)
         
         current_time = tw_time.strftime("%Y%m%d_%H%M")
         prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_name}/{source_name}_scan_report_{current_time}.csv"
