@@ -20,8 +20,30 @@ def cleanup_local_file(file_path):
     else:
         print(f"ℹ️ 檔案不存在，無需清理：{file_path}")
 
+def archive_and_cleanup(local_file_path, remote_path):
+    """【流程組合】負責高階的 備份 + 清理 聯動流程 (遠端路徑由外部決定)"""
+    if not local_file_path or not os.path.exists(local_file_path):
+        print("ℹ️ 今日無產出報表檔案，無需上傳 NAS。")
+        return
 
-def archive_and_cleanup(local_file_path, source_name, tw_time):
+    try:
+        # 1. 先嘗試上傳 (遠端路徑完全聽從外部指示)
+        upload_to_nas(
+            host=os.getenv("NAS_VPN_IP"),
+            port=int(os.getenv("NAS_SFTP_PORT")),
+            username=os.getenv("NAS_ACCOUNT"),
+            password=os.getenv("NAS_PASSWORD"),
+            local_path=local_file_path,
+            remote_path=remote_path  # 👈 直接代入傳進來的完整路徑
+        )
+        # 2. 上傳成功，才安全地刪除本地檔案
+        cleanup_local_file(local_file_path)
+        
+    except Exception as e:
+        print(f"❌ [備份失敗] 網路或 NAS 異常，保留本地檔案以供檢查。錯誤: {e}")
+
+
+def archive_and_cleanup_old(local_file_path, source_name, tw_time):
     """【流程組合】負責高階的 備份 + 清理 聯動流程"""
     # 🟢 優化 2：如果 local_file_path 是 None (代表今天沒股票、沒生檔案)
     if not local_file_path or not os.path.exists(local_file_path):
