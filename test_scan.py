@@ -40,34 +40,6 @@ from utils import (
     archive_and_cleanup
 )
 
-def run_single_day_core(test_time, stock_ids, stock_name_dict, all_df, strategies, source, status_col):
-    """單日掃描核心：計算策略、生本地 CSV、發 LINE，並透過正式架構封存與上傳"""
-    results = scan_stocks_df_list(stock_ids, strategies, all_df, stock_name_dict)
-    
-    output_name = f"{source.lower()}_test"
-    csv_path = send_report(results, output_name, test_time, status_col_name=status_col)
-    
-    # 🟢 完全沿用正式環境的生命週期（上傳、移轉、清理）
-    if csv_path and os.path.exists(csv_path):
-        current_time_str = test_time.strftime("%Y%m%d_%H%M")
-        remote_filename = f"{output_name}_report_{current_time_str}.csv"
-        
-        # 將遠端目標導向測試專用資料夾 test_reports
-        remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/test_reports/{remote_filename}"
-        
-        try:
-            print(f"📦 啟動自動化封存與清理流程 (目標：測試資料夾)...")
-            archive_and_cleanup(
-                local_file_path=csv_path,
-                remote_path=remote_test_path
-            )
-            print(f"🚀 [NAS 同步成功] 檔案已安全送達遠端：test_reports/{remote_filename}")
-        except Exception as e:
-            print(f"⚠️ [自動封存/上傳失敗] 請檢查 .env 設定或連線。錯誤: {e}")
-    else:
-        print(f"ℹ️ 本日無符合策略股票，不產出報表。")
-
-
 def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_data, strategies):
     """通用策略測試器（支援單日/連續區間自動回測）"""
     tz_tw = timezone(timedelta(hours=8))
@@ -142,6 +114,33 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         current_day += timedelta(days=1)
         
     print(f"\n🎉 所有的測試任務已全部執行完畢！")
+
+def run_single_day_core(test_time, stock_ids, stock_name_dict, all_df, strategies, source, status_col):
+    """單日掃描核心：計算策略、生本地 CSV、發 LINE，並透過正式架構封存與上傳"""
+    results = scan_stocks_df_list(stock_ids, strategies, all_df, stock_name_dict)
+    
+    output_name = f"{source.lower()}_test"
+    csv_path = send_report(results, output_name, test_time, status_col_name=status_col)
+    
+    # 🟢 完全沿用正式環境的生命週期（上傳、移轉、清理）
+    if csv_path and os.path.exists(csv_path):
+        current_time_str = test_time.strftime("%Y%m%d_%H%M")
+        remote_filename = f"{output_name}_report_{current_time_str}.csv"
+        
+        # 將遠端目標導向測試專用資料夾 test_reports
+        remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/test_reports/{remote_filename}"
+        
+        try:
+            print(f"📦 啟動自動化封存與清理流程 (目標：測試資料夾)...")
+            archive_and_cleanup(
+                local_file_path=csv_path,
+                remote_path=remote_test_path
+            )
+            print(f"🚀 [NAS 同步成功] 檔案已安全送達遠端：test_reports/{remote_filename}")
+        except Exception as e:
+            print(f"⚠️ [自動封存/上傳失敗] 請檢查 .env 設定或連線。錯誤: {e}")
+    else:
+        print(f"ℹ️ 本日無符合策略股票，不產出報表。")
 
 
 if __name__ == "__main__":
