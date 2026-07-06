@@ -91,7 +91,13 @@ def finmind_scan_ma240():
         csv_path = send_report(results, 'finmind', tw_time, status_col_name='觸發策略')
         
         # 🟢 步驟 2：歸檔清理
-        archive_and_cleanup(csv_path, 'finmind', tw_time)
+        #archive_and_cleanup(csv_path, 'finmind', tw_time)
+        
+        current_time = tw_time.strftime("%Y%m%d_%H%M")
+        prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_name}/{source_name}_scan_report_{current_time}.csv"
+
+        #         2-2. 乾乾淨淨地丟給工具執行
+        archive_and_cleanup(csv_path, prod_remote_path)
         
     except Exception as e:
         print(f"❌ [FM 排程例外] {e}")
