@@ -58,7 +58,7 @@ def run_single_day_core(test_time, stock_ids, stock_name_dict, all_df, strategie
         try:
             print(f"📦 啟動自動化封存與清理流程 (目標：測試資料夾)...")
             archive_and_cleanup(
-                local_path=csv_path,
+                local_file_path=csv_path,
                 remote_path=remote_test_path
             )
             print(f"🚀 [NAS 同步成功] 檔案已安全送達遠端：test_reports/{remote_filename}")
