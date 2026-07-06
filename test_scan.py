@@ -19,12 +19,12 @@ CHOSEN_SOURCE = 'yf'
 #    - 🔍 測試單日：START 填日期，END 填 None
 #    - 📈 測試區間：START 填起始日，END 填結束日（會逐日掃描，自動跳過週末）
 TEST_START_DATE = '2026-02-01'
-TEST_END_DATE   = '2026-04-30'  # 設為 None 則只跑單日測試
+TEST_END_DATE   = '2026-03-30'  # 設為 None 則只跑單日測試
 
 # 3. 設定股票來源：可選 'list' (自訂代號列表) 或 'csv' (讀取指定的檔案)
-STOCK_MODE = 'list'
-STOCK_INPUT = ['2377', '4583', '2357', '5269', '2330']  
-# STOCK_INPUT = 'data/TW50.csv'                          # 若想吃 CSV 請取消註解此行
+STOCK_MODE = 'csv'
+#STOCK_INPUT = ['2377', '4583', '2357', '5269', '2330']  # 若想吃 CSV 請取消註解此行
+STOCK_INPUT = ['data/TW50.csv', 'data/MID100.csv']  # 若想吃 單純的股票代號 請取消註解此行
 
 # 4. 勾選這次要加入測試的策略列表
 TEST_STRATEGIES = [st_bottom_u_turn]
