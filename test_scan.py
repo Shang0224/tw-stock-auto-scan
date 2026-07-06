@@ -27,7 +27,7 @@ STOCK_INPUT = ['2377', '4583', '2357', '5269', '2330']
 # STOCK_INPUT = 'data/TW50.csv'                          # 若想吃 CSV 請取消註解此行
 
 # 4. 勾選這次要加入測試的策略列表
-TEST_STRATEGIES = [st_near_ma240_df, st_bottom_u_turn]
+TEST_STRATEGIES = [st_bottom_u_turn]
 
 # =====================================================================
 
