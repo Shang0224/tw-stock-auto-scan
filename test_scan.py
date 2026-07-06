@@ -36,10 +36,9 @@ from utils import (
     parse_stock_ids,
     send_report,
     yf_fetch_all_stocks,
-    fm_fetch_all_stocks
+    fm_fetch_all_stocks,
+    archive_and_cleanup
 )
-# 🟢 直接引入正式環境的封存與清理工具
-from utils.storage import archive_and_cleanup  
 
 def run_single_day_core(test_time, stock_ids, stock_name_dict, all_df, strategies, source, status_col):
     """單日掃描核心：計算策略、生本地 CSV、發 LINE，並透過正式架構封存與上傳"""
