@@ -2,6 +2,8 @@
 import yfinance as yf
 import pandas as pd
 from FinMind.data import DataLoader
+from datetime import datetime, timedelta, timezone
+
 
 def yf_fetch_all_stocks(stock_ids, start_date, end_date):
     """
