@@ -157,8 +157,10 @@ def yfinance_scan_ma240():
     #print(message_text)
     
     # 傳出訊息
-    # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
-    send_line_message(message_text)
+    # 確保您的 send_line_message 函數已經設定好 Channel Access Token
+
+    #--------------------line 超過次數暫停
+    #send_line_message(message_text)
 
     #print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
 
@@ -337,7 +339,8 @@ def finmind_scan_ma240():
     
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token    
-    send_line_message(message_text)
+    #--------------------line 超過次數暫停
+    #send_line_message(message_text)
 
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
     if event_name == 'schedule':
