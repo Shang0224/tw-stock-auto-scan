@@ -159,9 +159,19 @@ def yfinance_scan_ma240():
     # 傳出訊息
     # 確保您的 send_line_message 函數已經設定好 Channel Access Token
 
-    #--------------------line 超過次數暫停
+    #--------------------line 超過次數暫停-------------------------
     #send_line_message(message_text)
 
+    # 2. 從環境變數讀取帳密 (安全性考量)
+    SENDER = os.getenv("SENDER_EMAIL")
+    RECEIVER = os.getenv("RECIPIENT_EMAIL")
+    
+    # 這是 16 位元的應用程式密碼，非登入密碼
+    PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
+
+    # 3. 執行寄送
+    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
+    
     #print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
 
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
@@ -178,18 +188,6 @@ def yfinance_scan_ma240():
             remote_path=f"{os.getenv('NAS_SFTP_PATH')}/yfinance/yf_scan_report_{current_time}.csv")
 
         cleanup_local_file(file_name)
-
-    # 2. 從環境變數讀取帳密 (安全性考量)
-    SENDER = os.getenv("SENDER_EMAIL")
-    RECEIVER = os.getenv("RECIPIENT_EMAIL")
-    
-    # 這是 16 位元的應用程式密碼，非登入密碼
-    PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
-
-    # 3. 執行寄送
-    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
-
-
 
 def finmind_scan_ma240():
     #資料設定, 決定是否執行測試資料
@@ -342,6 +340,19 @@ def finmind_scan_ma240():
     #--------------------line 超過次數暫停
     #send_line_message(message_text)
 
+    # 2. 從環境變數讀取帳密 (安全性考量)
+    SENDER = os.getenv("SENDER_EMAIL")
+    RECEIVER = os.getenv("RECIPIENT_EMAIL")
+    
+    # 這是 16 位元的應用程式密碼，非登入密碼
+    PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
+
+    # 3. 執行寄送
+    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
+
+    #print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
+
+    
     # 邏輯判定：只有在「定時排程」時才做上傳與清除檔案的動作
     if event_name == 'schedule':
         # 使用 Tailscale 分配給 NAS 的私有 IP
@@ -354,17 +365,7 @@ def finmind_scan_ma240():
             remote_path=f"{os.getenv('NAS_SFTP_PATH')}/finmind/fm_scan_report_{current_time}.csv")
 
         cleanup_local_file(file_name)
-    # 2. 從環境變數讀取帳密 (安全性考量)
-    SENDER = os.getenv("SENDER_EMAIL")
-    RECEIVER = os.getenv("RECIPIENT_EMAIL")
-    
-    # 這是 16 位元的應用程式密碼，非登入密碼
-    PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
 
-    # 3. 執行寄送
-    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
-
-    #print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
 
 
 
