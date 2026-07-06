@@ -44,3 +44,44 @@ def send_line_message(message):
         print("LINE 報告發送成功！")
     else:
         print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
+
+def send_email_with_csv(file_path, recipient_email, sender_email, app_password):
+    # 1. 設定郵件標題與內容
+    subject = f"📊 股市掃描報告 - {os.path.basename(file_path)}"
+    body = "您好，附件為今日的股市掃描結果 CSV 檔案，請查收。"
+
+    # 2. 建立郵件物件
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    # 3. 處理附件檔案
+    try:
+        with open(file_path, "rb") as attachment:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+        
+        # 將檔案編碼為 Base64
+        encoders.encode_base64(part)
+        
+        # 設定附件標頭
+        filename = os.path.basename(file_path)
+        part.add_header(
+            "Content-Disposition",
+            f"attachment; filename= {filename}",
+        )
+        msg.attach(part)
+
+        # 4. 連線至 Gmail SMTP 伺服器並寄出
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls() # 啟動安全傳輸
+        server.login(sender_email, app_password)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ Email 已成功寄送至 {recipient_email}")
+        
+    except Exception as e:
+        print(f"❌ 寄送 Email 失敗: {str(e)}")
