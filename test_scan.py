@@ -24,7 +24,7 @@ TEST_END_DATE   = '2026-05-15'  # 設為 None 則只跑單日測試
 # 3. 設定股票來源：可選 'list' (自訂代號列表) 或 'csv' (讀取指定的檔案)
 STOCK_MODE = 'csv'
 #STOCK_INPUT = ['2377', '4583', '2357', '5269', '2330']  # 若想吃 CSV 請取消註解此行
-STOCK_INPUT = ['data/TW50.csv', 'data/MID100.csv']  # 若想吃 單純的股票代號 請取消註解此行
+STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')  # 若想吃 單純的股票代號 請取消註解此行
 
 # 4. 勾選這次要加入測試的策略列表
 TEST_STRATEGIES = [st_bottom_u_turn]
