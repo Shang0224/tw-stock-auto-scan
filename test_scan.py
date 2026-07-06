@@ -5,6 +5,7 @@ from scanstock.scanstock import scan_stocks_df_list
 
 # 匯入您要測試的策略
 from strategy.strat_right_side import st_bottom_u_turn
+from strategy.bottom_rebound import st_bottom_v_turn
 from strategy.advanced_ma240 import st_advanced_ma240_df_up
 from strategy.near_ma240 import st_near_ma240_df
 
@@ -27,7 +28,7 @@ STOCK_MODE = 'csv'
 STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')  # 若想吃 單純的股票代號 請取消註解此行
 
 # 4. 勾選這次要加入測試的策略列表
-TEST_STRATEGIES = [st_bottom_u_turn]
+TEST_STRATEGIES = [st_bottom_u_turn, bottom_rebound]
 
 # =====================================================================
 
