@@ -345,7 +345,7 @@ def finmind_scan_ma240():
     PASSWORD = os.getenv("EMAIL_APP_PASSWORD") 
 
     # 3. 執行寄送
-    #send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
+    send_email_with_csv(file_name, RECEIVER, SENDER, PASSWORD)
 
     #print(f"NAS_SFTP_PATH: {os.getenv('NAS_SFTP_PATH')}, loaclpath: {file_name}")
 
