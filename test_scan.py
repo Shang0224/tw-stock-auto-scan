@@ -18,7 +18,7 @@ CHOSEN_SOURCE = 'yf'
 # 2. 設定測試日期
 #    - 🔍 測試單日：START 填日期，END 填 None
 #    - 📈 測試區間：START 填起始日，END 填結束日（會逐日掃描，自動跳過週末）
-TEST_START_DATE = '2026-03-01'
+TEST_START_DATE = '2026-02-01'
 TEST_END_DATE   = '2026-04-30'  # 設為 None 則只跑單日測試
 
 # 3. 設定股票來源：可選 'list' (自訂代號列表) 或 'csv' (讀取指定的檔案)
