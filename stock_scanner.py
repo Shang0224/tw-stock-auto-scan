@@ -1,7 +1,6 @@
 # main.py
 import yfinance as yf
 import pandas as pd
-import time
 import os
 import requests
 
