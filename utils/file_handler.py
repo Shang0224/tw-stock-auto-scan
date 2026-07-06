@@ -1,9 +1,9 @@
 # utils/file_handler.py
 import os
 import pandas as pd
-from utils.notifier import send_line_message # 🟢 跨模組呼叫：處理完順便叫 notifier 發 LINE
-from utils.storage import upload_to_nas  # 🟢 引入網路儲存工具
-from FinMind.data import DataLoader
+from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的 FinMind 匯入
+from utils.notifier import send_line_message 
+from utils.storage import upload_to_nas  
 
 def cleanup_local_file(file_path):
     """
@@ -23,7 +23,9 @@ def cleanup_local_file(file_path):
 
 def archive_and_cleanup(local_file_path, source_name, tw_time):
     """【流程組合】負責高階的 備份 + 清理 聯動流程"""
-    if not os.path.exists(local_file_path):
+    # 🟢 優化 2：如果 local_file_path 是 None (代表今天沒股票、沒生檔案)
+    if not local_file_path or not os.path.exists(local_file_path):
+        print("ℹ️ 今日無產出報表檔案，無需上傳 NAS。")
         return
 
     current_time = tw_time.strftime("%Y%m%d_%H%M")
@@ -60,12 +62,14 @@ def send_report(results, source_name, tw_time, status_col_name='觸發策略'):
         
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
         report.to_csv(file_name, index=False, encoding='utf-8-sig')
+        
+        send_line_message(message_text)
+        return file_name  # 有產出檔案，回傳路徑
     else:
         message_text = f"📅 [{source_name}] {now_str}\n今日無符合條件之股票。"
+        send_line_message(message_text)
+        return None  # 🟢 優化 3：明確回傳 None，讓後續 archive 知道今天不用上傳
 
-    # 🟢 漂亮的跨模組串接
-    send_line_message(message_text)
-    return file_name
 
 def parse_stock_ids(files_env):
     """解析 CSV 檔案取得去重後的股票代號"""
@@ -79,6 +83,7 @@ def parse_stock_ids(files_env):
         except Exception as e:
             print(f"❌ 讀取 {file} 失敗: {e}")
     return list(set(stock_ids))
+
 
 def get_stock_name_dict():
     """獲取全市場基本資訊名稱字典"""
