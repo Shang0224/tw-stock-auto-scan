@@ -64,4 +64,4 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
         if 'sftp' in locals():
             sftp.close()
         ssh.close()
-        print("🔌 已斷開 
+        print("🔌 已斷開 SSH 連線。")
