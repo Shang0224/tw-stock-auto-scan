@@ -5,6 +5,22 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def save_scan_report(results, source_name, tw_time):
+    """【職責】只負責處理 DataFrame 數據並儲存本地 CSV，回傳檔案路徑"""
+    if not results:
+        return None
+        
+    current_time = tw_time.strftime("%Y%m%d_%H%M")
+    file_name = f'data/{source_name}/{source_name}_scan_report_{current_time}.csv'
+    
+    report = pd.DataFrame(results)
+    report = report.sort_values(by=['觸發策略', '代號'], ascending=[False, True])
+    
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    report.to_csv(file_name, index=False, encoding='utf-8-sig')
+    
+    return file_name
+
 def cleanup_local_file(file_path):
     """
     清理本地暫存檔，確保環境整潔。
