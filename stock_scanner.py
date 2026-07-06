@@ -53,7 +53,13 @@ def yfinance_scan_ma240():
         csv_path = send_report(results, 'yfinance', tw_time, status_col_name='策略狀態')
         
         # 🟢 步驟 2：正式排程環境下，順著把檔案丟上 NAS 並清除本地暫存
-        archive_and_cleanup(csv_path, 'yfinance', tw_time)
+        #archive_and_cleanup(csv_path, 'yfinance', tw_time)
+        #         2-1. 在正式環境裡組出正式的路徑
+        current_time = tw_time.strftime("%Y%m%d_%H%M")
+        prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_name}/{source_name}_scan_report_{current_time}.csv"
+
+        #         2-2. 乾乾淨淨地丟給工具執行
+        archive_and_cleanup(csv_path, prod_remote_path)
         
     except Exception as e:
         print(f"❌ [YF 排程例外] {e}")
