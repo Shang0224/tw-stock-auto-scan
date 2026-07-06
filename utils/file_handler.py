@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from utils.notifier import send_line_message # 🟢 跨模組呼叫：處理完順便叫 notifier 發 LINE
 from utils.storage import upload_to_nas  # 🟢 引入網路儲存工具
+from FinMind.data import DataLoader
 
 def cleanup_local_file(file_path):
     """
