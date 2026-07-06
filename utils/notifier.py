@@ -9,6 +9,38 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+def send_line_summary(results, source_name, tw_time, status_col_name='策略狀態'):
+    """【單一職責】純粹處理 LINE 的文字摘要發送。不管有沒有股票都要通知狀態。"""
+    now_str = tw_time.strftime('%Y-%m-%d %H:%M')
+    
+    if not results:
+        message_text = f"📅 [{source_name}] {now_str}\n今日無符合條件之股票。"
+    else:
+        report = pd.DataFrame(results)
+        report = report.sort_values(by=['觸發策略', '代號'], ascending=[False, True])
+        short_report = report[['代號', '名稱', '收盤', status_col_name]]
+        message_text = f"📅 [{source_name}] 掃描完成: {now_str}\n=== 精選名單 ===\n\n{short_report.to_string(index=False)}"
+    
+    # 實際執行 LINE 發送 (依據你的實戰需求暫時註解或啟用)
+    # send_line_message(message_text)
+    print(f"📢 [LINE 訊息已就緒]:\n{message_text}\n")
+
+
+def send_email_report(file_path):
+    """【單一職責】純粹處理 Email 檔案附件發送。只有當實體檔案存在時才啟動。"""
+    if not (file_path and os.path.exists(file_path)):
+        print("💡 [Email 提示] 無實體檔案產出，跳過 Email 發送流程。")
+        return
+
+    SENDER = os.getenv("SENDER_EMAIL")
+    RECEIVER = os.getenv("RECIPIENT_EMAIL")
+    PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
+    
+    if SENDER and RECEIVER and PASSWORD:
+        print(f"📧 [Email 啟動] 正在發送檔案: {file_path}")
+        send_email_with_csv(file_path, RECEIVER, SENDER, PASSWORD)
+    else:
+        print("⚠️ [Email 錯誤] 缺少環境變數 (SENDER/RECEIVER/PASSWORD)，取消寄送。")
 
 def smart_read_csv(file_path):
     # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
