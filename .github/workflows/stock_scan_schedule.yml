@@ -1,0 +1,61 @@
+name: 每日掃描台灣50與中型100
+
+on:
+  schedule:
+    # 分 時 日 月 週 (UTC 時間 10:00 = 台北時間 18:00)
+    - cron: '44 10 * * 1-5'
+  workflow_dispatch: # 允許手動測試
+
+jobs:
+  daily-scan:
+    runs-on: ubuntu-latest
+    permissions:      # 加入這部分
+      contents: write # 顯式要求寫入權限
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pandas requests 
+
+      - name: Run Analysis Script
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }} # 確保程式能順利讀到排程事件狀態
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+          STOCK_FILES: ${{ vars.STOCK_FILES }}
+          STOCK_FILES_TEST: ${{ vars.STOCK_FILES_TEST }}
+          FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
+          SENDER_EMAIL: ${{ vars.SENDER_EMAIL }}
+          RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
+          EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
+          NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
+          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'          
+          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
+          NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
+          NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
+     
+        run: python stock_scanner.py  # 🌟 這裡已為您改為新的檔名
+
+      - name: Commit and Push results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "Daily 240MA scan results update" || echo "No changes to commit"
+
+          # 在 push 之前，先拉取遠端變更並用 rebase 線性整合
+          git pull --rebase origin main
+          
+          git push
