@@ -1,7 +1,19 @@
 # main.py
+import yfinance as yf
+import pandas as pd
+import time
 import os
+import requests
+
+from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
+from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
+from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df_list
+from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
+from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation
+from strategy.strat_right_side import st_bottom_u_turn
+
 
 # 🌟 從 utils 匯入全新整理好的工具
 from utils import (
