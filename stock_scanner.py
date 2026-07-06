@@ -51,17 +51,24 @@ def yfinance_scan_ma240():
     try:        
         results = scan_stocks_df_list(stock_ids, my_strategies, all_df, stock_name_dict)
         
-        # 🟢 步驟 1：產出報告、發 LINE、拿到本地產出的 CSV 檔案路徑
-        csv_path = send_report(results, source_name, tw_time, status_col_name='策略狀態')
+# 2. 產出本地 CSV 檔案 (有股票才會產檔並回傳路徑，沒股票回傳 None)
+        csv_path = save_scan_report(results, source_name, tw_time)
         
-        # 🟢 步驟 2：正式排程環境下，順著把檔案丟上 NAS 並清除本地暫存
-        #archive_and_cleanup(csv_path, 'yfinance', tw_time)
-        #         2-1. 在正式環境裡組出正式的路徑
-        current_time = tw_time.strftime("%Y%m%d_%H%M")
-        prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_name}/{source_name}_scan_report_{current_time}.csv"
-
-        #         2-2. 乾乾淨淨地丟給工具執行
-        archive_and_cleanup(csv_path, prod_remote_path)
+        # 3. 訊息派發：LINE 發送即時摘要 (純文字，每日必發)
+        send_line_summary(results, source_name, tw_time, status_col_name='策略狀態')
+        
+        # 4. 訊息派發：Email 發送完整報告 (依賴實體 CSV 檔案)
+        send_email_report(csv_path)
+        
+        # 5. 後續備份與清理 (依賴實體 CSV 檔案)
+        if csv_path and os.path.exists(csv_path):
+            current_time = tw_time.strftime("%Y%m%d_%H%M")
+            prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_name}/{source_name}_scan_report_{current_time}.csv"
+            
+            print(f"📦 [備份啟動] 偵測到實體報告，開始上傳至 NAS...")
+            archive_and_cleanup(csv_path, prod_remote_path)
+        else:
+            print("💡 [備份提示] 今日無實體檔案，跳過 NAS 上傳與清理。")
         
     except Exception as e:
         print(f"❌ [YF 排程例外] {e}")
