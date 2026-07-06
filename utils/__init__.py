@@ -11,5 +11,5 @@ __all__ = [
     'yf_fetch_all_stocks', 'fm_fetch_all_stocks',
     'send_line_message', 'send_email_with_csv',
     'upload_to_nas',
-    'parse_stock_ids', 'get_stock_name_dict', 'send_report', 'cleanup_local_file'
+    'parse_stock_ids', 'get_stock_name_dict', 'send_report', 'cleanup_local_file', 'archive_and_cleanup'
 ]
