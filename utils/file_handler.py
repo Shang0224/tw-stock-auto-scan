@@ -85,11 +85,13 @@ def send_report(results, source_name, tw_time, status_col_name='觸發策略'):
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
         report.to_csv(file_name, index=False, encoding='utf-8-sig')
         
-        send_line_message(message_text)
+        #--------------------line 超過次數暫停-----------------------------------------------------------
+        #send_line_message(message_text)
         return file_name  # 有產出檔案，回傳路徑
     else:
         message_text = f"📅 [{source_name}] {now_str}\n今日無符合條件之股票。"
-        send_line_message(message_text)
+        #--------------------line 超過次數暫停--------------------------------------------------------------
+        #send_line_message(message_text)
         return None  # 🟢 優化 3：明確回傳 None，讓後續 archive 知道今天不用上傳
 
 
