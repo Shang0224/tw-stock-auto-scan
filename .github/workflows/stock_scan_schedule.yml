@@ -1,10 +1,10 @@
-name: 00每日掃描台灣50與中型100
+name: 00掃描台灣50與中型100
 
 on:
   schedule:
     # 分 時 日 月 週 (UTC 時間 10:00 = 台北時間 18:00)
     - cron: '44 10 * * 1-5'
-  workflow_dispatch: # 允許手動測試
+  workflow_dispatch: # 允許手動測試（已移除所有繁瑣輸入欄位，一鍵直接開跑）
 
 jobs:
   daily-scan:
@@ -14,6 +14,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
@@ -45,8 +46,15 @@ jobs:
           NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
-     
-        run: python stock_scanner.py  # 🌟 這裡已為您改為新的檔名
+        # 🟢 這裡修改為依據觸發事件自動執行對應的獨立檔案
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_scan.py..."
+            python test_scan.py
+          else
+            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 stock_scanner.py..."
+            python stock_scanner.py
+          fi
 
       - name: Commit and Push results
         run: |
