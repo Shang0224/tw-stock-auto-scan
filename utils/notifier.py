@@ -3,6 +3,7 @@
 import requests
 import os
 import smtplib
+import pandas as pd
 from email import encoders
 from email.header import Header
 from email.mime.base import MIMEBase
