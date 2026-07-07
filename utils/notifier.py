@@ -19,7 +19,8 @@ def send_line_summary(results, source_name, tw_time, status_col_name='策略狀�
     else:
         report = pd.DataFrame(results)
         report = report.sort_values(by=['觸發策略', '代號'], ascending=[False, True])
-        short_report = report[['代號', '名稱', '收盤', status_col_name]]
+        #short_report = report[['代號', '名稱', '收盤', status_col_name]]
+        short_report = report[['代號', '名稱', '收盤']]
         message_text = f"📅 [{source_name}] 掃描完成: {now_str}\n=== 精選名單 ===\n\n{short_report.to_string(index=False)}"
     
     # 實際執行 LINE 發送 (依據你的實戰需求暫時註解或啟用)
