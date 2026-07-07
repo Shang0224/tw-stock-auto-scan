@@ -58,7 +58,8 @@ def yfinance_scan_ma240():
         csv_path = save_scan_report(results, source_name, tw_time)
         
         # 3. 訊息派發：LINE 發送即時摘要 (純文字，每日必發)
-        send_line_summary(results, source_name, tw_time, status_col_name='策略狀態')
+        #-------------------超過line免費限制-+------暫時註解
+        #send_line_summary(results, source_name, tw_time, status_col_name='策略狀態')
         
         # 4. 訊息派發：Email 發送完整報告 (依賴實體 CSV 檔案)
         send_email_report(csv_path)
