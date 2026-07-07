@@ -21,7 +21,10 @@ from utils import (
     parse_stock_ids,
     get_stock_name_dict,
     send_report,          # 變精簡了，只負責生報表、發 LINE
-    archive_and_cleanup   # 新增這個：負責排程專用的備份與清理
+    archive_and_cleanup,   # 新增這個：負責排程專用的備份與清理
+    save_scan_report,
+    send_line_summary,
+    send_email_report
 )
 
 from strategy.near_ma240 import st_near_ma240_df
