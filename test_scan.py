@@ -9,53 +9,6 @@ from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, s
 from strategy.advanced_ma240 import st_advanced_ma240_df_up
 from strategy.near_ma240 import st_near_ma240_df
 
-# 🌟 從 utils 匯入全新整理好的工具
-from utils import (
-    get_stock_name_dict,
-    parse_stock_ids,
-    send_report,
-    yf_fetch_all_stocks,
-    fm_fetch_all_stocks,
-
-    archive_and_cleanup,   #負責排程專用的備份與清理
-    save_scan_report,
-    send_line_summary,
-    send_email_report
-)
-
-
-# =====================================================================
-# 🎛️ 測試環境控制面板（本機測試直接在這裡修改參數）
-# =====================================================================
-
-# 1. 一鍵切換資料源：可輸入 'yf' (yfinance) 或 'fm' (FinMind)
-CHOSEN_SOURCE = 'yf' 
-
-# 2. 設定測試日期
-#    - 🔍 測試單日：START 填日期，END 填 None
-#    - 📈 測試區間：START 填起始日，END 填結束日（會逐日掃描，自動跳過週末）
-TEST_START_DATE = '2026-04-01'
-TEST_END_DATE   = '2026-04-05'  # 設為 None 則只跑單日測試
-
-# 3. 設定股票來源：可選 'list' (自訂代號列表) 或 'csv' (讀取指定的檔案)
-STOCK_MODE = 'csv'
-#STOCK_INPUT = ['2377', '4583', '2357', '5269', '2330']  # 若想吃 CSV 請取消註解此行
-STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')  # 若想吃 單純的股票代號 請取消註解此行
-
-# 4. 勾選這次要加入測試的策略列表
-TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout]
-
-# test_scan.py
-import os
-from datetime import datetime, timedelta, timezone
-from scanstock.scanstock import scan_stocks_df_list
-
-# 匯入您要測試的策略
-from strategy.strat_right_side import st_bottom_u_turn
-from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout
-from strategy.advanced_ma240 import st_advanced_ma240_df_up
-from strategy.near_ma240 import st_near_ma240_df
-
 # 🌟 完美導入你專屬的 utils 程式庫工具
 from utils import (
     get_stock_name_dict,
