@@ -54,7 +54,7 @@ def yfinance_scan_ma240():
     try:        
         results = scan_stocks_df_list(stock_ids, my_strategies, all_df, stock_name_dict)
         
-# 2. 產出本地 CSV 檔案 (有股票才會產檔並回傳路徑，沒股票回傳 None)
+        # 2. 產出本地 CSV 檔案 (有股票才會產檔並回傳路徑，沒股票回傳 None)
         csv_path = save_scan_report(results, source_name, tw_time)
         
         # 3. 訊息派發：LINE 發送即時摘要 (純文字，每日必發)
