@@ -5,6 +5,47 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def save_multi_day_report(collected_results, source_name, tw_time):
+    """
+    將多日/多組掃描結果格式化寫入同一個 CSV 檔。
+    每一天的結果用雙空行格開，並把日期獨立輸出成一行橫線。
+    
+    :param collected_results: dict, 結構為 {'2026-04-01': [dict, dict], '2026-04-02': [...]}
+    :param source_name: str, 來源名稱 (例如 'yf_test')
+    :param tw_time: datetime, 當前時間物件 (用於產出檔名時間戳)
+    :return: str, 產出的本地 CSV 檔案路徑
+    """
+    import os
+    import pandas as pd
+    
+    # 1. 沿用你原本的命名與目錄建立邏輯
+    current_time = tw_time.strftime("%Y%m%d_%H%M")
+    os.makedirs(f"data/{source_name}", exist_ok=True)
+    csv_path = f"data/{source_name}/{source_name}_scan_report_{current_time}.csv"
+    
+    # 2. 開始手動格式化寫入
+    with open(csv_path, 'w', encoding='utf-8-sig') as f:
+        is_first_day = True
+        
+        # 確保日期由舊到新排序
+        for date_key, day_list in sorted(collected_results.items()):
+            if not day_list: # 如果當天沒資料就跳過
+                continue
+                
+            # 每一天中間隔開雙空行
+            if not is_first_day:
+                f.write("\n\n")
+            
+            # 🌟 獨立輸出一行橫線與日期
+            f.write(f"==================== {date_key} ====================\n")
+            
+            # 將當天的結果寫入 CSV
+            day_df = pd.DataFrame(day_list)
+            day_df.to_csv(f, index=False, header=True)
+            is_first_day = False
+            
+    return csv_path
+
 def save_scan_report(results, source_name, tw_time):
     """【職責】只負責處理 DataFrame 數據並儲存本地 CSV，回傳檔案路徑"""
     if not results:
