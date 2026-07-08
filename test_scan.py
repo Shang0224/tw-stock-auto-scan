@@ -20,7 +20,7 @@ CHOSEN_SOURCE = 'yf'
 #    - 🔍 測試單日：START 填日期，END 填 None
 #    - 📈 測試區間：START 填起始日，END 填結束日（會逐日掃描，自動跳過週末）
 TEST_START_DATE = '2026-04-01'
-TEST_END_DATE   = '2026-04-30'  # 設為 None 則只跑單日測試
+TEST_END_DATE   = '2026-04-05'  # 設為 None 則只跑單日測試
 
 # 3. 設定股票來源：可選 'list' (自訂代號列表) 或 'csv' (讀取指定的檔案)
 STOCK_MODE = 'csv'
@@ -118,11 +118,23 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
 
 def run_single_day_core(test_time, stock_ids, stock_name_dict, all_df, strategies, source, status_col):
     """單日掃描核心：計算策略、生本地 CSV、發 LINE，並透過正式架構封存與上傳"""
+    
     results = scan_stocks_df_list(stock_ids, strategies, all_df, stock_name_dict)
     
     output_name = f"{source.lower()}_test"
-    csv_path = send_report(results, output_name, test_time, status_col_name=status_col)
+
+    #2. 產出本地 CSV 檔案 (有股票才會產檔並回傳路徑，沒股票回傳 None)
+    csv_path = save_scan_report(results, output_name, test_time)       
     
+    #csv_path = send_report(results, output_name, test_time, status_col_name=status_col)
+
+    # 3. 訊息派發：LINE 發送即時摘要 (純文字，每日必發)
+    #-------------------超過line免費限制-+------暫時註解
+    #send_line_summary(results, source_name, tw_time, status_col_name='策略狀態')
+        
+    # 4. 訊息派發：Email 發送完整報告 (依賴實體 CSV 檔案)
+    send_email_report(csv_path)
+        
     # 🟢 完全沿用正式環境的生命週期（上傳、移轉、清理）
     if csv_path and os.path.exists(csv_path):
         current_time_str = test_time.strftime("%Y%m%d_%H%M")
