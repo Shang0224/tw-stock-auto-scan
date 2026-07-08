@@ -190,6 +190,6 @@ def finmind_scan_ma240():
 
 
 if __name__ == "__main__":
-    finmind_scan_ma240()
+    #finmind_scan_ma240()
     yfinance_scan_ma240()
 
