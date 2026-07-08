@@ -50,8 +50,8 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_scan.py..."
-            #python test_scan.py
-            python stock_scanner.py #強制手動執行正式環境
+            python test_scan.py
+            #python stock_scanner.py #強制手動執行正式環境
           else
             echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 stock_scanner.py..."
             python stock_scanner.py
