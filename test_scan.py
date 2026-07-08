@@ -9,6 +9,20 @@ from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, s
 from strategy.advanced_ma240 import st_advanced_ma240_df_up
 from strategy.near_ma240 import st_near_ma240_df
 
+# 🌟 從 utils 匯入全新整理好的工具
+from utils import (
+    get_stock_name_dict,
+    parse_stock_ids,
+    send_report,
+    yf_fetch_all_stocks,
+    fm_fetch_all_stocks,
+    archive_and_cleanup,   #負責排程專用的備份與清理
+    save_scan_report,
+    send_line_summary,
+    send_email_report
+)
+
+
 # =====================================================================
 # 🎛️ 測試環境控制面板（本機測試直接在這裡修改參數）
 # =====================================================================
@@ -29,17 +43,6 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')  # 若想吃 單純的
 
 # 4. 勾選這次要加入測試的策略列表
 TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout]
-
-# =====================================================================
-
-from utils import (
-    get_stock_name_dict,
-    parse_stock_ids,
-    send_report,
-    yf_fetch_all_stocks,
-    fm_fetch_all_stocks,
-    archive_and_cleanup
-)
 
 def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_data, strategies):
     """通用策略測試器（支援單日/連續區間自動回測）"""
