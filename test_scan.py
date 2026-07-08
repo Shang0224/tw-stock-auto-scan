@@ -16,6 +16,7 @@ from utils import (
     send_report,
     yf_fetch_all_stocks,
     fm_fetch_all_stocks,
+
     archive_and_cleanup,   #負責排程專用的備份與清理
     save_scan_report,
     send_line_summary,
@@ -63,7 +64,8 @@ from utils import (
     fm_fetch_all_stocks,
     save_multi_day_report, # 🌟 新增：專門處理多日格式化的存檔函數
     archive_and_cleanup,   # 負責排程專用的備份與清理
-    send_email_report
+    send_email_report,
+    save_multi_day_report
 )
 
 # =====================================================================
