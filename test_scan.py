@@ -19,7 +19,7 @@ from utils import (
     archive_and_cleanup,   # 負責排程專用的備份與清理
     send_email_report,
     save_multi_day_report,
-    calculate_forward_performance
+    calculate_one_year_extremes
 )
 
 # =====================================================================
@@ -115,7 +115,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         if day_results:
             # 💡 這裡直接調用來自 utils 的績效計算工具
             for hit in day_results:
-                perf = calculate_forward_performance(hit["代號"], day_str, global_df)
+                perf = calculate_one_year_extremes(hit["代號"], day_str, global_df)
                 hit.update(perf)
 
             print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的（已完成績效追蹤）。")
