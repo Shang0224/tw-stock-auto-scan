@@ -25,8 +25,8 @@ from utils import (
 # 🎛️ 測試環境控制面板
 # =====================================================================
 CHOSEN_SOURCE = 'yf' 
-TEST_START_DATE = '2026-03-01'
-TEST_END_DATE   = '2026-04-30'  # 設為 None 則只跑單日測試
+TEST_START_DATE = '2026-01-01'
+TEST_END_DATE   = '2026-07-08'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
 STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
