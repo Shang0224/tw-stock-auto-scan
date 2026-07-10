@@ -42,7 +42,7 @@ def st_bottom_u_turn_mid100_rebirth(df_single):
     
     # --- 3. 時空前置過濾網 (配合中型股優化調整) ---
     # (A) 空間跌幅：中型股修正更深，卡死必須從一年(240日)最高點「腰斬」 50% 以上
-    max_price_240d = df_single['high'].rolling(240).max().iloc[-1]
+    max_price_240d = df_single['max'].rolling(240).max().iloc[-1]
     is_dropped_enough = today['close'] <= (max_price_240d * 0.50)
     
     # (B) 時間沉澱：計算季線在年線下方的連續天數，過去 120 天必須天天都在年線下
