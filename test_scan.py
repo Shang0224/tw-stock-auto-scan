@@ -18,7 +18,8 @@ from utils import (
     save_multi_day_report, # 🌟 新增：專門處理多日格式化的存檔函數
     archive_and_cleanup,   # 負責排程專用的備份與清理
     send_email_report,
-    save_multi_day_report
+    save_multi_day_report,
+    calculate_forward_performance
 )
 
 # =====================================================================
