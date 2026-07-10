@@ -73,7 +73,7 @@ def st_bottom_u_turn(df_single):
     return is_hit, info
 
 def st_bottom_u_turn_2026070302(df_single):
-"""
+    """
     ***st_bottom_u_turn_2026070302 策略 A-2：題材破滅 U 型碗底翻揚系統 (純結構動能＋中長線雙扣抵預報版)***
 
     【核心篩選條件 (同時滿足才觸發 is_hit)】
