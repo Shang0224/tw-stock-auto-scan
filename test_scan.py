@@ -25,11 +25,15 @@ from utils import (
 # 🎛️ 測試環境控制面板
 # =====================================================================
 CHOSEN_SOURCE = 'yf' 
-TEST_START_DATE = '2026-04-01'
-TEST_END_DATE   = '2026-04-05'  # 設為 None 則只跑單日測試
+TEST_START_DATE = '2026-03-01'
+TEST_END_DATE   = '2026-04-30'  # 設為 None 則只跑單日測試
 
-STOCK_MODE = 'csv'
-STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
+#STOCK_MODE = 'csv' 
+#STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
+
+STOCK_MODE = 'noncsv' 
+STOCK_INPUT = '3005, 2353, 6191'
+
 TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout]
 
 
