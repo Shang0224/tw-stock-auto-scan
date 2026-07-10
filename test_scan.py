@@ -65,7 +65,10 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
 
     stock_name_dict, dl = get_stock_name_dict()
     
-    fetch_end_str = end_date.strftime("%Y-%m-%d")
+    #fetch_end_str = end_date.strftime("%Y-%m-%d")
+    # 建議將遠端抓取資料的結束時間往後推 400 天，確保完整的未來績效能被計算到
+    fetch_end_str = (end_date + timedelta(days=400)).strftime("%Y-%m-%d")
+    
     fetch_start_str = (start_date - timedelta(days=500)).strftime("%Y-%m-%d")
     
     print(f"📡 正在抓取全段歷史數據緩衝 ({fetch_start_str} ~ {fetch_end_str})...")
