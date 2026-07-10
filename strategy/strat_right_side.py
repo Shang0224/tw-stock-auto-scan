@@ -1,126 +1,86 @@
 import pandas as pd
 
-def st_bottom_u_turn_mid100_rebirth(df_single):
+# ==============================================================================
+# 💡 策略邏輯備忘註腳 (Strategy Footnotes & Design Philosophy)
+# ==============================================================================
+# 1. 核心哲學：本策略專門捕捉「U 型底」或「地下室破冰」的轉骨黑馬股。
+# 2. 徹底揚棄「前波高點」的時空猜測，改用中長線均線的「絕對乖離度」作為空間防守依據。
+# 3. 承認並解鎖「價量時差 (Time Lag)」：
+#    - 主力往往在底部最絕望、均線仍下彎時敲進「定海神針」的大量 (此時型態不符)。
+#    - 隨後溫和量縮橫盤，等到季線轉強、年線減速時，當天成交量通常已趨於平淡 (此時無大量)。
+#    - 因此，本策略引進「時空記憶體」，只要過去 20 天(一個月)曾有主力爆量足跡，
+#      搭配「今日」價格與均線結構正式到位，即視為完美的波段買點。
+# ==============================================================================
+
+def st_bottom_u_turn_with_memory(df_single):
     """
-    ***st_bottom_u_turn 策略 A-3：中型 100 題材破滅 U 型底重生系統 (主力動能版)***
+    ***st_bottom_u_turn 策略 A-5：解鎖價量時差的「主力痕跡記憶系統」***
     
-    【中型 100 核心篩選參數說明】
-    1. 流動性防線：過去 20 日平均成交量需 >= 300 張，防止買進流動性窒息的殭屍股。
-    2. 空間腰斬過濾：當前股價距離過去 240 日最高價至少跌了 50% (中型股吹泡沫破滅後的安全位階)。
-    3. 時間沉澱：季線在年線下方連續沉澱至少 120 個交易日 (約半年，洗淨沒耐心的融資浮額)。
-    4. 均線發散度放寬：短中期均線發散度限制放寬至 <= 8% (適應中型股第一根發動時常有的劇烈大紅K)。
-    5. 動能甦醒加強：今日必收紅K，且成交量必須大於 20 日均量的 2.0 倍 (確認真主力資金進場換手)。
-    
-    【其餘基底架構承襲嚴選版】
-    - 季線在年線下方 (60MA < 240MA)
-    - 年線 5 日變動率 >= -1.0% (長線引力減速)
-    - 季線扭轉向上 (今日 60MA > 昨日 60MA)
-    - 短中期多頭排列 (5MA > 10MA > 20MA > 60MA)
-    - 雙扣抵智能容許 (季線 5 日扣抵變動 <= 1.5%、年線 20 日扣抵變動 <= 2.0%)
+    【核心邏輯優化】
+    - 拋棄「爆量與均線必須在同一天」的死板限制。
+    - 記憶濾網：過去 20 天內曾出現過 > 20日均量 2.0 倍的紅K爆量，程式會記住此主力腳印。
+    - 收網觸發：今日剛好走到「季線探頭、年線減速、價格創 60 日新高」的翻揚臨界點，立刻觸發。
     """
-    # 確保資料量足夠計算時空濾網，包含年線與長線沉澱，基本需 300 筆以上
-    if df_single.empty or len(df_single) < 300:
+    if df_single.empty or len(df_single) < 250:
         return False, {}
 
     # --- 1. 計算基本技術指標 ---
     df_single['MA5'] = df_single['close'].rolling(5).mean()
-    df_single['MA10'] = df_single['close'].rolling(10).mean()
     df_single['MA20'] = df_single['close'].rolling(20).mean()
     df_single['MA60'] = df_single['close'].rolling(60).mean()
     df_single['MA240'] = df_single['close'].rolling(240).mean()
-    df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
     df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
     
     today = df_single.iloc[-1]
     yesterday = df_single.iloc[-2]
     
-    # --- 2. 流動性核心防線 (新增) ---
-    # 中型股最怕型態漂亮但平時沒量，進得去出不來。日均量未達 300 張直接淘汰
-    is_liquid = today['Vol_MA20'] >= 300
-    if not is_liquid:
+    # 流動性基本防禦
+    if today['Vol_MA20'] < 300:
         return False, {}
+
+    # --- 2. 主力爆量記憶體 (解鎖價量時差) ---
+    # 計算每一天是否「成交量 >= 20日均量的 2.0 倍 且 當天收紅K」
+    df_single['is_volume_burst'] = (df_single['Trading_Volume'] >= df_single['Vol_MA20'] * 2.0) & (df_single['close'] > df_single['open'])
     
-    # --- 3. 時空前置過濾網 (配合中型股優化調整) ---
-    # (A) 空間跌幅：中型股修正更深，卡死必須從一年(240日)最高點「腰斬」 50% 以上
-    max_price_240d = df_single['max'].rolling(240).max().iloc[-1]
-    is_dropped_enough = today['close'] <= (max_price_240d * 0.50)
+    # 檢查「過去 20 個交易日（約一個月）」內，有沒有任何一天觸發過爆量
+    has_volume_memory_20d = df_single['is_volume_burst'].rolling(20).max().iloc[-1] == 1.0
+
+    # --- 3. 空間防守：季線在年線下方至少 8% 之外 (絕對低檔位階，免用前波高點) ---
+    ma_gap_ratio = today['MA60'] / today['MA240'] if today['MA240'] > 0 else 1.0
+    is_deep_enough = ma_gap_ratio <= 0.92  
     
-    # (B) 時間沉澱：計算季線在年線下方的連續天數，過去 120 天必須天天都在年線下
-    df_single['below_count'] = (df_single['MA60'] < df_single['MA240']).astype(int)
-    consecutive_below_days = df_single['below_count'].rolling(120).sum().iloc[-1]
-    is_sedimented_enough = consecutive_below_days >= 120
+    # --- 4. 價格實質突破：創 60 日（一季）最高收盤價，突破碗底頸線 ---
+    max_close_60d = df_single['close'].iloc[-61:-1].max()
+    is_price_breakout = today['close'] > max_close_60d
     
-    # --- 4. 基本位階與趨勢檢查 ---
-    is_below_ma240 = today['MA60'] < today['MA240']
+    # --- 5. 趨勢轉折與年線減速 (今天收網的技術條件) ---
+    is_ma60_turning_up = today['MA60'] > yesterday['MA60']
     
     ma240_5d_ago = df_single['MA240'].iloc[-6]
     ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago if ma240_5d_ago != 0 else 0
-    is_ma240_stable = ma240_slope_5d >= -0.01 
+    is_ma240_stable = ma240_slope_5d >= -0.015
     
-    is_ma60_turning_up = today['MA60'] > yesterday['MA60']
-    is_short_trend_bullish = today['MA5'] > today['MA10'] > today['MA20'] > today['MA60']
+    # 今日基本動能：不求今天暴巨量，但今天至少要是個多頭前進的收紅盤
+    is_today_positive = today['close'] >= yesterday['close']
     
-    # --- 5. 扣抵值智能容許過濾 ---
-    ma60_deduct_today = df_single['close'].iloc[-60]
-    ma60_deduct_5d_later = df_single['close'].iloc[-55]
-    ma60_deduct_change = (ma60_deduct_5d_later - ma60_deduct_today) / ma60_deduct_today if ma60_deduct_today > 0 else 0
-    is_ma60_deduct_ok = ma60_deduct_change <= 0.015
+    # --- 6. 綜合判定 ---
+    is_hit = (has_volume_memory_20d and is_deep_enough and is_price_breakout and 
+              is_ma60_turning_up and is_ma240_stable and is_today_positive)
+              
+    # 找出過去 20 天最高的那次量能倍數，方便在 log 中觀察主力力道
+    df_single['vol_ratio_track'] = df_single['Trading_Volume'] / df_single['Vol_MA20']
+    max_vol_ratio_20d = df_single['vol_ratio_track'].rolling(20).max().iloc[-1]
 
-    ma240_deduct_today = df_single['close'].iloc[-240]
-    ma240_deduct_20d_later = df_single['close'].iloc[-220]
-    ma240_deduct_change = (ma240_deduct_20d_later - ma240_deduct_today) / ma240_deduct_today if ma240_deduct_today > 0 else 0
-    is_ma240_deduct_ok = ma240_deduct_change <= 0.02
-    
-    # --- 6. 均線發散度過濾 (配合中型股優化調整) ---
-    # 中型股第一根突圍紅K往往拉得又急又快，發散度限制適度放寬至 8%，避免誤殺起漲飆股
-    ma_list = [today['MA5'], today['MA10'], today['MA20']]
-    ma_dispersion = (max(ma_list) - min(ma_list)) / today['MA20'] if today['MA20'] > 0 else 0
-    is_ma_not_overheated = ma_dispersion <= 0.08
-
-    # --- 7. 量能與動能甦醒判定 (配合中型股優化調整) ---
-    is_triggered = today['close'] > today['open'] # 當日必收紅K
-    # 甦醒量：中型股底部基期量極低，主力點火引導右側攻擊，成交量必須大於 20 日均量的 2.0 倍
-    is_volume_revived = today['Trading_Volume'] >= (today['Vol_MA20'] * 2.0)
-    
-    # --- 8. 綜合判定 (10 大條件完全交集) ---
-    is_hit = (is_liquid and is_dropped_enough and is_sedimented_enough and is_below_ma240 and 
-              is_ma240_stable and is_ma60_turning_up and is_short_trend_bullish and 
-              is_ma60_deduct_ok and is_ma240_deduct_ok and is_ma_not_overheated and 
-              is_triggered and is_volume_revived)
-
-    # 描述量能型態供日誌分析
-    vol_ratio = today['Trading_Volume'] / today['Vol_MA5'] if today['Vol_MA5'] > 0 else 0
-    is_vol_type_A = vol_ratio >= 1.5
-    is_vol_type_B = (today['Trading_Volume'] > yesterday['Trading_Volume']) and (today['Trading_Volume'] > today['Vol_MA5'])
-    vol_style = "無量空漲"
-    if is_vol_type_A and is_vol_type_B:
-        vol_style = "雙重觸發【主力暴發攻擊量】與【溫和遞增量】"
-    elif is_vol_type_A:
-        vol_style = "型態 A：底部主力強勢攻擊量(>=1.5x 5MA)"
-    elif is_vol_type_B:
-        vol_style = "型態 B：溫和放量遞增"
-    
-    status = "[A-3 中型100重生底] 腰斬股低檔橫盤半年，主力帶 2 倍大補量點火！" if is_hit else "未觸發訊號"
-    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
-    
     info = {
         "收盤": today['close'],
-        "均線發散度": f"{round(ma_dispersion * 100, 2)}%",
-        "距離年線": f"{round(dist_ratio * 100, 2)}%",
-        "240日高點跌幅": f"{round((1 - today['close']/max_price_240d)*100, 2)}%",
-        "季線年線下沉天數": int(consecutive_below_days),
-        "20日均量(張)": int(today['Vol_MA20']),
+        "季線/年線比": f"{round(ma_gap_ratio * 100, 2)}%",
+        "突破60日高點": is_price_breakout,
+        "過去一個月有主力訊號": "有" if has_volume_memory_20d else "無",
+        "期間最大主力波段量": f"{round(max_vol_ratio_20d, 2)}x",
         "今日量比20MA": f"{round(today['Trading_Volume'] / today['Vol_MA20'], 2)}x",
-        "量能風格": vol_style,
-        "策略狀態": status
+        "策略狀態": "【時差解鎖】主力潛伏完畢，今日結構正式轉強！" if is_hit else "未觸發"
     }
     
-    if is_hit:
-        print(f"【觸發訊號】st_bottom_u_turn_mid100_rebirth is_hit:{is_hit}")
-        print(f"-> 流動性安全: {is_liquid} (20MA日均量: {int(today['Vol_MA20'])}張)")
-        print(f"-> 空間檢查(腰斬): {is_dropped_enough} (跌幅: {info['240日高點跌幅']})")
-        print(f"-> 時間沉澱: {consecutive_below_days}天 | 主力甦醒量: {info['今日量比20MA']}")
-        
     return is_hit, info
 
 
