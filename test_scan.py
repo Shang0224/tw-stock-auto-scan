@@ -103,8 +103,19 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
 
         day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict)
 
+        #if day_results:
+         #   print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的。")
+          #  collected_range_results[day_str] = day_results
+        #else:         
+        #    print(f"🔍 {day_str} 掃描完成，無符合標的。")
+
         if day_results:
-            print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的。")
+            # 💡 這裡直接調用來自 utils 的績效計算工具
+            for hit in day_results:
+                perf = calculate_forward_performance(hit["代號"], day_str, global_df)
+                hit.update(perf)
+
+            print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的（已完成績效追蹤）。")
             collected_range_results[day_str] = day_results
         else:
             print(f"🔍 {day_str} 掃描完成，無符合標的。")
