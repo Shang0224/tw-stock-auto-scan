@@ -9,70 +9,62 @@ import pandas as pd
 #    - 主力在拉抬前，往往會利用市場恐慌，刻意砸盤殺破「前 60 日歷史新低」(製造崩盤假象)。
 #    - 關鍵在於：洗盤當天成交量必須呈現「窒息量縮」(代表籌碼已被主力鎖死，散戶絕望繳械)。
 #    - 隨後主力迅速在 10 天之內發動總攻，拉出爆量長紅並一舉強勢站回季線（生命線）。
-#    - 因此，本策略引進「時空記憶體」，只要過去 10 天(兩週)曾出現主力惡意挖坑洗盤的足跡，
+#    - 因此，本策略引進「時空記憶體」，只要過去 30 天(一個半月)曾出現主力惡意挖坑洗盤的足跡，
 #      搭配「今日」主力爆量點火、價格全面復活，即視為最完美的短線右側發動點。
 # ==============================================================================
 
 def st_washout_phoenix(df_single):
-    """強力洗盤復活策略
+    """強力洗盤復活策略 (鳳凰涅槃定錨版)
     
-    【策略靈魂】: 
-    專抓大週期跌深、年線減速走平，且過去 10 天內出現「惡意創 60 日新低」的窒息量洗盤，
-    今日突然拉出帶量紅K，一舉站回季線並創 20 日新高的「破底翻」暴利黑馬股。
+    【系統欄位對接】: 已將原始最低價欄位由 'low' 修正為你系統官方的 'min'
     """
     try:
-        # 1. 基礎長度防護門檻（確保滿足 MA240 與 60 日滾動窗格需求）
-        if len(df_single) < 310:
-            return False, {"策略狀態": "資料天數不足(<310)"}
+        if len(df_single) < 330: # 確保滿足 MA240 與 90 日滾動窗格需求
+            return False, {"策略狀態": "資料天數不足(<330)"}
             
         # =========================================================================
-        # 🔧 策略內部獨立運算：不共用、不依賴外層，自給自足
+        # 🔧 策略內部獨立運算：自給自足
         # =========================================================================
         df_single['MA60'] = df_single['close'].rolling(60).mean()
         df_single['MA240'] = df_single['close'].rolling(240).mean()
         df_single['MA5_volume'] = df_single['Trading_Volume'].rolling(5).mean()
         df_single['MA20_volume'] = df_single['Trading_Volume'].rolling(20).mean()
             
-        # 定義時間指針：永遠鎖定最後一列（今日最新數據）
         today = df_single.iloc[-1]
-        
         today_ma5_vol = df_single['MA5_volume'].iloc[-1]
         today_ma20_vol = df_single['MA20_volume'].iloc[-1]
 
         # =========================================================================
-        # 核心條件一：均線與趨勢濾網（鎖定長期大底部）
+        # 核心條件一：大底部型態濾網（年線走平 + 股價站上季線）
         # =========================================================================
-        # 條件 A: 處於低檔空頭排列 (季線在年線下方，確保不是追在高檔)
-        is_in_bottom_zone = today['MA60'] < today['MA240']
-        
-        # 條件 B: 年線下彎速度走平 (計算年線 5 日斜率，確保引力衰減中)
+        # 條件 A: 年線下彎速度走平 (確保引力衰減中)
         ma240_5d_ago = df_single['MA240'].iloc[-5]
         ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago
         is_ma240_flattening = ma240_slope_5d >= -0.015  # 下跌斜率收斂在 -1.5% 以內
         
-        # 條件 C: 今日實體強勢站回生命線 (今日收盤價必須站上季線)
+        # 條件 B: 今日實體強勢站回生命線 (今日收盤價必須站上季線)
         is_above_lifeline = today['close'] >= today['MA60']
         
-        if not (is_in_bottom_zone and is_ma240_flattening and is_above_lifeline):
-            return False, {"策略狀態": "大週期均線型態不符（未過趨勢濾網）"}
+        if not (is_ma240_flattening and is_above_lifeline):
+            return False, {"策略狀態": "底部均線型態不符（年線未走平或未站上季線）"}
 
         # =========================================================================
-        # 核心條件二：過去 10 天惡意洗盤判定（破底翻骨架）
+        # 核心條件二：30 天時空記憶體（對接 min 欄位，捕捉大甩轎破底翻）
         # =========================================================================
-        # 觀測窗格：切出過去 10 天 (不含今天) 的歷史 K 線
-        past_10d_window = df_single.iloc[-11:-1]
+        # 觀測窗格：切出過去 30 天 (不含今天) 的歷史 K 線
+        past_30d_window = df_single.iloc[-31:-1]
         
-        # 找出洗盤發生前、更早的 60 日最低價邊界
-        historical_60d_min_low = df_single['min'].iloc[-71:-11].min()
+        # 找出洗盤發生前、更早的 60 日最低價邊界（使用對接欄位 'min'）
+        historical_60d_min_low = df_single['min'].iloc[-91:-31].min()
         
-        # 判定 A: 過去 10 天內，最低價必須「曾經跌破」之前的 60 日歷史低點（誘空洗盤）
-        past_min_low = past_10d_window['min'].min()
+        # 判定 A: 過去 30 天內，最低價必須「曾經跌破」之前的 60 日歷史低點
+        past_min_low = past_30d_window['min'].min()
         has_washout_drop = past_min_low <= historical_60d_min_low
         
-        # 判定 B: 找出破底洗盤那天，成交量必須呈現「窒息量縮」
-        # （使用相對位置 argmin 與 iloc 絕對定錨，100% 避開交易日 Index 衝突）
-        washout_relative_pos = past_10d_window['min'].values.argmin() 
-        absolute_pos = len(df_single) - 11 + washout_relative_pos
+        # 判定 B: 找出甩轎那天的窒息量
+        # （使用相對位置 argmin 與 iloc 絕對定錨，避開交易日 Index 衝突）
+        washout_relative_pos = past_30d_window['min'].values.argmin() 
+        absolute_pos = len(df_single) - 31 + washout_relative_pos
         
         washout_day_volume = df_single['Trading_Volume'].iloc[absolute_pos]
         washout_day_ma20_vol = df_single['MA20_volume'].iloc[absolute_pos]
@@ -80,7 +72,7 @@ def st_washout_phoenix(df_single):
         is_washout_volume_low = washout_day_volume < washout_day_ma20_vol * 0.8
         
         if not (has_washout_drop and is_washout_volume_low):
-            return False, {"策略狀態": "觀測期未見惡意洗盤（未創60日新低或未見窒息量）"}
+            return False, {"策略狀態": "30日觀測期內未見洗盤訊號（未創低或未見窒息量）"}
 
         # =========================================================================
         # 核心條件三：今日總攻判定（全面復活）
@@ -95,7 +87,6 @@ def st_washout_phoenix(df_single):
         # 條件 C: 主力發動爆量點火 (今日成交量大於 5 日均量的 1.5 倍)
         is_volume_signal_up = today['Trading_Volume'] >= today_ma5_vol * 1.5
         
-        # 分流判斷：如果洗盤訊號已備，但今日動能未達標
         if not is_price_breakout_20d:
             return False, {"策略狀態": "進入潛伏觀測區（已惡意洗盤，但今日股價未創20日新高）"}
             
@@ -107,7 +98,6 @@ def st_washout_phoenix(df_single):
         # =========================================================================
         if is_price_breakout_20d and is_today_positive and is_volume_signal_up:
             
-            # 計算實戰所需的關鍵價量參考值
             today_change = round(((today['close'] - today['open']) / today['open']) * 100, 2)
             stop_loss_price = round(past_min_low * 0.99, 2)
             stop_loss_pct = round(((stop_loss_price - today['close']) / today['close']) * 100, 2)
@@ -124,7 +114,6 @@ def st_washout_phoenix(df_single):
             return True, detail_info
 
     except Exception as e:
-        # 終極防護：印出異常提示，默默跳過該股票，絕不讓 GitHub Actions 中斷退出
         stock_code = df_single['stock_id'].iloc[0] if 'stock_id' in df_single.columns else '未知'
         print(f"⚠️ [策略異常跳過] 股票代號 {stock_code} 發生錯誤: {str(e)}")
         return False, {"策略狀態": f"計算異常跳過 ({str(e)})"}
