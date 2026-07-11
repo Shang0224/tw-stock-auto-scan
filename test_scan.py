@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from scanstock.scanstock import scan_stocks_df_list
 
 # 匯入您要測試的策略
-from strategy.strat_right_side import st_shakeout_resurrection, st_bottom_u_turn, st_bottom_u_turn_v20260703, st_bottom_u_turn_v2026070301, st_bottom_u_turn_2026070302, st_bottom_u_turn_with_memory, st_washout_phoenix
+from strategy.strat_right_side import st_bottom_u_turn_2026071101, st_shakeout_resurrection, st_bottom_u_urn, st_bottom_u_turn_v20260703, st_bottom_u_turn_v2026070301, st_bottom_u_turn_2026070302, st_bottom_u_turn_with_memory, st_washout_phoenix
 from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout
 from strategy.advanced_ma240 import st_advanced_ma240_df_up
 from strategy.near_ma240 import st_near_ma240_df
@@ -35,7 +35,7 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['3005', '2353', '6191']
 
-TEST_STRATEGIES = [st_bottom_u_turn]
+TEST_STRATEGIES = [st_bottom_u_turn_2026071101]
 #TEST_STRATEGIES = [st_shakeout_resurrection]
 #TEST_STRATEGIES = [st_washout_phoenix]
 #TEST_STRATEGIES = [st_bottom_u_turn_with_memory]
