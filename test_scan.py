@@ -155,11 +155,11 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         if csv_path and os.path.exists(csv_path):
             try:
                 # 讀出原本的內容
-                with open(csv_path, 'r', encoding='utf-8') as f:
+                with open(csv_path, 'r', encoding='utf-8-sig') as f:
                     original_content = f.read()
                 
                 # 將策略清單放在第一行，後面接原本的內容重新寫入
-                with open(csv_path, 'w', encoding='utf-8') as f:
+                with open(csv_path, 'w', encoding='utf-8-sig') as f:
                     f.write(strat_header_line)
                     f.write(original_content)
                 
