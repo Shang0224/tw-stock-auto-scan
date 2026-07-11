@@ -71,7 +71,7 @@ def st_washout_phoenix(df_single):
         
         # 判定 B: 找出破底洗盤那天，成交量必須呈現「窒息量縮」
         # （使用相對位置 argmin 與 iloc 絕對定錨，100% 避開交易日 Index 衝突）
-        washout_relative_pos = past_10d_window['low'].values.argmin() 
+        washout_relative_pos = past_10d_window['min'].values.argmin() 
         absolute_pos = len(df_single) - 11 + washout_relative_pos
         
         washout_day_volume = df_single['Trading_Volume'].iloc[absolute_pos]
