@@ -134,13 +134,40 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     # 🌟 呼叫全新的工具函數
     # =====================================================================
     if collected_range_results:
-        output_name = f"{source.lower()}_test"
+        # 1. 蒐集當次測試的所有策略名稱
+        strat_names = [strat.__name__ for strat in strategies]
+        strat_header_line = f"# 🧪 測試策略清單: {', '.join(strat_names)}\n"
+        
+        # 為了主檔名乾淨，主檔名仍可用第一個策略或 multi 代表
+        strat_label = strat_names[0] if len(strat_names) == 1 else f"multi_strat_{len(strat_names)}"
+        output_name = f"{source.lower()}_test_{strat_label}"
+        
         now_time = datetime.now(timezone(timedelta(hours=8)))
+        
+        #output_name = f"{source.lower()}_test"
+        #now_time = datetime.now(timezone(timedelta(hours=8)))
         
         # 1. 🌟 直接調用 utils 的新函數，一行程式碼搞定格式化產檔
         csv_path = save_multi_day_report(collected_range_results, output_name, now_time)
         print(f"✅ [報表產出成功] 已透過 utils.save_multi_day_report 格式化輸出：{csv_path}")
 
+        # 3. 📝 【核心亮點】將策略清單動態插隊寫入檔案第一行
+        if csv_path and os.path.exists(csv_path):
+            try:
+                # 讀出原本的內容
+                with open(csv_path, 'r', encoding='utf-8') as f:
+                    original_content = f.read()
+                
+                # 將策略清單放在第一行，後面接原本的內容重新寫入
+                with open(csv_path, 'w', encoding='utf-8') as f:
+                    f.write(strat_header_line)
+                    f.write(original_content)
+                
+                print(f"✍️  [策略註記成功] 已將策略名稱寫入檔案第一行：{strat_header_line.strip()}")
+            except Exception as e:
+                print(f"⚠️  [寫入策略註腳失敗] 錯誤: {e}")
+
+        
         # 2. 訊息派發：Email 發送完整報告
         send_email_report(csv_path)
 
