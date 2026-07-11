@@ -32,7 +32,7 @@ def st_bottom_u_turn_2026071101(df_single):
     # 🌟 條件 A：歷史最大回撤限制（定義 U 型底的「左側碗壁」）
     # 尋找過去 1 年（約 240 個交易日）的歷史最高價，要求目前股價至少要從高點深幅修正 20% 以上
     # 這樣可以直接擋掉廣達這種在大盤大跌時、自己卻橫盤頂天根本沒跌的抗跌平台股
-    max_price_1y = df_single['high'].rolling(240).max().iloc[-1]
+    max_price_1y = df_single['max'].rolling(240).max().iloc[-1]
     drop_from_top = (max_price_1y - today['close']) / max_price_1y if max_price_1y > 0 else 0
     is_real_drop_1y = drop_from_top >= 0.20  # 門檻設為 20%，確保左側有因題材破滅而狠跌過的軌跡
 
