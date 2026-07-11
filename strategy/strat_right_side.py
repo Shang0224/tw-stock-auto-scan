@@ -63,10 +63,10 @@ def st_washout_phoenix(df_single):
         past_10d_window = df_single.iloc[-11:-1]
         
         # 找出洗盤發生前、更早的 60 日最低價邊界
-        historical_60d_min_low = df_single['low'].iloc[-71:-11].min()
+        historical_60d_min_low = df_single['min'].iloc[-71:-11].min()
         
         # 判定 A: 過去 10 天內，最低價必須「曾經跌破」之前的 60 日歷史低點（誘空洗盤）
-        past_min_low = past_10d_window['low'].min()
+        past_min_low = past_10d_window['min'].min()
         has_washout_drop = past_min_low <= historical_60d_min_low
         
         # 判定 B: 找出破底洗盤那天，成交量必須呈現「窒息量縮」
