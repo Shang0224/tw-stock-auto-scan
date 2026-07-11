@@ -22,7 +22,7 @@ def st_washout_phoenix(df_single):
     """
     # 1. 基礎長度防護門檻（ need 滿足 MA240 與 60 日滾動窗格需求 ）
     if len(df_single) < 310:
-        return False, {}
+        return False, {"策略狀態": "資料天數不足(<310)"}
         
     # 定義時間指針：永遠鎖定你系統切出的 df_single 最後一列（即今日盤後最新數據）
     today = df_single.iloc[-1]
@@ -51,7 +51,7 @@ def st_washout_phoenix(df_single):
     is_above_lifeline = today['close'] >= today['MA60']
     
     if not (is_in_bottom_zone and is_ma240_flattening and is_above_lifeline):
-        return False, {}
+        return False, {"策略狀態": "大週期均線型態不符（未過趨勢濾網）"}
 
     # =========================================================================
     # 核心條件二：過去 10 天惡意洗盤判定（破底翻骨架）
@@ -72,7 +72,7 @@ def st_washout_phoenix(df_single):
     is_washout_volume_low = washout_day_volume < df_single['MA20_volume'].loc[washout_day_idx] * 0.8
     
     if not (has_washout_drop and is_washout_volume_low):
-        return False, {}
+        return False, {"策略狀態": "觀測期未見惡意洗盤（未創60日新低或未見窒息量）"}
 
     # =========================================================================
     # 核心條件三：今日總攻判定（全面復活）
@@ -87,6 +87,13 @@ def st_washout_phoenix(df_single):
     # 條件 C: 主力發動爆量點火 (今日成交量大於 5 日均量的 1.5 倍)
     is_volume_signal_up = today['volume'] >= today_ma5_vol * 1.5
     
+    # 分流判斷：如果洗盤訊號已備，但今日動能未達標
+    if not is_price_breakout_20d:
+        return False, {"策略狀態": "進入潛伏觀測區（已惡意洗盤，但今日股價未創20日新高）"}
+        
+    if not (is_today_positive and is_volume_signal_up):
+        return False, {"策略狀態": "進入潛伏觀測區（已惡意洗盤、股價突破，但今日紅K未爆量）"}
+        
     # =========================================================================
     # 🎯 觸發成功：打包回傳數據（完美對接 hit_row.update）
     # =========================================================================
@@ -98,6 +105,7 @@ def st_washout_phoenix(df_single):
         stop_loss_pct = round(((stop_loss_price - today['close']) / today['close']) * 100, 2)
         
         detail_info = {
+            "策略狀態": "完全觸發（帶量紅K破底翻）",
             "今日收盤": today['close'],
             "今日K線漲幅": f"{today_change}%",
             "洗盤區最低價": past_min_low,
@@ -107,7 +115,7 @@ def st_washout_phoenix(df_single):
         }
         return True, detail_info
         
-    return False, {}
+    return False, {"策略狀態": "未知異常狀態"}
 
 # ==============================================================================
 # 💡 策略邏輯備忘註腳 (Strategy Footnotes & Design Philosophy)
