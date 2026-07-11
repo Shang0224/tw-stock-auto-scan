@@ -1,5 +1,114 @@
 import pandas as pd
 
+def st_bottom_u_turn_2026071101(df_single):
+    """
+    ***策略 A-2：題材破滅 U 型碗底翻揚系統 (20260711 究極嚴選 U 型底版)***
+    
+    優化重點回顧：
+    1. 雙扣抵容許區間 ➡️ 留下華碩，洗掉結構不穩股。
+    2. 均線發散度限制 ➡️ 洗掉短線暴衝、均線拉太開的個股。
+    3. [新增] 歷史最大回撤限制 ➡️ 確保個股「左側狠跌過」，剔除抗跌橫盤平台股。
+    4. [新增] 季線年線深層位階 ➡️ 確保個股處於「中長線深層底部」，剔除貼著年線整理股。
+    """
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
+
+    # ==========================================
+    # 1. 技術指標計算
+    # ==========================================
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA10'] = df_single['close'].rolling(10).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
+    
+    today = df_single.iloc[-1]
+    yesterday = df_single.iloc[-2]
+    
+    # ==========================================
+    # 2. 【核心新增】真正 U 型底形態檢查 (碗壁與深度過濾)
+    # ==========================================
+    # 🌟 條件 A：歷史最大回撤限制（定義 U 型底的「左側碗壁」）
+    # 尋找過去 1 年（約 240 個交易日）的歷史最高價，要求目前股價至少要從高點深幅修正 20% 以上
+    # 這樣可以直接擋掉廣達這種在大盤大跌時、自己卻橫盤頂天根本沒跌的抗跌平台股
+    max_price_1y = df_single['high'].rolling(240).max().iloc[-1]
+    drop_from_top = (max_price_1y - today['close']) / max_price_1y if max_price_1y > 0 else 0
+    is_real_drop_1y = drop_from_top >= 0.20  # 門檻設為 20%，確保左側有因題材破滅而狠跌過的軌跡
+
+    # 🌟 條件 B：中長線深層底部限制（定義 U 型底的「碗底深處」）
+    # 要求代表中線的季線（MA60）必須在年線（MA240）下方至少 5% 以上，確保中長線位階夠低
+    # 廣達觸發時因長線過於強勢，季線與年線幾乎黏在一起（小於 1%），補上此條可徹底洗掉「假築底、真橫盤」的股票
+    is_deep_bottom = (today['MA240'] - today['MA60']) / today['MA240'] >= 0.05
+
+    # ==========================================
+    # 3. 基本位階與趨勢檢查
+    # ==========================================
+    # 季線在年線下方，代表中線仍處底部的基本設定
+    is_below_ma240 = today['MA60'] < today['MA240']
+    
+    # 檢查年線（MA240）斜率是否趨於走平，代表長期賣壓已經告一段落
+    ma240_5d_ago = df_single['MA240'].iloc[-6]
+    ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago if ma240_5d_ago > 0 else 0
+    is_ma240_stable = ma240_slope_5d >= -0.01 
+    
+    # 短中線多頭排列且季線開始上揚，代表碗底開始「探頭翻揚」
+    is_ma60_turning_up = today['MA60'] > yesterday['MA60']
+    is_short_trend_bullish = today['MA5'] > today['MA10'] > today['MA20'] > today['MA60']
+    
+    # ==========================================
+    # 4. 歷史優化條件檢查
+    # ==========================================
+    # 🌟 優化一：扣抵值智能容許過濾 (避免個股因為扣抵值短暫拉高而被策略誤殺)
+    ma60_deduct_today = df_single['close'].iloc[-60]
+    ma60_deduct_5d_later = df_single['close'].iloc[-55]
+    ma60_deduct_change = (ma60_deduct_5d_later - ma60_deduct_today) / ma60_deduct_today if ma60_deduct_today > 0 else 0
+    is_ma60_deduct_ok = ma60_deduct_change <= 0.015
+
+    ma240_deduct_today = df_single['close'].iloc[-240]
+    ma240_deduct_20d_later = df_single['close'].iloc[-220]
+    ma240_deduct_change = (ma240_deduct_20d_later - ma240_deduct_today) / ma240_deduct_today if ma240_deduct_today > 0 else 0
+    is_ma240_deduct_ok = ma240_deduct_change <= 0.02
+    
+    # 🌟 優化二：均線發散度過濾 (洗掉短線已經暴衝、均線拉太開的過熱股票)
+    ma_list = [today['MA5'], today['MA10'], today['MA20']]
+    ma_dispersion = (max(ma_list) - min(ma_list)) / today['MA20'] if today['MA20'] > 0 else 0
+    is_ma_not_overheated = ma_dispersion <= 0.06  # 限制短中期均線乖離在 6% 以內，確保均線溫和凝聚
+
+    # ==========================================
+    # 5. 量能與當日觸發判定
+    # ==========================================
+    is_triggered = today['close'] > today['open'] # 當日收紅 K 棒做為右側發動訊號
+    
+    # ==========================================
+    # 6. 綜合判定（加入所有新舊核心條件）
+    # ==========================================
+    is_hit = (is_real_drop_1y and is_deep_bottom and                      # 🎯 碗壁與碗底形態過濾
+              is_below_ma240 and is_ma240_stable and is_ma60_turning_up and # 趨勢位階
+              is_short_trend_bullish and is_triggered and                  # 短線發動
+              is_ma60_deduct_ok and is_ma240_deduct_ok and is_ma_not_overheated) # 扣抵與凝聚優化
+
+    # Debug 訊息輸出
+    print(f"--- 形態檢查 ---")
+    print(f"RealDrop1Y(>=20%): {is_real_drop_1y} (實際跌幅: {round(drop_from_top*100,2)}%)")
+    print(f"DeepBottom(>=5%): {is_deep_bottom} (年季線差距: {round(((today['MA240']-today['MA60'])/today['MA240'])*100,2)}%)")
+    print(f"--- 趨勢與技術面檢查 ---")
+    print(f"Below240: {is_below_ma240} | Stable240: {is_ma240_stable} | MA60Up: {is_ma60_turning_up} | ShortBull: {is_short_trend_bullish} | Triggered: {is_triggered}")
+    print(f"ma60_deduct: {is_ma60_deduct_ok} | ma240_deduct: {is_ma240_deduct_ok} | not_overheated: {is_ma_not_overheated}")
+    
+    status = "[A-2 鑽石碗底] 均線溫和凝聚＋雙扣抵大吉！" if is_hit else "未觸發訊號"
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    
+    info = {
+        "收盤": today['close'],
+        "均線發散度": f"{round(ma_dispersion * 100, 2)}%",
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "策略狀態": status
+    }
+        
+    return is_hit, info
+
+
 # ==============================================================================
 # 💡 策略邏輯備忘註腳 (Strategy Footnotes & Design Philosophy)
 # ==============================================================================
