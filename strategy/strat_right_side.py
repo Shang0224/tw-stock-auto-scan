@@ -20,6 +20,99 @@ def st_bottom_u_turn_with_memory(df_single):
     - 拋棄「爆量與均線必須在同一天」的死板限制。
     - 記憶濾網：過去 20 天內曾出現過 > 20日均量 2.0 倍的紅K爆量，程式會記住此主力腳印。
     - 收網觸發：今日剛好走到「季線探頭、年線減速、價格創 60 日新高」的翻揚臨界點，立刻觸發。
+    
+    - 比st_bottom_u_turn_with_memory_20260711_01增加扣抵值濾網
+    """
+    if df_single.empty or len(df_single) < 250:
+        return False, {}
+
+    # --- 1. 計算基本技術指標 ---
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
+    
+    today = df_single.iloc[-1]
+    yesterday = df_single.iloc[-2]
+    
+    # 流動性基本防禦
+    if today['Vol_MA20'] < 300:
+        return False, {}
+
+    # --- 2. 主力爆量記憶體 (解鎖價量時差) ---
+    # 計算每一天是否「成交量 >= 20日均量的 2.0 倍 且 當天收紅K」
+    df_single['is_volume_burst'] = (df_single['Trading_Volume'] >= df_single['Vol_MA20'] * 2.0) & (df_single['close'] > df_single['open'])
+    
+    # 檢查「過去 20 個交易日（約一個月）」內，有沒有任何一天觸發過爆量
+    has_volume_memory_20d = df_single['is_volume_burst'].rolling(20).max().iloc[-1] == 1.0
+
+    # --- 3. 空間防守：季線在年線下方至少 8% 之外 (絕對低檔位階，免用前波高點) ---
+    ma_gap_ratio = today['MA60'] / today['MA240'] if today['MA240'] > 0 else 1.0
+    is_deep_enough = ma_gap_ratio <= 0.92  
+    
+    # --- 4. 價格實質突破：創 60 日（一季）最高收盤價，突破碗底頸線 ---
+    max_close_60d = df_single['close'].iloc[-61:-1].max()
+    is_price_breakout = today['close'] > max_close_60d
+    
+    # --- 5. 趨勢轉折與年線減速 (今天收網的技術條件) ---
+    is_ma60_turning_up = today['MA60'] > yesterday['MA60']
+    
+    ma240_5d_ago = df_single['MA240'].iloc[-6]
+    ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago if ma240_5d_ago != 0 else 0
+    is_ma240_stable = ma240_slope_5d >= -0.015
+    
+    # 今日基本動能：不求今天暴巨量，但今天至少要是個多頭前進的收紅盤
+    is_today_positive = today['close'] >= yesterday['close']
+
+    # === 新增：年線扣抵值防禦濾網 ===
+    # 找出 240 天前的股價（即今日 MA240 的扣抵位置）
+    # 為了防止高價股高檔套牢壓力，未來 20 天的扣抵值（240天前~220天前）也必須納入考量
+    ref_idx_240 = -240
+    ref_idx_220 = -220
+    
+    if len(df_single) >= 240:
+        price_240d_ago = df_single['close'].iloc[ref_idx_240]
+        # 未來一個月內會扣抵到的最高價
+        max_charge_price_next_month = df_single['close'].iloc[ref_idx_240:ref_idx_220].max()
+        
+        # 【核心防禦條件】: 今日股價如果距離未來一個月要扣抵的最高價「太遠」（例如跌幅超過 40%）
+        # 代表一年前的今天是一座高不可攀的大山，年線在未來一個月「絕對不可能扣平」，只會加速下墜！
+        is_charge_safe = today['close'] >= (max_charge_price_next_month * 0.55) # 至少要在扣抵最高價的 55% 以上
+    else:
+        is_charge_safe = False
+
+    # === 結合原本的判定 ===
+    is_hit = (has_volume_memory_20d and is_deep_enough and is_price_breakout and 
+              is_ma60_turning_up and is_ma240_stable and is_today_positive and
+              is_charge_safe) # 🌟 只有扣抵安全才准觸發
+              
+    # 找出過去 20 天最高的那次量能倍數，方便在 log 中觀察主力力道
+    df_single['vol_ratio_track'] = df_single['Trading_Volume'] / df_single['Vol_MA20']
+    max_vol_ratio_20d = df_single['vol_ratio_track'].rolling(20).max().iloc[-1]
+
+    info = {
+        "收盤": today['close'],
+        "季線/年線比": f"{round(ma_gap_ratio * 100, 2)}%",
+        "突破60日高點": is_price_breakout,
+        "過去一個月有主力訊號": "有" if has_volume_memory_20d else "無",
+        "期間最大主力波段量": f"{round(max_vol_ratio_20d, 2)}x",
+        "今日量比20MA": f"{round(today['Trading_Volume'] / today['Vol_MA20'], 2)}x",
+        "策略狀態": "【時差解鎖】主力潛伏完畢，今日結構正式轉強！" if is_hit else "未觸發"
+    }
+    
+    return is_hit, info
+
+
+def st_bottom_u_turn_with_memory_20260711_01(df_single):
+    """
+    ***st_bottom_u_turn 策略 A-5：解鎖價量時差的「主力痕跡記憶系統」***
+    
+    【核心邏輯優化】
+    - 拋棄「爆量與均線必須在同一天」的死板限制。
+    - 記憶濾網：過去 20 天內曾出現過 > 20日均量 2.0 倍的紅K爆量，程式會記住此主力腳印。
+    - 收網觸發：今日剛好走到「季線探頭、年線減速、價格創 60 日新高」的翻揚臨界點，立刻觸發。
+    無扣抵值濾網
     """
     if df_single.empty or len(df_single) < 250:
         return False, {}
