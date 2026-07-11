@@ -27,11 +27,11 @@ def st_washout_phoenix(df_single):
     # 定義時間指針：永遠鎖定你系統切出的 df_single 最後一列（即今日盤後最新數據）
     today = df_single.iloc[-1]
     
-    # 2. 量能指標安全補算（若你的 all_df 外部沒算，內部自動補齊）
+    # 2. 量能指標安全補算（維持原本滾動均量名稱，取底層量能時改用 Trading_Volume）
     if 'MA5_volume' not in df_single.columns:
-        df_single['MA5_volume'] = df_single['volume'].rolling(5).mean()
+        df_single['MA5_volume'] = df_single['Trading_Volume'].rolling(5).mean()
     if 'MA20_volume' not in df_single.columns:
-        df_single['MA20_volume'] = df_single['volume'].rolling(20).mean()
+        df_single['MA20_volume'] = df_single['Trading_Volume'].rolling(20).mean()
         
     today_ma5_vol = df_single['MA5_volume'].iloc[-1]
     today_ma20_vol = df_single['MA20_volume'].iloc[-1]
@@ -66,9 +66,9 @@ def st_washout_phoenix(df_single):
     past_min_low = past_10d_window['low'].min()
     has_washout_drop = past_min_low <= historical_60d_min_low
     
-    # 判定 B: 找出破底洗盤那天，成交量必須呈現「窒息量」（主力沒跑，散戶恐慌拋售）
+    # 判定 B: 找出破底洗盤那天，成交量必須呈現「窒息量縮」（主力沒跑，散戶恐慌拋售）
     washout_day_idx = past_10d_window['low'].idxmin()
-    washout_day_volume = past_10d_window.loc[washout_day_idx, 'volume']
+    washout_day_volume = past_10d_window.loc[washout_day_idx, 'Trading_Volume']
     is_washout_volume_low = washout_day_volume < df_single['MA20_volume'].loc[washout_day_idx] * 0.8
     
     if not (has_washout_drop and is_washout_volume_low):
@@ -85,7 +85,7 @@ def st_washout_phoenix(df_single):
     is_today_positive = today['close'] > today['open']
     
     # 條件 C: 主力發動爆量點火 (今日成交量大於 5 日均量的 1.5 倍)
-    is_volume_signal_up = today['volume'] >= today_ma5_vol * 1.5
+    is_volume_signal_up = today['Trading_Volume'] >= today_ma5_vol * 1.5
     
     # 分流判斷：如果洗盤訊號已備，但今日動能未達標
     if not is_price_breakout_20d:
