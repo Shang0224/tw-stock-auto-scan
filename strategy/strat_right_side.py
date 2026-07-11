@@ -3,6 +3,115 @@ import pandas as pd
 # ==============================================================================
 # 💡 策略邏輯備忘註腳 (Strategy Footnotes & Design Philosophy)
 # ==============================================================================
+# 1. 核心哲學：本策略專門捕捉「破底翻」或「惡意洗盤後 V 型拔地而起」的暴利黑馬股。
+# 2. 徹底揚棄「左側摸底」的左側猜測，改用今日「實體紅K 創 20 日新高」作為右側動能確認的進場依據。
+# 3. 承認並解鎖「洗盤時差 (Washout Lag)」：
+#    - 主力在拉抬前，往往會利用市場恐慌，刻意砸盤殺破「前 60 日歷史新低」(製造崩盤假象)。
+#    - 關鍵在於：洗盤當天成交量必須呈現「窒息量縮」(代表籌碼已被主力鎖死，散戶絕望繳械)。
+#    - 隨後主力迅速在 10 天之內發動總攻，拉出爆量長紅並一舉強勢站回季線（生命線）。
+#    - 因此，本策略引進「時空記憶體」，只要過去 10 天(兩週)曾出現主力惡意挖坑洗盤的足跡，
+#      搭配「今日」主力爆量點火、價格全面復活，即視為最完美的短線右側發動點。
+# ==============================================================================
+
+def st_washout_phoenix(df_single):
+    """強力洗盤復活策略
+    
+    【策略靈魂】: 
+    專抓大週期跌深、年線減速走平，且過去 10 天內出現「惡意創 60 日新低」的窒息量洗盤，
+    今日突然拉出帶量紅K，一舉站回季線並創 20 日新高的「破底翻」暴利黑馬股。
+    """
+    # 1. 基礎長度防護門檻（ need 滿足 MA240 與 60 日滾動窗格需求 ）
+    if len(df_single) < 310:
+        return False, {}
+        
+    # 定義時間指針：永遠鎖定你系統切出的 df_single 最後一列（即今日盤後最新數據）
+    today = df_single.iloc[-1]
+    
+    # 2. 量能指標安全補算（若你的 all_df 外部沒算，內部自動補齊）
+    if 'MA5_volume' not in df_single.columns:
+        df_single['MA5_volume'] = df_single['volume'].rolling(5).mean()
+    if 'MA20_volume' not in df_single.columns:
+        df_single['MA20_volume'] = df_single['volume'].rolling(20).mean()
+        
+    today_ma5_vol = df_single['MA5_volume'].iloc[-1]
+    today_ma20_vol = df_single['MA20_volume'].iloc[-1]
+
+    # =========================================================================
+    # 核心條件一：均線與趨勢濾網（鎖定長期大底部）
+    # =========================================================================
+    # 條件 A: 處於低檔空頭排列 (季線在年線下方，確保不是追在高檔)
+    is_in_bottom_zone = today['MA60'] < today['MA240']
+    
+    # 條件 B: 年線下彎速度走平 (計算年線 5 日斜率，確保引力衰減中)
+    ma240_5d_ago = df_single['MA240'].iloc[-5]
+    ma240_slope_5d = (today['MA240'] - ma240_5d_ago) / ma240_5d_ago
+    is_ma240_flattening = ma240_slope_5d >= -0.015  # 下跌斜率收斂在 -1.5% 以內
+    
+    # 條件 C: 今日實體強勢站回生命線 (今日收盤價必須站上季線)
+    is_above_lifeline = today['close'] >= today['MA60']
+    
+    if not (is_in_bottom_zone and is_ma240_flattening and is_above_lifeline):
+        return False, {}
+
+    # =========================================================================
+    # 核心條件二：過去 10 天惡意洗盤判定（破底翻骨架）
+    # =========================================================================
+    # 觀測窗格：切出過去 10 天 (不含今天) 的歷史 K 線
+    past_10d_window = df_single.iloc[-11:-1]
+    
+    # 找出洗盤發生前、更早的 60 日最低價邊界
+    historical_60d_min_low = df_single['low'].iloc[-71:-11].min()
+    
+    # 判定 A: 過去 10 天內，最低價必須「曾經跌破」之前的 60 日歷史低點（誘空洗盤）
+    past_min_low = past_10d_window['low'].min()
+    has_washout_drop = past_min_low <= historical_60d_min_low
+    
+    # 判定 B: 找出破底洗盤那天，成交量必須呈現「窒息量」（主力沒跑，散戶恐慌拋售）
+    washout_day_idx = past_10d_window['low'].idxmin()
+    washout_day_volume = past_10d_window.loc[washout_day_idx, 'volume']
+    is_washout_volume_low = washout_day_volume < df_single['MA20_volume'].loc[washout_day_idx] * 0.8
+    
+    if not (has_washout_drop and is_washout_volume_low):
+        return False, {}
+
+    # =========================================================================
+    # 核心條件三：今日總攻判定（全面復活）
+    # =========================================================================
+    # 條件 A: 今日收盤價一舉創下過去 20 日的新高
+    max_price_20d = df_single['close'].iloc[-21:-1].max()
+    is_price_breakout_20d = today['close'] >= max_price_20d
+    
+    # 條件 B: 今日收盤必須是實體紅K (收盤價高於開盤價)
+    is_today_positive = today['close'] > today['open']
+    
+    # 條件 C: 主力發動爆量點火 (今日成交量大於 5 日均量的 1.5 倍)
+    is_volume_signal_up = today['volume'] >= today_ma5_vol * 1.5
+    
+    # =========================================================================
+    # 🎯 觸發成功：打包回傳數據（完美對接 hit_row.update）
+    # =========================================================================
+    if is_price_breakout_20d and is_today_positive and is_volume_signal_up:
+        
+        # 計算實戰所需的關鍵價量參考值
+        today_change = round(((today['close'] - today['open']) / today['open']) * 100, 2)
+        stop_loss_price = round(past_min_low * 0.99, 2)
+        stop_loss_pct = round(((stop_loss_price - today['close']) / today['close']) * 100, 2)
+        
+        detail_info = {
+            "今日收盤": today['close'],
+            "今日K線漲幅": f"{today_change}%",
+            "洗盤區最低價": past_min_low,
+            "建議保命停損價": stop_loss_price,
+            "預估停損幅度": f"{stop_loss_pct}%",
+            "進場時年線斜率": f"{round(ma240_slope_5d * 100, 2)}%"
+        }
+        return True, detail_info
+        
+    return False, {}
+
+# ==============================================================================
+# 💡 策略邏輯備忘註腳 (Strategy Footnotes & Design Philosophy)
+# ==============================================================================
 # 1. 核心哲學：本策略專門捕捉「U 型底」或「地下室破冰」的轉骨黑馬股。
 # 2. 徹底揚棄「前波高點」的時空猜測，改用中長線均線的「絕對乖離度」作為空間防守依據。
 # 3. 承認並解鎖「價量時差 (Time Lag)」：
