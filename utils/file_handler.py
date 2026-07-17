@@ -37,7 +37,7 @@ def save_multi_day_report(collected_results, source_name, tw_time):
                 f.write("\n\n")
             
             # 🌟 獨立輸出一行橫線與日期
-            f.write(f"==================== {date_key} ====================\n")
+            f.write(f"====,=====,==== {date_key} ===========================\n")
             
             # 將當天的結果寫入 CSV
             day_df = pd.DataFrame(day_list)
