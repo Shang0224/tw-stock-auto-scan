@@ -42,7 +42,7 @@ def yfinance_scan_ma240():
         # 2. 讀取.csv檔
         # 從系統環境變數讀取，若讀不到則給予預設值
         files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
-        my_strategies = [st_near_ma240_df, st_advanced_ma240_df, st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation, st_bottom_u_turn]
+        my_strategies = [st_near_ma240_df, st_advanced_ma240_df]
         print(f"【定時排程模式】自動切換至今日：{tw_time.strftime('%Y-%m-%d')}, 資料來源：{files_env}")
     else:
         print(type(files_env), files_env)
