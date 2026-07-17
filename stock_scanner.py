@@ -36,7 +36,11 @@ def yfinance_scan_ma240():
     tw_time = datetime.now(tz_tw)
     
     files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
-    my_strategies = [st_near_ma240_df, st_bottom_v_turn, st_bottom_breakout] # 策略列表
+
+    
+    #my_strategies = [st_near_ma240_df, st_bottom_v_turn, st_bottom_breakout] # 策略列表
+    my_strategies = [st_near_ma240_df, st_advanced_ma240_df] # 策略列表
+    
     
     print(f"⏰ [YF 排程啟動] 日期：{tw_time.strftime('%Y-%m-%d')}, 來源：{files_env}")
 
