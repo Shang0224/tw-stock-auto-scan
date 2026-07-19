@@ -5,6 +5,71 @@ import time
 
 def st_bottom_v_turn(df_single):
     """
+    ***底部篩選 - 左側超跌 V 轉模式 (優化版)***
+    
+    優化邏輯：
+    1. 收窄超跌區間：將 -5%~-20% 調整為 -10%~-20%，過濾掉缺乏爆發力的弱勢股。
+    2. 維持天量催化：保持 2.5x 爆量門檻，確保進場訊號具有主力護盤確認。
+    """
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
+
+    # 計算技術指標
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
+    
+    today = df_single.iloc[-1]
+    vol_ma5 = today['Vol_MA5']
+    
+    # 基底檢查：股價在年線下方
+    is_below_ma240 = today['close'] < today['MA240']
+    
+    # 計算年線 20 日斜率（百分比變動）
+    ma240_20d_ago = df_single['MA240'].iloc[-21]
+    ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
+    
+    # 計算負乖離率
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+
+    # 【優化重點 1】：收窄超跌定義，過濾掉修正幅度不足的股票 (只挑 -10% ~ -20%)
+    is_oversold_zone = -0.20 <= dist_ratio <= -0.10
+    
+    # 計算今日量比
+    vol_ratio = today['Trading_Volume'] / vol_ma5 if vol_ma5 > 0 else 0
+    is_huge_volume = vol_ratio >= 2.5
+    
+    # ==================== 【天量催化劑動態門檻】 ====================
+    if is_huge_volume:
+        # 爆量時，放寬年線限制到 -1.0%，捕捉強力的暴力 V 轉
+        slope_threshold = -0.01 
+        status_tag = "[左側天量V轉]大多頭催化劑發動! 主力/庫藏股爆量硬拉"
+    else:
+        # 平常無量時，嚴格鎖死在 -0.2% 進行防禦，拒絕承接緩跌盤
+        slope_threshold = -0.002
+        status_tag = "[左側超跌]多頭拉回錯殺, 年線維持標準多頭慣性"
+        
+    is_v_turn_slope = ma_slope_20d > slope_threshold
+    # ===============================================================
+    
+    # 綜合判定 (is_below_ma240 & is_oversold_zone & is_v_turn_slope)
+    is_hit = is_below_ma240 and is_oversold_zone and is_v_turn_slope
+    
+    status = status_tag if is_hit else "未觸發訊號"
+    
+    info = {
+        "收盤": today['close'],
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
+        "今日量比": f"{round(vol_ratio, 2)}x",
+        "動態斜率門檻": f"{round(slope_threshold * 100, 2)}%",
+        "策略狀態": status
+    }
+
+    # print(f"st_bottom_v_turn is_hit:{is_hit} info:{info}") # 建議正式運作時註解掉 print
+    return is_hit, info
+
+def st_bottom_v_turn_071901(df_single):
+    """
     ***底部篩選 - 左側超跌 V 轉模式 (含天量催化劑後門)***
     
     邏輯設計：
