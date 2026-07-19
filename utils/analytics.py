@@ -18,6 +18,9 @@ def calculate_one_year_extremes(stock_id, trigger_date_str, global_df):
     # 擷取未來一年（240個交易日）的資料
     df_future = df_stock.iloc[trigger_idx + 1 : trigger_idx + 241]
     perf_results = {}
+
+    # 【修改處】：過濾掉 close <= 0 的異常值/暫停交易值後，再找最低價的索引
+    df_future_valid = df_future[df_future['close'] > 0]
     
     if df_future.empty:
         perf_results["1Y內最高績效"] = "資料不足"
