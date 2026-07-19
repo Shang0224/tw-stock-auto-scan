@@ -35,7 +35,7 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['3005', '2353', '6191']
 
-TEST_STRATEGIES = [st_bottom_breakout]
+TEST_STRATEGIES = [st_bottom_consolidation]
 #TEST_STRATEGIES = [st_bottom_u_turn]
 #TEST_STRATEGIES = [st_shakeout_resurrection]
 #TEST_STRATEGIES = [st_washout_phoenix]
