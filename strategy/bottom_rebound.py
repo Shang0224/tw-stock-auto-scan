@@ -65,8 +65,8 @@ def st_bottom_v_turn(df_single):
         "策略狀態": status
     }
 
-    if is_hit : 
-        print(f"st_bottom_v_turn is_hit:{is_hit} 收盤:{today['close']}") # 建議正式運作時註解掉 print
+    #if is_hit : 
+    #    print(f"st_bottom_v_turn is_hit:{is_hit} 收盤:{today['close']}") # 建議正式運作時註解掉 print
         
     return is_hit, info
 
