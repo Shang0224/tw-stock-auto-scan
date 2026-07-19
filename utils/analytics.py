@@ -36,6 +36,8 @@ def calculate_one_year_extremes(stock_id, trigger_date_str, global_df):
     
     max_return = ((max_row['close'] - entry_price) / entry_price) * 100
     min_return = ((min_row['close'] - entry_price) / entry_price) * 100
+
+    print(f"{stock_id} ---min_date : {min_date} | min_row : {min_row['close']} | entry_price : {entry_price}-----------")
     
     # 2. 時序判定：比較 index 來決定誰先發生
     if max_idx < min_idx:
