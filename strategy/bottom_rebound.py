@@ -13,6 +13,9 @@ def st_bottom_v_turn(df_single):
     if df_single.empty or len(df_single) < 260:
         return False, {}
 
+    # 建立副本以避免修改到外部原始 DataFrame
+    df_single = df_single.copy()
+    
     # 計算技術指標
     df_single['MA240'] = df_single['close'].rolling(240).mean()
     df_single['Vol_MA5'] = df_single['Trading_Volume'].rolling(5).mean()
