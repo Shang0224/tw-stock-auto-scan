@@ -9,8 +9,11 @@ import pandas as pd
 import pandas as pd
 
 
+import pandas as pd
+
+
 def st_bottom_v_turn(df_single):
-  """***V 轉選股策略（完全依據最新條件一與條件二擇一）***"""
+  """***V 轉選股策略（條件一/二獨立觸發，並依策略屬性自動套用對應的量能檢核狀態）***"""
   if df_single.empty or len(df_single) < 280:
     return False, {}
 
@@ -22,6 +25,15 @@ def st_bottom_v_turn(df_single):
   df_single['MA20'] = df_single['close'].rolling(20).mean()
   df_single['MA60'] = df_single['close'].rolling(60).mean()  # 季線
   df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
+
+  # 計算成交量相關指標 (MA20_Vol 與 5日均量 MA5_Vol)
+  vol_col = 'volume' if 'volume' in df_single.columns else 'Volume'
+  if vol_col in df_single.columns:
+    df_single['Vol_MA20'] = df_single[vol_col].rolling(20).mean()
+    df_single['Vol_MA5'] = df_single[vol_col].rolling(5).mean()
+  else:
+    df_single['Vol_MA20'] = 0
+    df_single['Vol_MA5'] = 0
 
   # 計算均線 20 日斜率
   df_single['MA60_slope'] = (
@@ -35,6 +47,11 @@ def st_bottom_v_turn(df_single):
   df_single['MA5_slope'] = (
       df_single['MA5'] - df_single['MA5'].shift(5)
   ) / df_single['MA5'].shift(5)
+
+  # 計算 5 日均量斜率 (判斷 5日均量是否向上：今日 MA5_Vol > 昨天 MA5_Vol)
+  df_single['Vol_MA5_slope'] = df_single['Vol_MA5'] - df_single['Vol_MA5'].shift(
+      1
+  )
 
   today = df_single.iloc[-1]
   prev = df_single.iloc[-2]
@@ -54,13 +71,9 @@ def st_bottom_v_turn(df_single):
   ma5_slope = today['MA5_slope']
 
   # ==================== 【條件一】 ====================
-  # 1. 季線在年線下方
   c1_ma60_below_240 = ma60 < ma240
-  # 2. 且年線或季線至少一個走揚（斜率 >= -0.001）
   c1_at_least_one_rising = (ma60_slope >= -0.001) or (ma240_slope >= -0.001)
-  # 3. 5日、10日、20日亦在季線下方
   c1_short_below_60 = (ma5 < ma60) and (ma10 < ma60) and (ma20 < ma60)
-  # 4. 且 5日、10日、20日形成多頭排列 (MA5 > MA10 > MA20)
   c1_short_bullish = (ma5 > ma10) and (ma10 > ma20)
 
   cond_1 = (
@@ -71,19 +84,12 @@ def st_bottom_v_turn(df_single):
   )
 
   # ==================== 【條件二】 ====================
-  # 1. 季線在年線下方
   c2_ma60_below_240 = ma60 < ma240
-  # 2. 年線斜率走緩接近改平甚至上揚 (>= -0.002)
   c2_ma240_flat_up = ma240_slope >= -0.002
-  # 3. 季線在年線下方且已經改平或者走揚 (>= -0.002)
   c2_ma60_flat_up = ma60_slope >= -0.002
-  # 4. 收盤高於 5 日線
   c2_close_gt_ma5 = close > ma5
-  # 5. 5 日線突破季線 (今日 MA5 > MA60，且昨日 MA5 <= MA60)
   c2_ma5_cross = (ma5 > ma60) and (prev['MA5'] <= prev['MA60'])
-  # 6. 5 日線斜度好 (MA5_slope > 0.005)
   c2_ma5_slope = ma5_slope > 0.005
-  # 7. 5 日 10日 20日關係：5日高於 10日與 20日線
   c2_ma5_gt_10_20 = (ma5 > ma10) and (ma5 > ma20)
 
   cond_2 = (
@@ -96,18 +102,75 @@ def st_bottom_v_turn(df_single):
       and c2_ma5_gt_10_20
   )
 
-  # ==================== 【綜合判定與狀態標註】 ====================
   is_hit = cond_1 or cond_2
 
+  # ==================== 【依條件動態判斷量能狀態】 ====================
+  vol_status = '未觸發訊號'
+
+  if vol_col in df_single.columns and len(df_single) >= 5:
+    if cond_2 and not cond_1:
+      # 【條件二：強勢突破邏輯】當日成交量 >= 20日均量 * 1.5 且 5日均量向上
+      today_vol = today[vol_col]
+      today_vol_ma20 = today['Vol_MA20']
+      vol_ma5_slope_val = today['Vol_MA5_slope']
+
+      cond_vol_2 = False
+      if pd.notna(today_vol_ma20) and today_vol_ma20 > 0:
+        is_vol_gt_15 = (today_vol / today_vol_ma20) >= 1.5
+        is_vma5_up = pd.notna(vol_ma5_slope_val) and vol_ma5_slope_val > 0
+        if is_vol_gt_15 and is_vma5_up:
+          cond_vol_2 = True
+
+      vol_status = (
+          '[條件二] 符合(強勢帶量突破)'
+          if cond_vol_2
+          else '[條件二] 未符合(量能不足或均量未向上)'
+      )
+
+    elif cond_1 and not cond_2:
+      # 【條件一：長多回檔邏輯】前 5 天內曾出現量縮回測，且觸發當天帶量大於 5 日均量
+      recent_5d = df_single.iloc[-5:]  # 含今日共 5 天
+      has_shrink = False
+      for _, row_v in recent_5d.iloc[:-1].iterrows():  # 檢查前 4 天是否有量縮
+        v = row_v[vol_col]
+        v_ma20 = row_v['Vol_MA20']
+        if pd.notna(v_ma20) and v_ma20 > 0:
+          if (v / v_ma20) < 0.8:  # 量縮定義：小於 20 日均量 0.8 倍
+            has_shrink = True
+            break
+
+      today_v = today[vol_col]
+      today_v_ma5 = today['Vol_MA5']
+      is_today_gt_vma5 = (
+          pd.notna(today_v_ma5)
+          and today_v_ma5 > 0
+          and today_v > today_v_ma5
+      )
+
+      cond_vol_1 = has_shrink and is_today_gt_vma5
+      vol_status = (
+          '[條件一] 符合(量縮回測後帶量回流)'
+          if cond_vol_1
+          else '[條件一] 未符合(未見明顯量縮或觸發當天無量)'
+      )
+
+    elif cond_1 and cond_2:
+      vol_status = '[綜合] 同時符合條件一與條件二(雙軌檢核中)'
+    else:
+      vol_status = '未觸發訊號'
+
+  # ==================== 【綜合判定與狀態標註】 ====================
   if cond_1 and cond_2:
     status = '[V轉策略] 同時符合【條件一】與【條件二】'
   elif cond_1:
     status = (
-        '[V轉策略] 符合【條件一】(季線在年線下、長線至少一條走揚、5/10/20在季線下且短多排列)'
+        '[V轉策略] 符合【條件一】(季線在年線下、長線至少一條走揚、'
+        '5/10/20在季線下且短多排列)'
     )
   elif cond_2:
     status = (
-        '[V轉策略] 符合【條件二】(季線在年線下、年季線皆走平或走揚、5日線強勢突破季線且高於10/20日)'
+        '[V轉策略] 符合【條件二】(季線在年線下、年季線皆走平或走揚、'
+        '5日線強勢突破季線且高於10/20日)'
     )
   else:
     status = '未觸發訊號'
@@ -124,6 +187,7 @@ def st_bottom_v_turn(df_single):
       '年線20日斜率': f'{round(ma240_slope * 100, 2)}%',
       '5日線5日斜率': f'{round(ma5_slope * 100, 2)}%',
       '建議停損參考價': recent_low,
+      '量能狀態': vol_status,  # 依條件一/二自動切換對應的量能檢核結果
       '策略狀態': status,
   }
 
