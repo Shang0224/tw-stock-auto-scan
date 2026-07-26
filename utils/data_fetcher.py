@@ -52,6 +52,9 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 df.rename(columns={'volume': 'Trading_Volume'}, inplace=True)
                 df.rename(columns={'high': 'max'}, inplace=True)
                 df.rename(columns={'low': 'min'}, inplace=True)
+
+                df.rename(columns={'close': 'real_close'}, inplace=True)
+                df.rename(columns={'adj close': 'close'}, inplace=True)
         
                 all_data.append(df)
             
