@@ -104,28 +104,36 @@ def st_bottom_v_turn(df_single):
 
   is_hit = cond_1 or cond_2
 
-  # ==================== 【依條件動態判斷量能狀態】 ====================
+  # ==================== 【放寬後的量能狀態檢核】 ====================
   vol_status = '未觸發訊號'
 
   if vol_col in df_single.columns and len(df_single) >= 5:
-    if cond_2 and not cond_1:
-      # 【條件二：強勢突破邏輯】當日成交量 >= 20日均量 * 1.5 且 5日均量向上
-      today_vol = today[vol_col]
-      today_vol_ma20 = today['Vol_MA20']
-      vol_ma5_slope_val = today['Vol_MA5_slope']
+    today_vol = today[vol_col]
+    today_vol_ma20 = today['Vol_MA20']
 
-      cond_vol_2 = False
-      if pd.notna(today_vol_ma20) and today_vol_ma20 > 0:
-        is_vol_gt_15 = (today_vol / today_vol_ma20) >= 1.5
-        is_vma5_up = pd.notna(vol_ma5_slope_val) and vol_ma5_slope_val > 0
-        if is_vol_gt_15 and is_vma5_up:
-          cond_vol_2 = True
+    if pd.notna(today_vol_ma20) and today_vol_ma20 > 0:
+      if cond_2 and not cond_1:
+        # 【條件二：強勢突破放寬版】當日成交量 >= 20日均量 × 1.2
+        if (today_vol / today_vol_ma20) >= 1.2:
+          vol_status = '[條件二] 符合(成交量放大突破)'
+        else:
+          vol_status = '[條件二] 未符合(量能未明顯放大)'
 
-      vol_status = (
-          '[條件二] 符合(強勢帶量突破)'
-          if cond_vol_2
-          else '[條件二] 未符合(量能不足或均量未向上)'
-      )
+      elif cond_1 and not cond_2:
+        # 【條件一：長多回檔放寬版】當天成交量大於 20 日均量，或大於前一日成交量
+        prev_vol = prev[vol_col]
+        if (today_vol >= today_vol_ma20) or (today_vol > prev_vol):
+          vol_status = '[條件一] 符合(回檔後量能回溫)'
+        else:
+          vol_status = '[條件一] 未符合(量能偏低)'
+
+      elif cond_1 and cond_2:
+        if (today_vol / today_vol_ma20) >= 1.2:
+          vol_status = '[綜合] 符合(雙條件且量能放大)'
+        else:
+          vol_status = '[綜合] 未符合(量能不足)'
+      else:
+        vol_status = '未觸發訊號'
 
     elif cond_1 and not cond_2:
       # 【條件一：長多回檔邏輯】前 5 天內曾出現量縮回測，且觸發當天帶量大於 5 日均量
