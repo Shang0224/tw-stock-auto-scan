@@ -29,7 +29,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             #因為yfinance抓資料時, 只會抓到end_date的前一天, 故傳入的end_date必須加1天, 再傳入download
             end_date_plus_one = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d") 
             
-            df = yf.download(ticker_id, start=start_date, end=end_date_plus_one, progress=False, multi_level_index=False)
+            df = yf.download(ticker_id, start=start_date, end=end_date_plus_one, progress=False, multi_level_index=False, auto_adjust=True)
      
             if not df.empty:
                 
@@ -52,9 +52,6 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                 df.rename(columns={'volume': 'Trading_Volume'}, inplace=True)
                 df.rename(columns={'high': 'max'}, inplace=True)
                 df.rename(columns={'low': 'min'}, inplace=True)
-
-                df.rename(columns={'close': 'real close'}, inplace=True)
-                df.rename(columns={'adj close': 'close'}, inplace=True)
         
                 all_data.append(df)
             
