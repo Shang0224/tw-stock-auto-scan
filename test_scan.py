@@ -28,13 +28,13 @@ from utils import (
 CHOSEN_SOURCE = 'yf' 
 #CHOSEN_SOURCE = 'fm' 
 TEST_START_DATE = '2021-01-01'
-TEST_END_DATE   = '2022-09-30'  # 設為 None 則只跑單日測試
+TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
 STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
-#STOCK_MODE = 'noncsv' 
-#STOCK_INPUT = ['6191', '2377', '2408']
+STOCK_MODE = 'noncsv' 
+STOCK_INPUT = ['6191', '2377', '2408']
 
 TEST_STRATEGIES = [st_bottom_consolidation]
 #TEST_STRATEGIES = [st_bottom_u_turn]
