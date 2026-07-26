@@ -119,9 +119,18 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         if day_results:
             # 💡 這裡直接調用來自 utils 的績效計算工具
             for hit in day_results:
-                hit.update({"觸發日期": day_str})
                 perf = calculate_one_year_extremes(hit["代號"], day_str, global_df)
-                hit.update(perf)
+                
+                # 🌟 先建立包含「觸發日期」的字典，確保它在第一個鍵值
+                updated_hit = {"觸發日期": day_str}
+                updated_hit.update(hit)   # 放原本 hit 的欄位（如代號、名稱...）
+                updated_hit.update(perf)  # 放 1Y最高/最低績效
+    
+                hit.clear()
+                hit.update(updated_hit)
+                
+                #hit.update({"觸發日期": day_str})                
+                #hit.update(perf)
 
             print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的（已完成績效追蹤）。")
             collected_range_results[day_str] = day_results
