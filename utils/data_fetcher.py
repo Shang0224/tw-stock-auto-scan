@@ -61,7 +61,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
             # 延遲避免請求過於頻繁
             time.sleep(2)
 
-            print("-----------{df}----------------")
+            print(f"-----------{df}----------------")
             
         except Exception as e:
             print(f"⚠️ 抓取 {ticker_id} 失敗: {e}")
