@@ -5,15 +5,6 @@ import time
 
 import pandas as pd
 
-
-import pandas as pd
-
-
-import pandas as pd
-
-import pandas as pd
-
-
 def st_bottom_v_turn(df_single):
   """***V 轉選股策略（條件一已升級：限制季線必須向上，並加入未來 20 日年線高扣抵防禦）***"""
   if df_single.empty or len(df_single) < 280:
