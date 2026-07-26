@@ -37,11 +37,17 @@ def save_multi_day_report(collected_results, source_name, tw_time):
                 f.write("\n\n")
             
             # 🌟 獨立輸出一行橫線與日期
-            f.write(f"====,=====,==== {date_key} ===========================\n")
-            
+            #f.write(f"====,=====,==== {date_key} ===========================\n")
+
             # 將當天的結果寫入 CSV
+            # 💡 關鍵：只有第一天 (is_first_day 為 True) 時輸出欄位名稱，後續日期寫入時設為 False
             day_df = pd.DataFrame(day_list)
-            day_df.to_csv(f, index=False, header=True)
+            day_df.to_csv(f, index=False, header=is_first_day)
+
+            # 將當天的結果寫入 CSV
+            #day_df = pd.DataFrame(day_list)
+            #day_df.to_csv(f, index=False, header=True)
+            
             is_first_day = False
             
     return csv_path
