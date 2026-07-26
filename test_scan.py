@@ -32,10 +32,10 @@ TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 STOCK_MODE = 'csv' 
 STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
-#STOCK_MODE = 'noncsv' 
-#STOCK_INPUT = ['3005', '2353', '6191']
+STOCK_MODE = 'noncsv' 
+STOCK_INPUT = ['8210', '2353', '3005', '3711', '6176', '2327']
 
-TEST_STRATEGIES = [st_bottom_breakout]
+TEST_STRATEGIES = [st_bottom_consolidation]
 #TEST_STRATEGIES = [st_bottom_u_turn]
 #TEST_STRATEGIES = [st_shakeout_resurrection]
 #TEST_STRATEGIES = [st_washout_phoenix]
