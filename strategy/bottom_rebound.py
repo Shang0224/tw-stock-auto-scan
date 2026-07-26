@@ -3,7 +3,122 @@ import pandas as pd
 from datetime import datetime, timedelta
 import time
 
+import pandas as pd
+
+
 def st_bottom_v_turn(df_single):
+  """***底部篩選 - V 轉新版策略 (符合多頭排列回檔、均線走平與5日線突破)***"""
+  # 確保資料長度足夠計算 240 日年線與相關斜率
+  if df_single.empty or len(df_single) < 280:
+    return False, {}
+
+  df_single = df_single.copy()
+
+  # 計算各天期移動平均線
+  df_single['MA5'] = df_single['close'].rolling(5).mean()
+  df_single['MA10'] = df_single['close'].rolling(10).mean()
+  df_single['MA20'] = df_single['close'].rolling(20).mean()
+  df_single['MA60'] = df_single['close'].rolling(60).mean()  # 季線
+  df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
+
+  # 計算均線 20 日斜率（衡量中長期趨勢方向）
+  df_single['MA60_slope'] = (
+      df_single['MA60'] - df_single['MA60'].shift(20)
+  ) / df_single['MA60'].shift(20)
+  df_single['MA240_slope'] = (
+      df_single['MA240'] - df_single['MA240'].shift(20)
+  ) / df_single['MA240'].shift(20)
+
+  # 計算 5 日線 5 日斜率（衡量短線攻擊斜度）
+  df_single['MA5_slope'] = (
+      df_single['MA5'] - df_single['MA5'].shift(5)
+  ) / df_single['MA5'].shift(5)
+
+  today = df_single.iloc[-1]
+  prev = df_single.iloc[-2]
+
+  # 防禦性檢查：確保關鍵指標無 NaN
+  if pd.isna([today['MA60'], today['MA240'], today['MA5']]).any():
+    return False, {}
+
+  # ==================== 【條件一：季線與年線下方形成多頭排列，且至少一個走揚】 ====================
+  # 1. 股價在季線與年線下方
+  is_below_long_term = (today['close'] < today['MA60']) and (
+      today['close'] < today['MA240']
+  )
+
+  # 2. 季線與年線形成多頭排列 (MA60 > MA240)
+  is_ma_bullish_alignment = today['MA60'] > today['MA240']
+
+  # 3. 至少一個走揚或持平 (斜率 >= -0.001)
+  is_at_least_one_rising = (today['MA60_slope'] >= -0.001) or (
+      today['MA240_slope'] >= -0.001
+  )
+
+  cond_1 = (
+      is_below_long_term and is_ma_bullish_alignment and is_at_least_one_rising
+  )
+
+  # ==================== 【條件二：年季線走平、5日線突破與短線多頭排列】 ====================
+  # 1. 年線斜率走緩、改平甚至上揚 (MA240_slope >= -0.002)
+  is_ma240_flattening_or_up = today['MA240_slope'] >= -0.002
+
+  # 2. 季線改平或走揚 (MA60_slope >= -0.002)
+  is_ma60_flattening_or_up = today['MA60_slope'] >= -0.002
+
+  # 3. 收盤高於 5 日線
+  is_close_above_ma5 = today['close'] > today['MA5']
+
+  # 4. 5 日線突破季線 (今日 MA5 > MA60，且昨日 MA5 <= MA60 或剛站上)
+  is_ma5_cross_ma60 = (today['MA5'] > today['MA60']) and (
+      prev['MA5'] <= prev['MA60']
+  )
+
+  # 5. 5 日線斜度好 (MA5_slope > 0.005，即 5 日線向上斜率明顯)
+  is_ma5_slope_good = today['MA5_slope'] > 0.005
+
+  # 6. 5 日線高於 10 日與 20 日線
+  is_ma5_above_ma10_20 = (today['MA5'] > today['MA10']) and (
+      today['MA5'] > today['MA20']
+  )
+
+  cond_2 = (
+      is_ma240_flattening_or_up
+      and is_ma60_flattening_or_up
+      and is_close_above_ma5
+      and is_ma5_cross_ma60
+      and is_ma5_slope_good
+      and is_ma5_above_ma10_20
+  )
+
+  # 綜合判定
+  is_hit = cond_1 and cond_2
+
+  status = (
+      '[V轉新版] 符合多頭回檔、年季線走平及5日線帶量突破季線'
+      if is_hit
+      else '未觸發訊號'
+  )
+
+  # 計算近期停損參考價（過去 20 天最低價）
+  recent_low = df_single['close'].iloc[-20:].min()
+
+  info = {
+      '收盤': today['close'],
+      '5日線': round(today['MA5'], 2),
+      '季線(MA60)': round(today['MA60'], 2),
+      '年線(MA240)': round(today['MA240'], 2),
+      '季線20日斜率': f'{round(today["MA60_slope"] * 100, 2)}%',
+      '年線20日斜率': f'{round(today["MA240_slope"] * 100, 2)}%',
+      '5日線5日斜率': f'{round(today["MA5_slope"] * 100, 2)}%',
+      '建議停損參考價': recent_low,
+      '策略狀態': status,
+  }
+
+  return is_hit, info
+
+
+def st_bottom_v_turn_20260726(df_single):
     """
     ***底部篩選 - 左側超跌 V 轉模式 (優化版 + 防禦過熱機制)***
     
