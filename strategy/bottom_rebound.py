@@ -211,7 +211,6 @@ def st_bottom_v_turn_071901(df_single):
     print(f"st_bottom_v_turn is_hit:{is_hit} info:{info}")
     return is_hit, info
 
-
 def st_bottom_consolidation(df_single):
     """
     ***底部篩選 - 左側橫盤沉澱模式 (含未來 20 日扣抵預測)***
@@ -258,11 +257,11 @@ def st_bottom_consolidation(df_single):
     
     # 判斷需要熬多久（時間矩陣）
     if today['close'] < avg_deduct_price * 0.85:
-        time_to_wait = "扣抵高價壁壘仍重, 預估至少仍需橫盤20天以上"
+        time_to_wait = "(觀察)扣抵高價壁壘仍重, 預估至少仍需橫盤20天以上"
     elif deduct_slope < -0.05:
-        time_to_wait = "高價扣抵即將墜落, 年線即將減速, 隨時注意右側突破"
+        time_to_wait = "(觀察)高價扣抵即將墜落, 年線即將減速, 隨時注意右側突破"
     else:
-        time_to_wait = "橫盤扣抵中, 靜待均線糾結"
+        time_to_wait = "(可買進)橫盤扣抵中, 靜待均線糾結"
     # =====================================================================
     
     is_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted
