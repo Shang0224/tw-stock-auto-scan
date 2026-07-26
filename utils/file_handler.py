@@ -34,7 +34,7 @@ def save_multi_day_report(collected_results, source_name, tw_time):
                 
             # 每一天中間隔開雙空行
             if not is_first_day:
-                f.write("\n\n")
+                f.write("\n")
             
             # 🌟 獨立輸出一行橫線與日期
             #f.write(f"====,=====,==== {date_key} ===========================\n")
