@@ -6,7 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 
-def st_u_bottom_v2(df_single):
+def st_u_bottom(df_single):
   """***U底生命週期策略 v2 (價值型穩健築底反向回溯驗證架構)***
 
   策略邏輯： - 以右側突破 (BUY) 作為第一主動觸發點。 - 嚴格年線過濾：要求當下年線 20 日斜率必須 >= 0.0% (平轉或向上)，拒絕空頭接刀。 -
