@@ -4,11 +4,9 @@ from datetime import datetime, timedelta
 import time
 
 import pandas as pd
-
-import pandas as pd
 import numpy as np
 
-def st_u_bottom(df_single)
+def st_u_bottom(df_single):
     """
     ***U底生命週期策略 (整合左側沉澱與右側突破)***
     自動判斷股票目前處於 U 底的哪個階段：
