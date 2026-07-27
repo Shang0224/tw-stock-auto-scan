@@ -5,69 +5,164 @@ import time
 
 import numpy as np
 import pandas as pd
-import re
 
+def st_u_bottom_v2(df_single):
+  """***U底生命週期策略 v2 (價值型穩健築底反向回溯驗證架構)***
 
-def clean_percentage(val):
-  """輔助函數：將百分比字串轉換為浮點數"""
-  if pd.isna(val):
-    return np.nan
-  match = re.search(r'([-+]?\d*\.?\d+)%', str(val))
-  return float(match.group(1)) if match else np.nan
-
-
-def st_u_bottom(df):
-  """st_u_bottom 策略重構版：價值型穩健築底策略
-
-  參數與過濾條件說明:
-  1. 回溯沉澱天數 >= 10 天：排除僅有 2、3 天喘息的假沉澱，確保基本底部結構。
-  2. 年線20日斜率 >= 0.0%：強制過濾長天期空頭、均線下彎的弱勢股。
-  3. 近10日價格波動度 <= 2.0%：確保在發動前夕價格已經過充分壓縮與穩定。
+  策略邏輯： - 以右側突破 (BUY) 作為第一主動觸發點。 - 嚴格年線過濾：要求當下年線 20 日斜率必須 >= 0.0% (平轉或向上)，拒絕空頭接刀。 -
+  當右側突破成立時，固定回溯過去 60 個交易日（約3個月），檢查是否經歷過扎實的左側籌碼沉澱 (累積至少 10 天以上)。 -
+  確保打底扎實、拒絕短線假突破與高風險深水區回檔。
   """
-  # 複製資料框以避免更動原始數據
-  work_df = df.copy()
+  LOOKBACK_DAYS = 60  # 直接寫死回溯天數為 60 個交易日（約 3 個月）
 
-  # 數值清洗
-  work_df['slope_num'] = work_df['年線20日斜率'].apply(clean_percentage)
-  work_df['volatility_num'] = work_df['近10日價格波動度'].apply(
-      clean_percentage
+  if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
+    return False, {}
+
+  # ==================== 1. 共用技術指標計算 ====================
+  df_single = df_single.copy()
+  df_single['MA5'] = df_single['close'].rolling(5).mean()
+  df_single['MA20'] = df_single['close'].rolling(20).mean()
+  df_single['MA60'] = df_single['close'].rolling(60).mean()
+  df_single['MA240'] = df_single['close'].rolling(240).mean()
+
+  today = df_single.iloc[-1]
+
+  # 共同基底檢查：必須在年線下方
+  is_below_ma240 = today['close'] < today['MA240']
+
+  # 年線 20 日斜率
+  ma240_20d_ago = df_single['MA240'].iloc[-21]
+  ma_slope_20d = (
+      (today['MA240'] - ma240_20d_ago) / ma240_20d_ago
+      if ma240_20d_ago > 0
+      else 0
   )
-  work_df['max_perf_num'] = work_df['1Y內最高績效'].apply(clean_percentage)
-  work_df['min_perf_num'] = work_df['1Y內最低績效'].apply(clean_percentage)
 
-  # 定義穩健築底的嚴格過濾條件
-  robust_condition = (
-      (work_df['回溯沉澱天數'] >= 10)
-      & (work_df['slope_num'] >= 0.0)  # 年線斜率必須平轉或向上
-      & (work_df['volatility_num'] <= 2.0)  # 價格波動度收斂
+  # 距離年線乖離率
+  dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+
+  # ==================== 2. 共用核心：未來 20 日扣抵分析 ====================
+  future_deduct_series = df_single['close'].iloc[-240:-220]
+  deduct_slope = (
+      (future_deduct_series.iloc[-1] - future_deduct_series.iloc[0])
+      / future_deduct_series.iloc[0]
+      if future_deduct_series.iloc[0] > 0
+      else 0
   )
 
-  # 執行篩選
-  filtered_df = work_df[robust_condition].copy()
+  # ==================== 3. 階段二：右側突破判定 (今日表態條件) ====================
+  # A. 均線糾結度檢查 (5/20/60)
+  ma_list = [today['MA5'], today['MA20'], today['MA60']]
+  dispersion = (
+      (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
+  )
+  is_converged = dispersion < 0.05
 
-  # 簡單統計輸出
-  print(f'原始總訊號數: {len(work_df)}')
-  print(f'經價值型穩健築底篩選後保留數: {len(filtered_df)}')
+  # B. 帶量轉強檢查
+  vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
+  is_volume_up = (
+      today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
+  )
 
-  if len(filtered_df) > 0:
-    print(
-        f'篩選後平均最高績效: '
-        f"{filtered_df['max_perf_num'].mean():.2f}%"
+  # C. 價值型穩健築底：嚴格規定年線斜率必須 >= 0.0 (平轉或向上，不開後門)
+  is_flattening_slope = ma_slope_20d >= 0.0
+
+  # 今日是否符合右側突破的表態條件
+  is_today_right_hit = (
+      is_below_ma240
+      and is_converged
+      and is_volume_up
+      and is_flattening_slope
+  )
+
+  # ==================== 4. 核心反向回溯驗證：檢查歷史扎實沉澱 ====================
+  has_preceding_sediment = False
+  validated_sediment_days = 0
+
+  if is_today_right_hit:
+    # 切片檢視過去 60 天內的歷史 K 線是否符合左側穩健沉澱特徵
+    history_window = df_single.iloc[-(LOOKBACK_DAYS + 1) : -1]
+
+    sediment_count = 0
+    for i in range(len(history_window)):
+      row = history_window.iloc[i]
+      hist_below = row['close'] < row['MA240']
+
+      # 計算該歷史點位的 MA240 20日斜率
+      idx_in_full = len(df_single) - LOOKBACK_DAYS + i
+      if idx_in_full >= 21:
+        hist_ma240_ago = df_single['MA240'].iloc[idx_in_full - 21]
+        hist_slope = (
+            (row['MA240'] - hist_ma240_ago) / hist_ma240_ago
+            if hist_ma240_ago > 0
+            else 0
+        )
+      else:
+        hist_slope = 0
+
+      # 價值型築底不允許歷史點位呈現強烈下彎
+      hist_downward = hist_slope >= -0.005
+      hist_dist = (row['close'] - row['MA240']) / row['MA240']
+      hist_discounted = -0.25 <= hist_dist <= -0.02
+
+      # 檢查當日價格波動度 (取該日前 10 日，確保價格已充分壓縮收斂)
+      if i >= 9:
+        sub_close = history_window['close'].iloc[i - 9 : i + 1]
+        sub_cv = (
+            sub_close.std() / sub_close.mean() if sub_close.mean() > 0 else 1
+        )
+        hist_stabilized = sub_cv <= 0.02  # 波動度嚴格收斂在 2% 以內
+      else:
+        hist_stabilized = False
+
+      if hist_below and hist_downward and hist_stabilized and hist_discounted:
+        sediment_count += 1
+
+    # 要求回溯窗內累積必須達到至少 10 天以上的沉澱，才視為扎實築底
+    if sediment_count >= 10:
+      has_preceding_sediment = True
+      validated_sediment_days = sediment_count
+
+  # ==================== 5. 最終狀態封裝與輸出分流 ====================
+  if is_today_right_hit and has_preceding_sediment:
+    strategy_stage = (
+        '【價值型穩健築底驗證成功】前方經扎實長期沉澱(>=10天) ➔ 執行買進'
     )
-    print(
-        f'篩選後平均最大回檔: '
-        f"{filtered_df['min_perf_num'].mean():.2f}%"
+    action_signal = 'BUY'
+    is_hit = True
+  else:
+    strategy_stage = (
+        '未觸發有效買進訊號 (無效突破、年線下彎或前置沉澱天數不足)'
     )
-    severe_dd_rate = (
-        (filtered_df['min_perf_num'] < -20).mean() * 100
-    )
-    print(f'嚴重回檔(<-20%)發生率: {severe_dd_rate:.2f}%')
+    action_signal = 'NONE'
+    is_hit = False
 
-  return filtered_df
+  # 近 10 日價格波動度計算
+  recent_10d = df_single['close'].iloc[-10:]
+  price_cv = (
+      recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 0
+  )
 
+  info = {
+      '收盤': today['close'],
+      '策略階段': strategy_stage,
+      '訊號動作': action_signal,
+      '距離年線': f"{round(dist_ratio * 100, 2)}%",
+      '年線20日斜率': f"{round(ma_slope_20d * 100, 2)}%",
+      '近10日價格波動度': f"{round(price_cv * 100, 2)}%",
+      '中短期糾結度': f"{round(dispersion * 100, 2)}%",
+      '今日量比': (
+          f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x"
+      ),
+      '回溯沉澱天數': validated_sediment_days,
+      '前置沉澱扎實度評估': (
+          f'回溯{LOOKBACK_DAYS}天內符合穩健沉澱特徵共'
+          f' {validated_sediment_days} 天 (門檻>=10天)'
+      ),
+  }
 
-# 範例執行方式（假設 df 為已載入的原始回測資料）
-# robust_results = st_u_bottom_v2(df)
+  print(f'u_bottom_v2 action:{action_signal} info:{info}')
+  return is_hit, info
 
 
 def st_bottom_v_turn(df_single):
