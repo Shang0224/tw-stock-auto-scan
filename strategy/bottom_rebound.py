@@ -5,6 +5,112 @@ import time
 
 import pandas as pd
 
+import pandas as pd
+import numpy as np
+
+def st_u_bottom(df_single)
+    """
+    ***U底生命週期策略 (整合左側沉澱與右側突破)***
+    自動判斷股票目前處於 U 底的哪個階段：
+    - 階段一：【左側沉澱】價格已止跌、乖離足夠、靜待均線糾結 (回傳 WATCH)
+    - 階段二：【右側突破】均線糾結、量能表態、年線改平或扣抵牆崩塌 (回傳 BUY)
+    """
+    if df_single.empty or len(df_single) < 260:
+        return False, {}
+
+    # ==================== 1. 共用技術指標計算 ====================
+    df_single = df_single.copy()
+    df_single['MA5'] = df_single['close'].rolling(5).mean()
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['MA60'] = df_single['close'].rolling(60).mean()
+    df_single['MA240'] = df_single['close'].rolling(240).mean()
+    
+    today = df_single.iloc[-1]
+    
+    # 共同基底檢查：必須在年線下方
+    is_below_ma240 = today['close'] < today['MA240']
+    
+    # 年線 20 日斜率
+    ma240_20d_ago = df_single['MA240'].iloc[-21]
+    ma_slope_20d = (today['MA240'] - ma240_20d_ago) / ma240_20d_ago if ma240_20d_ago > 0 else 0
+    
+    # 距離年線乖離率
+    dist_ratio = (today['close'] - today['MA240']) / today['MA240']
+    
+    # ==================== 2. 共用核心：未來 20 日扣抵分析 ====================
+    future_deduct_series = df_single['close'].iloc[-240:-220]
+    avg_deduct_price = future_deduct_series.mean()
+    deduct_slope = (future_deduct_series.iloc[-1] - future_deduct_series.iloc[0]) / future_deduct_series.iloc[0] if future_deduct_series.iloc[0] > 0 else 0
+
+    # ==================== 3. 階段二：右側突破判定 (優先判斷是否表態) ====================
+    # A. 均線糾結度檢查 (5/20/60)
+    ma_list = [today['MA5'], today['MA20'], today['MA60']]
+    dispersion = (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
+    is_converged = dispersion < 0.05
+    
+    # B. 帶量轉強檢查
+    vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
+    is_volume_up = today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
+    
+    # C. 年線改平或扣抵後門
+    is_standard_flattening = -0.005 <= ma_slope_20d <= 0.005
+    is_deduct_override = (ma_slope_20d > -0.01) and (deduct_slope < -0.03)
+    is_flattening_slope = is_standard_flattening or is_deduct_override
+
+    # 右側突破觸發條件
+    is_right_hit = is_below_ma240 and is_converged and is_volume_up and is_flattening_slope
+
+    # ==================== 4. 階段一：左側沉澱判定 (尋找潛伏低基期) ====================
+    # A. 近 10 日價格實質止跌 (變異係數 < 1.5%)
+    recent_10d = df_single['close'].iloc[-10:]
+    price_cv = recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 1
+    is_price_stabilized = price_cv < 0.015 
+    
+    # B. 下降斜率與中型股乖離空間 (-20% ~ -8%)
+    is_downward_slope = ma_slope_20d < -0.002
+    is_discounted = -0.20 <= dist_ratio <= -0.08
+
+    # 左側沉澱觸發條件
+    is_left_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted and not is_right_hit
+
+    # ==================== 5. 狀態封裝與輸出分流 ====================
+    if is_right_hit:
+        strategy_stage = "【階段二：右側突破】均線糾結+量能表態 ➔ 執行買進"
+        action_signal = "BUY"
+        is_hit = True
+    elif is_left_hit:
+        strategy_stage = "【階段一：左側沉澱】價格已止跌，靜待均線糾結 ➔ 加入觀察"
+        action_signal = "WATCH"
+        is_hit = True
+    else:
+        strategy_stage = "未觸發訊號"
+        action_signal = "NONE"
+        is_hit = False
+
+    # 沉澱時間描述
+    if today['close'] < avg_deduct_price * 0.85:
+        time_to_wait = "高價壁壘仍重, 預估至少仍需橫盤20天以上"
+    elif deduct_slope < -0.05:
+        time_to_wait = "高價扣抵即將墜落, 隨時注意右側突破"
+    else:
+        time_to_wait = "橫盤扣抵中, 靜待均線糾結"
+
+    info = {
+        "收盤": today['close'],
+        "策略階段": strategy_stage,
+        "訊號動作": action_signal,
+        "距離年線": f"{round(dist_ratio * 100, 2)}%",
+        "年線20日斜率": f"{round(ma_slope_20d * 100, 2)}%",
+        "近10日價格波動度": f"{round(price_cv * 100, 2)}%",
+        "中短期糾結度": f"{round(dispersion * 100, 2)}%",
+        "今日量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
+        "預估沉澱狀態": time_to_wait
+    }
+
+    print(f"st_u_bottom_strategy action:{action_signal} info:{info}")
+    return is_hit, info
+
+
 def st_bottom_v_turn(df_single):
   """***V 轉選股策略（條件一已升級：限制季線必須向上，並加入未來 20 日年線高扣抵防禦）***"""
   if df_single.empty or len(df_single) < 280:
