@@ -6,14 +6,15 @@ import time
 import pandas as pd
 import numpy as np
 
-def st_u_bottom(df_single):
+def st_u_bottom(df_single, lookback_days=60):
     """
-    ***U底生命週期策略 (整合左側沉澱與右側突破)***
-    自動判斷股票目前處於 U 底的哪個階段：
-    - 階段一：【左側沉澱】價格已止跌、乖離足夠、靜待均線糾結 (回傳 WATCH)
-    - 階段二：【右側突破】均線糾結、量能表態、年線改平或扣抵牆崩塌 (回傳 BUY)
+    ***U底生命週期策略 (反向回溯驗證架構)***
+    策略邏輯：
+    - 以右側突破 (BUY) 作為第一主動觸發點。
+    - 當右側突破成立時，回頭檢視過去 lookback_days 內是否曾經歷過左側沉澱。
+    - 若前方無對應沉澱，則予以過濾，確保打底扎實、拒絕接刀。
     """
-    if df_single.empty or len(df_single) < 260:
+    if df_single.empty or len(df_single) < (260 + lookback_days):
         return False, {}
 
     # ==================== 1. 共用技術指標計算 ====================
@@ -37,10 +38,9 @@ def st_u_bottom(df_single):
     
     # ==================== 2. 共用核心：未來 20 日扣抵分析 ====================
     future_deduct_series = df_single['close'].iloc[-240:-220]
-    avg_deduct_price = future_deduct_series.mean()
     deduct_slope = (future_deduct_series.iloc[-1] - future_deduct_series.iloc[0]) / future_deduct_series.iloc[0] if future_deduct_series.iloc[0] > 0 else 0
 
-    # ==================== 3. 階段二：右側突破判定 (優先判斷是否表態) ====================
+    # ==================== 3. 階段二：右側突破判定 (今日表態條件) ====================
     # A. 均線糾結度檢查 (5/20/60)
     ma_list = [today['MA5'], today['MA20'], today['MA60']]
     dispersion = (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
@@ -55,43 +55,63 @@ def st_u_bottom(df_single):
     is_deduct_override = (ma_slope_20d > -0.01) and (deduct_slope < -0.03)
     is_flattening_slope = is_standard_flattening or is_deduct_override
 
-    # 右側突破觸發條件
-    is_right_hit = is_below_ma240 and is_converged and is_volume_up and is_flattening_slope
+    # 今日是否符合右側突破的表態條件
+    is_today_right_hit = is_below_ma240 and is_converged and is_volume_up and is_flattening_slope
 
-    # ==================== 4. 階段一：左側沉澱判定 (尋找潛伏低基期) ====================
-    # A. 近 10 日價格實質止跌 (變異係數 < 1.5%)
-    recent_10d = df_single['close'].iloc[-10:]
-    price_cv = recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 1
-    is_price_stabilized = price_cv < 0.015 
+    # ==================== 4. 核心反向回溯驗證：檢查歷史沉澱 ====================
+    has_preceding_sediment = False
+    validated_sediment_days = 0
     
-    # B. 下降斜率與中型股乖離空間 (-20% ~ -8%)
-    is_downward_slope = ma_slope_20d < -0.002
-    is_discounted = -0.20 <= dist_ratio <= -0.08
+    if is_today_right_hit:
+        # 切片檢視過去 lookback_days 內的歷史 K 線是否符合左側沉澱特徵
+        history_window = df_single.iloc[-(lookback_days + 1):-1]
+        
+        sediment_count = 0
+        for i in range(len(history_window)):
+            row = history_window.iloc[i]
+            hist_below = row['close'] < row['MA240']
+            
+            # 計算該歷史點位的 MA240 20日斜率
+            idx_in_full = len(df_single) - lookback_days + i
+            if idx_in_full >= 21:
+                hist_ma240_ago = df_single['MA240'].iloc[idx_in_full - 21]
+                hist_slope = (row['MA240'] - hist_ma240_ago) / hist_ma240_ago if hist_ma240_ago > 0 else 0
+            else:
+                hist_slope = 0
+                
+            hist_downward = hist_slope < -0.002
+            hist_dist = (row['close'] - row['MA240']) / row['MA240']
+            hist_discounted = -0.20 <= hist_dist <= -0.08
+            
+            # 檢查當日價格波動度 (取該日前 10 日)
+            if i >= 9:
+                sub_close = history_window['close'].iloc[i-9:i+1]
+                sub_cv = sub_close.std() / sub_close.mean() if sub_close.mean() > 0 else 1
+                hist_stabilized = sub_cv < 0.015
+            else:
+                hist_stabilized = False
+                
+            if hist_below and hist_downward and hist_stabilized and hist_discounted:
+                sediment_count += 1
+                
+        # 若在回溯窗內累積足夠天數的沉澱記錄，視為通過驗證
+        if sediment_count > 0:
+            has_preceding_sediment = True
+            validated_sediment_days = sediment_count
 
-    # 左側沉澱觸發條件
-    is_left_hit = is_below_ma240 and is_downward_slope and is_price_stabilized and is_discounted and not is_right_hit
-
-    # ==================== 5. 狀態封裝與輸出分流 ====================
-    if is_right_hit:
-        strategy_stage = "【階段二：右側突破】均線糾結+量能表態 ➔ 執行買進"
+    # ==================== 5. 最終狀態封裝與輸出分流 ====================
+    if is_today_right_hit and has_preceding_sediment:
+        strategy_stage = "【右側突破驗證成功】前方經扎實沉澱 ➔ 執行買進"
         action_signal = "BUY"
         is_hit = True
-    elif is_left_hit:
-        strategy_stage = "【階段一：左側沉澱】價格已止跌，靜待均線糾結 ➔ 加入觀察"
-        action_signal = "WATCH"
-        is_hit = True
     else:
-        strategy_stage = "未觸發訊號"
+        strategy_stage = "未觸發有效買進訊號 (無效突破或缺乏前置沉澱)"
         action_signal = "NONE"
         is_hit = False
 
-    # 沉澱時間描述
-    if today['close'] < avg_deduct_price * 0.85:
-        time_to_wait = "高價壁壘仍重, 預估至少仍需橫盤20天以上"
-    elif deduct_slope < -0.05:
-        time_to_wait = "高價扣抵即將墜落, 隨時注意右側突破"
-    else:
-        time_to_wait = "橫盤扣抵中, 靜待均線糾結"
+    # 近 10 日價格波動度計算
+    recent_10d = df_single['close'].iloc[-10:]
+    price_cv = recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 0
 
     info = {
         "收盤": today['close'],
@@ -102,10 +122,11 @@ def st_u_bottom(df_single):
         "近10日價格波動度": f"{round(price_cv * 100, 2)}%",
         "中短期糾結度": f"{round(dispersion * 100, 2)}%",
         "今日量比": f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x",
-        "預估沉澱狀態": time_to_wait
+        "回溯沉澱天數": validated_sediment_days,
+        "前置沉澱扎實度評估": f"回溯{lookback_days}天內符合沉澱特徵共 {validated_sediment_days} 天"
     }
 
-    print(f"st_u_bottom_strategy action:{action_signal} info:{info}")
+    print(f"u_bottom action:{action_signal} info:{info}")
     return is_hit, info
 
 
