@@ -76,10 +76,10 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
     c1_above_ma240 = True
 
   # 【新增防禦 1】乖離率過濾：收盤價高於 20MA 超過 12% 視為短線過熱，不予追價
-  c1_bias_safe = bias_20 <= 0.06  # 可依回測結果調整為 0.10 ~ 0.15
+  c1_bias_safe = bias_20 <= 0.08  # 可依回測結果調整為 0.10 ~ 0.15
 
   # 【新增防禦 2】盤整區間扎實度：前 20 日區間振幅應小於 25%，確保是有效收斂打底
-  c1_consolidation_tight = range_20 <= 0.06
+  c1_consolidation_tight = range_20 <= 0.10
 
   cond_1 = (
       c1_breakout
