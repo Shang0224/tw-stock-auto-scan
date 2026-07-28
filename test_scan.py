@@ -1,5 +1,7 @@
 # test_scan.py
 import os
+import pandas as pd
+
 from datetime import datetime, timedelta, timezone
 from scanstock.scanstock import scan_stocks_df_list
 
