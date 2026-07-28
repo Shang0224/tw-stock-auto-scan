@@ -10,8 +10,10 @@ from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_s
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
-from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_breakout, st_bottom_consolidation
-from strategy.strat_right_side import st_bottom_u_turn
+
+
+from strategy.strat_right_side import st_right_side_breakout
+from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout, st_u_bottom
 
 
 # 🌟 從 utils 匯入全新整理好的工具
@@ -39,7 +41,7 @@ def yfinance_scan_ma240():
 
     
     #my_strategies = [st_near_ma240_df, st_bottom_v_turn, st_bottom_breakout] # 策略列表
-    my_strategies = [st_near_ma240_df, st_advanced_ma240_df] # 策略列表
+    my_strategies = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout] # 策略列表
     
     
     print(f"⏰ [YF 排程啟動] 日期：{tw_time.strftime('%Y-%m-%d')}, 來源：{files_env}")
