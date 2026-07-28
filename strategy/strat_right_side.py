@@ -1,7 +1,155 @@
 import pandas as pd
 
+
 def st_right_side_breakout(df_single, market_above_ma240=True):
+  """***右側交易突破選股策略（調整版：第一種符合條件二，第二種符合條件二且通過條件一濾網）***"""
+
+  #改寫自st_right_side_breakout_2026072802, 
+  #符合條件二的
+
+  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
+  if not market_above_ma240:
+    return False, {}
+
+  if df_single.empty or len(df_single) < 120:
+    return False, {}
+
+  df_single = df_single.copy()
+
+  # 計算各天期移動平均線
+  df_single['MA5'] = df_single['close'].rolling(5).mean()
+  df_single['MA10'] = df_single['close'].rolling(10).mean()
+  df_single['MA20'] = df_single['close'].rolling(20).mean()
+  df_single['MA60'] = df_single['close'].rolling(60).mean()  # 季線
+  df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
+
+  # 計算成交量 20 日均量
+  df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
+
+  # 計算 20 日價格最高價與最低價（用以判斷突破與區間振幅）
+  df_single['Max_20'] = df_single['max'].shift(1).rolling(20).max()
+  df_single['Min_20'] = df_single['min'].shift(1).rolling(20).min()
+
+  # 計算 20 日均線乖離率 (Bias) = (收盤價 - MA20) / MA20
+  df_single['Bias_20'] = (
+      df_single['close'] - df_single['MA20']
+  ) / df_single['MA20']
+
+  # 計算過去 20 日區間振幅 (Range%) = (20日最高 - 20日最低) / MA20
+  df_single['Range_20'] = (df_single['Max_20'] - df_single['Min_20']) / df_single[
+      'MA20'
+  ]
+
+  # 計算均線斜率
+  df_single['MA20_slope'] = (
+      df_single['MA20'] - df_single['MA20'].shift(20)
+  ) / df_single['MA20'].shift(20)
+  df_single['MA60_slope'] = (
+      df_single['MA60'] - df_single['MA60'].shift(20)
+  ) / df_single['MA60'].shift(20)
+  df_single['MA5_slope'] = (
+      df_single['MA5'] - df_single['MA5'].shift(5)
+  ) / df_single['MA5'].shift(5)
+
+  today = df_single.iloc[-1]
+  prev = df_single.iloc[-2]
+
+  if pd.isna([today['MA20'], today['MA60'], today['MA5']]).any():
+    return False, {}
+
+  close = today['close']
+  max_20 = today['Max_20']
+  volume = today['Trading_Volume']
+  vol_ma20 = today['Vol_MA20']
+  ma5 = today['MA5']
+  ma10 = today['MA10']
+  ma20 = today['MA20']
+  ma60 = today['MA60']
+  ma240 = today['MA240']
+  ma20_slope = today['MA20_slope']
+  ma60_slope = today['MA60_slope']
+  ma5_slope = today['MA5_slope']
+  bias_20 = today['Bias_20']
+  range_20 = today['Range_20']
+
+  # ==================== 【條件一：箱型突破與量能爆發防禦版】 ====================
+  c1_breakout = close > max_20
+  c1_volume_surge = volume >= (vol_ma20 * 1.5)
+  c1_bullish_alignment = (ma5 > ma10) and (ma10 > ma20) and (ma20 > ma60)
+  c1_ma_rising = (ma20_slope >= 0.0) and (ma60_slope >= 0.0)
+
+  if len(df_single) >= 240 and not pd.isna(ma240):
+    c1_above_ma240 = close > ma240
+  else:
+    c1_above_ma240 = True
+
+  c1_bias_safe = bias_20 <= 0.12
+  c1_consolidation_tight = range_20 <= 0.25
+
+  cond_1 = (
+      c1_breakout
+      and c1_volume_surge
+      and c1_bullish_alignment
+      and c1_ma_rising
+      and c1_above_ma240
+      and c1_bias_safe
+      and c1_consolidation_tight
+  )
+
+  # ==================== 【條件二：短線強勢動能與均線交叉發散版】 ====================
+  c2_close_gt_ma5 = close > ma5
+  c2_ma5_cross_20 = (ma5 > ma20) and (prev['MA5'] <= prev['MA20'])
+  c2_ma5_slope_strong = ma5_slope >= 0.005
+  c2_short_bullish = (ma5 > ma10) and (ma10 > ma20)
+  c2_ma20_safe = ma20_slope >= -0.001
+  c2_bias_safe = bias_20 <= 0.10
+
+  cond_2 = (
+      c2_close_gt_ma5
+      and c2_ma5_cross_20
+      and c2_ma5_slope_strong
+      and c2_short_bullish
+      and c2_ma20_safe
+      and c2_bias_safe
+  )
+
+  # ==================== 【選股分類邏輯】 ====================
+  is_type_1 = cond_2  # 第一種：符合條件二
+  is_type_2 = cond_2 and cond_1  # 第二種：符合條件二且通過條件一濾網
+
+  # 只要符合條件二，整體策略即視為觸發訊號
+  is_hit = cond_2
+
+  if is_type_2:
+    status = (
+        '[右側策略] 第二種(勝率極高)：短線強勢動能與均線交叉發散, 並結構突破'
+    )
+  elif is_type_1:
+    status = '[右側策略] 第一種：短線強勢動能與均線交叉發散'
+  else:
+    status = '未觸發右側訊號'
+
+  recent_low = df_single['close'].iloc[-10:].min()
+
+  info = {
+      '收盤': close,
+      '5日線': round(ma5, 2),
+      '20日線(MA20)': round(ma20, 2),
+      '季線(MA60)': round(ma60, 2),
+      '20MA乖離率': f'{round(bias_20 * 100, 2)}%',
+      '20日區間振幅': f'{round(range_20 * 100, 2)}%',
+      '建議停損參考價': recent_low,
+      '符合第一種(條件二)': is_type_1,
+      '符合第二種(條件二+條件一)': is_type_2,
+      '策略狀態': status,
+  }
+
+  return is_hit, info
+
+
+def st_right_side_breakout_2026072802(df_single, market_above_ma240=True):
   """***右側交易突破選股策略（優化版：新增新增乖離率與盤整扎實度過濾與大盤年線過濾與乖離率防禦）***"""
+  #此版分為條件一與條件二篩選股票, 後來發現條件一訊號太多, 但條件2+條件1勝率很高, 故改寫為輸出符合條件2與條件2並通過條件1的濾網
     
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
   if not market_above_ma240:
