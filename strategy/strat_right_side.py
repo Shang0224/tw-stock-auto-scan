@@ -150,6 +150,11 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
 def st_right_side_breakout_2026072802(df_single, market_above_ma240=True):
   """***右側交易突破選股策略（優化版：新增新增乖離率與盤整扎實度過濾與大盤年線過濾與乖離率防禦）***"""
   #此版分為條件一與條件二篩選股票, 後來發現條件一訊號太多, 但條件2+條件1勝率很高, 故改寫為輸出符合條件2與條件2並通過條件1的濾網
+  #輸出檔為yf_test_st_right_side_breakout_range_2024-01-01_to_2025-09-30_20260728_1809
+  #
+  #用以下條件執行篩選
+  #c1_bias_safe = bias_20 <= 0.06        # 20MA 乖離小於 6%
+  #c1_consolidation_tight = range_20 <= 0.06  # 20日區間振幅小於 6%（極度收斂）
   #輸出檔為yf_test_st_right_side_breakout_range_2024-01-01_to_2025-09-30_20260728_1752
     
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
