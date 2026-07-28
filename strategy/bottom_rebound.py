@@ -149,10 +149,13 @@ def st_u_bottom(df_single):
       recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 0
   )
 
+  stop_loss = 20
+  
   info = {
       '收盤': today['close'],
       '策略階段': strategy_stage,
       '訊號動作': action_signal,
+      '停損': stop_loss,
       '距離年線': f"{round(dist_ratio * 100, 2)}%",
       '年線20日斜率': f"{round(ma_slope_20d * 100, 2)}%",
       '近10日價格波動度': f"{round(price_cv * 100, 2)}%",
@@ -286,10 +289,11 @@ def st_bottom_v_turn(df_single):
 
   # 計算近期停損參考價（過去 20 天最低價）
   recent_low = df_single['close'].iloc[-20:].min()
-
+  stop_loss = 20
   info = {
       '收盤': close,
       '5日線': round(ma5, 2),
+      '停損': stop_loss,
       '季線(MA60)': round(ma60, 2),
       '年線(MA240)': round(ma240, 2),
       '季線20日斜率': f'{round(ma60_slope * 100, 2)}%',
