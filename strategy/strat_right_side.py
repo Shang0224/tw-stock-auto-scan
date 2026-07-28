@@ -1,5 +1,146 @@
 import pandas as pd
 
+def st_right_side_breakout(df_single):
+  """***右側交易突破選股策略（條件一：強勢突破創高與量價齊揚防禦；條件二：均線發散與動能確認）***"""
+  if df_single.empty or len(df_single) < 120:
+    return False, {}
+
+  df_single = df_single.copy()
+
+  # 計算各天期移動平均線
+  df_single['MA5'] = df_single['close'].rolling(5).mean()
+  df_single['MA10'] = df_single['close'].rolling(10).mean()
+  df_single['MA20'] = df_single['close'].rolling(20).mean()
+  df_single['MA60'] = df_single['close'].rolling(60).mean()  # 季線
+  df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
+
+  # 計算成交量 20 日均量
+  df_single['Vol_MA20'] = df_single['volume'].rolling(20).mean()
+
+  # 計算 20 日價格最高價（不含當日，用以判斷突破前高）
+  df_single['High_20'] = df_single['high'].shift(1).rolling(20).max()
+
+  # 計算均線 20 日斜率
+  df_single['MA20_slope'] = (
+      df_single['MA20'] - df_single['MA20'].shift(20)
+  ) / df_single['MA20'].shift(20)
+  df_single['MA60_slope'] = (
+      df_single['MA60'] - df_single['MA60'].shift(20)
+  ) / df_single['MA60'].shift(20)
+
+  # 計算 5 日線 5 日斜率
+  df_single['MA5_slope'] = (
+      df_single['MA5'] - df_single['MA5'].shift(5)
+  ) / df_single['MA5'].shift(5)
+
+  today = df_single.iloc[-1]
+  prev = df_single.iloc[-2]
+
+  # 防禦性檢查
+  if pd.isna([today['MA20'], today['MA60'], today['MA5']]).any():
+    return False, {}
+
+  close = today['close']
+  high_20 = today['High_20']
+  volume = today['volume']
+  vol_ma20 = today['Vol_MA20']
+  ma5 = today['MA5']
+  ma10 = today['MA10']
+  ma20 = today['MA20']
+  ma60 = today['MA60']
+  ma240 = today['MA240']
+  ma20_slope = today['MA20_slope']
+  ma60_slope = today['MA60_slope']
+  ma5_slope = today['MA5_slope']
+
+  # ==================== 【條件一：箱型突破與量能爆發防禦版】 ====================
+  # 1. 價格突破過去 20 日最高價
+  c1_breakout = close > high_20
+
+  # 2. 量能確認：當日成交量大於 20 日均量 1.5 倍以上
+  c1_volume_surge = volume >= (vol_ma20 * 1.5)
+
+  # 3. 趨勢多頭排列：短期與中期均線向上發散 (MA5 > MA10 > MA20 > MA60)
+  c1_bullish_alignment = (ma5 > ma10) and (ma10 > ma20) and (ma20 > ma60)
+
+  # 4. 均線斜率向上防禦：20日與60日均線皆必須向上（斜率 >= 0）
+  c1_ma_rising = (ma20_slope >= 0.0) and (ma60_slope >= 0.0)
+
+  # 5. 遠離底部防禦：收盤價高於年線（若有 240 天資料時檢查）
+  if len(df_single) >= 240 and not pd.isna(ma240):
+    c1_above_ma240 = close > ma240
+  else:
+    c1_above_ma240 = True
+
+  cond_1 = (
+      c1_breakout
+      and c1_volume_surge
+      and c1_bullish_alignment
+      and c1_ma_rising
+      and c1_above_ma240
+  )
+
+  # ==================== 【條件二：短線強勢動能與均線交叉發散版】 ====================
+  # 1. 收盤價站穩 5 日線之上
+  c2_close_gt_ma5 = close > ma5
+
+  # 2. 5日線向上穿越 20 日線（黃金交叉或發散初期）
+  c2_ma5_cross_20 = (ma5 > ma20) and (prev['MA5'] <= prev['MA20'])
+
+  # 3. 5日線斜率強勢（斜率 >= 0.005）
+  c2_ma5_slope_strong = ma5_slope >= 0.005
+
+  # 4. 均線多頭排列 (MA5 > MA10 > MA20)
+  c2_short_bullish = (ma5 > ma10) and (ma10 > ma20)
+
+  # 5. 20日均線走平或向上 (斜率 >= -0.001)
+  c2_ma20_safe = ma20_slope >= -0.001
+
+  cond_2 = (
+      c2_close_gt_ma5
+      and c2_ma5_cross_20
+      and c2_ma5_slope_strong
+      and c2_short_bullish
+      and c2_ma20_safe
+  )
+
+  # ==================== 【綜合判定與狀態標註】 ====================
+  is_hit = cond_1 or cond_2
+
+  if cond_1 and cond_2:
+    status = '[右側策略] 同時符合【條件一】與【條件二】'
+  elif cond_1:
+    status = (
+        '[右側策略] 符合【條件一】(突破20日新高、量能放大>=1.5倍、'
+        '均線多頭發散 MA5>MA10>MA20>MA60、均線向上且站上年線)'
+    )
+  elif cond_2:
+    status = (
+        '[右側策略] 符合【條件二】(站穩5日線、MA5帶量穿越MA20、'
+        '5日線強勢斜率、短均多頭排列)'
+    )
+  else:
+    status = '未觸發右側訊號'
+
+  # 計算近期右側追價停損參考價（例如過去 10 天最低價或 20MA）
+  recent_low = df_single['close'].iloc[-10:].min()
+
+  info = {
+      '收盤': close,
+      '5日線': round(ma5, 2),
+      '20日線(MA20)': round(ma20, 2),
+      '季線(MA60)': round(ma60, 2),
+      '20日線20日斜率': f'{round(ma20_slope * 100, 2)}%',
+      '季線20日斜率': f'{round(ma60_slope * 100, 2)}%',
+      '5日線5日斜率': f'{round(ma5_slope * 100, 2)}%',
+      '建議停損參考價': recent_low,
+      '策略狀態': status,
+  }
+
+  return is_hit, info
+
+
+
 def st_bottom_u_turn_2026071101(df_single):
     """
     ***策略 A-2：題材破滅 U 型碗底翻揚系統 (20260711 究極嚴選 U 型底版)***
