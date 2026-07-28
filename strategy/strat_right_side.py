@@ -1,6 +1,138 @@
 import pandas as pd
 
 def st_right_side_breakout(df_single):
+  """***右側交易突破選股策略（優化版：新增乖離率與盤整扎實度過濾）***"""
+  if df_single.empty or len(df_single) < 120:
+    return False, {}
+
+  df_single = df_single.copy()
+
+  # 計算各天期移動平均線
+  df_single['MA5'] = df_single['close'].rolling(5).mean()
+  df_single['MA10'] = df_single['close'].rolling(10).mean()
+  df_single['MA20'] = df_single['close'].rolling(20).mean()
+  df_single['MA60'] = df_single['close'].rolling(60).mean()  # 季線
+  df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
+
+  # 計算成交量 20 日均量
+  df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
+
+  # 計算 20 日價格最高價與最低價（用以判斷突破與區間振幅）
+  df_single['Max_20'] = df_single['max'].shift(1).rolling(20).max()
+  df_single['Min_20'] = df_single['min'].shift(1).rolling(20).min()
+
+  # 【新增】計算 20 日均線乖離率 (Bias) = (收盤價 - MA20) / MA20
+  df_single['Bias_20'] = (df_single['close'] - df_single['MA20']) / df_single['MA20']
+
+  # 【新增】計算過去 20 日區間振幅 (Range%) = (20日最高 - 20日最低) / MA20
+  df_single['Range_20'] = (df_single['Max_20'] - df_single['Min_20']) / df_single['MA20']
+
+  # 計算均線斜率
+  df_single['MA20_slope'] = (
+      df_single['MA20'] - df_single['MA20'].shift(20)
+  ) / df_single['MA20'].shift(20)
+  df_single['MA60_slope'] = (
+      df_single['MA60'] - df_single['MA60'].shift(20)
+  ) / df_single['MA60'].shift(20)
+  df_single['MA5_slope'] = (
+      df_single['MA5'] - df_single['MA5'].shift(5)
+  ) / df_single['MA5'].shift(5)
+
+  today = df_single.iloc[-1]
+  prev = df_single.iloc[-2]
+
+  if pd.isna([today['MA20'], today['MA60'], today['MA5']]).any():
+    return False, {}
+
+  close = today['close']
+  max_20 = today['Max_20']
+  volume = today['Trading_Volume']
+  vol_ma20 = today['Vol_MA20']
+  ma5 = today['MA5']
+  ma10 = today['MA10']
+  ma20 = today['MA20']
+  ma60 = today['MA60']
+  ma240 = today['MA240']
+  ma20_slope = today['MA20_slope']
+  ma60_slope = today['MA60_slope']
+  ma5_slope = today['MA5_slope']
+  bias_20 = today['Bias_20']
+  range_20 = today['Range_20']
+
+  # ==================== 【條件一：箱型突破與量能爆發防禦版】 ====================
+  c1_breakout = close > max_20
+  c1_volume_surge = volume >= (vol_ma20 * 1.5)
+  c1_bullish_alignment = (ma5 > ma10) and (ma10 > ma20) and (ma20 > ma60)
+  c1_ma_rising = (ma20_slope >= 0.0) and (ma60_slope >= 0.0)
+  
+  if len(df_single) >= 240 and not pd.isna(ma240):
+    c1_above_ma240 = close > ma240
+  else:
+    c1_above_ma240 = True
+
+  # 【新增防禦 1】乖離率過濾：收盤價高於 20MA 超過 12% 視為短線過熱，不予追價
+  c1_bias_safe = bias_20 <= 0.12  # 可依回測結果調整為 0.10 ~ 0.15
+
+  # 【新增防禦 2】盤整區間扎實度：前 20 日區間振幅應小於 25%，確保是有效收斂打底
+  c1_consolidation_tight = range_20 <= 0.25
+
+  cond_1 = (
+      c1_breakout
+      and c1_volume_surge
+      and c1_bullish_alignment
+      and c1_ma_rising
+      and c1_above_ma240
+      and c1_bias_safe              # <--- 新增乖離率過熱防禦
+      and c1_consolidation_tight    # <--- 新增盤整區間扎實度過濾
+  )
+
+  # ==================== 【條件二：短線強勢動能與均線交叉發散版】 ====================
+  c2_close_gt_ma5 = close > ma5
+  c2_ma5_cross_20 = (ma5 > ma20) and (prev['MA5'] <= prev['MA20'])
+  c2_ma5_slope_strong = ma5_slope >= 0.005
+  c2_short_bullish = (ma5 > ma10) and (ma10 > ma20)
+  c2_ma20_safe = ma20_slope >= -0.001
+
+  # 同樣可對條件二加上乖離率限制，避免黃金交叉時已經噴出太遠
+  c2_bias_safe = bias_20 <= 0.10
+
+  cond_2 = (
+      c2_close_gt_ma5
+      and c2_ma5_cross_20
+      and c2_ma5_slope_strong
+      and c2_short_bullish
+      and c2_ma20_safe
+      and c2_bias_safe              # <--- 新增乖離率防禦
+  )
+
+  # ==================== 【綜合判定與狀態標註】 ====================
+  is_hit = cond_1 or cond_2
+
+  if cond_1 and cond_2:
+    status = '[右側策略] 同時符合【條件一】與【條件二】'
+  elif cond_1:
+    status = '[右側策略] 符合【條件一】(突破20日新高、量價齊揚、乖離健康與區間收斂)'
+  elif cond_2:
+    status = '[右側策略] 符合【條件二】(短線強勢動能與均線黃金交叉)'
+  else:
+    status = '未觸發右側訊號'
+
+  recent_low = df_single['close'].iloc[-10:].min()
+
+  info = {
+      '收盤': close,
+      '5日線': round(ma5, 2),
+      '20日線(MA20)': round(ma20, 2),
+      '季線(MA60)': round(ma60, 2),
+      '20MA乖離率': f'{round(bias_20 * 100, 2)}%',
+      '20日區間振幅': f'{round(range_20 * 100, 2)}%',
+      '建議停損參考價': recent_low,
+      '策略狀態': status,
+  }
+
+  return is_hit, info
+
+def st_right_side_breakout_2026072801(df_single):
   """***右側交易突破選股策略（條件一：強勢突破創高與量價齊揚防禦；條件二：均線發散與動能確認）***"""
   if df_single.empty or len(df_single) < 120:
     return False, {}
