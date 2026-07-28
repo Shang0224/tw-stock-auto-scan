@@ -8,30 +8,12 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 #from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
 
-# 🌟 完美導入你專屬的 utils 程式庫工具
-from utils import (
-    get_stock_name_dict,
-    parse_stock_ids,
-    yf_fetch_all_stocks,
-    fm_fetch_all_stocks,
-    save_multi_day_report, # 🌟 新增：專門處理多日格式化的存檔函數
-    archive_and_cleanup,   # 負責排程專用的備份與清理
-    send_email_report,
-    save_multi_day_report,
-    calculate_one_year_extremes,
-    send_line_message,
-    send_line_summary
-)
-
-
-
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
 
 from strategy.strat_right_side import st_right_side_breakout
 from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout, st_u_bottom
-
 
 # 🌟 從 utils 匯入全新整理好的工具
 from utils import (
@@ -43,7 +25,8 @@ from utils import (
     archive_and_cleanup,   # 新增這個：負責排程專用的備份與清理
     save_scan_report,
     send_line_summary,
-    send_email_report
+    send_line_message,
+    send_email_report    
 )
 
 def yfinance_scan_ma240():
@@ -56,8 +39,7 @@ def yfinance_scan_ma240():
     
     #my_strategies = [st_near_ma240_df, st_bottom_v_turn, st_bottom_breakout] # 策略列表
     my_strategies = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout] # 策略列表
-    
-    
+        
     print(f"⏰ [YF 排程啟動] 日期：{tw_time.strftime('%Y-%m-%d')}, 來源：{files_env}")
 
     stock_name_dict, _ = get_stock_name_dict()
