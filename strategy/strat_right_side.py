@@ -18,7 +18,7 @@ def st_right_side_breakout(df_single):
   df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
 
   # 計算 20 日價格最高價（不含當日，用以判斷突破前高）
-  df_single['High_20'] = df_single['high'].shift(1).rolling(20).max()
+  df_single['Max_20'] = df_single['max'].shift(1).rolling(20).max()
 
   # 計算均線 20 日斜率
   df_single['MA20_slope'] = (
@@ -41,7 +41,7 @@ def st_right_side_breakout(df_single):
     return False, {}
 
   close = today['close']
-  high_20 = today['High_20']
+  max_20 = today['Max_20']
   volume = today['Trading_Volume']
   vol_ma20 = today['Vol_MA20']
   ma5 = today['MA5']
@@ -55,7 +55,7 @@ def st_right_side_breakout(df_single):
 
   # ==================== 【條件一：箱型突破與量能爆發防禦版】 ====================
   # 1. 價格突破過去 20 日最高價
-  c1_breakout = close > high_20
+  c1_breakout = close > max_20
 
   # 2. 量能確認：當日成交量大於 20 日均量 1.5 倍以上
   c1_volume_surge = volume >= (vol_ma20 * 1.5)
