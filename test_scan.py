@@ -76,14 +76,30 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     
     fetch_start_str = (start_date - timedelta(days=500)).strftime("%Y-%m-%d")
     
-    print(f"📡 正在抓取全段歷史數據緩衝 ({fetch_start_str} ~ {fetch_end_str})...")
+    #print(f"📡 正在抓取全段歷史數據緩衝 ({fetch_start_str} ~ {fetch_end_str})...")
+    #if source.lower() == 'yf':
+    #    global_df = yf_fetch_all_stocks(stock_ids, fetch_start_str, fetch_end_str)
+    #elif source.lower() == 'fm':
+    #    global_df = fm_fetch_all_stocks(dl, stock_ids, fetch_start_str, fetch_end_str)
+    #else:
+    #    raise ValueError("❌ 未知的資料來源設定，僅支援 'yf' 或 'fm'")
+
+
+    # ----------------------------------------------------
+    # 1. 在抓取個股歷史數據時，同時抓取大盤指數 (以 Yahoo Finance ^TWII 為例)
+    # ----------------------------------------------------
+    print(f"📡 正在抓取全段歷史數據緩衝與大盤指數 ({fetch_start_str} ~ {fetch_end_str})...")
     if source.lower() == 'yf':
         global_df = yf_fetch_all_stocks(stock_ids, fetch_start_str, fetch_end_str)
+        # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
+        market_df = yf_fetch_all_stocks(['^TWII'], fetch_start_str, fetch_end_str)
     elif source.lower() == 'fm':
         global_df = fm_fetch_all_stocks(dl, stock_ids, fetch_start_str, fetch_end_str)
+        # FinMind 對應的大盤代碼，可依你的 FinMind 資料源調整（例如 'TAIEX' 或指數代碼）
+        market_df = fm_fetch_all_stocks(dl, ['TAIEX'], fetch_start_str, fetch_end_str)
     else:
         raise ValueError("❌ 未知的資料來源設定，僅支援 'yf' 或 'fm'")
-
+    
     if global_df.empty:
         print(f"❌ [{source.upper()} 測試失敗] 抓取歷史資料為空！")
         return
@@ -104,12 +120,23 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         day_data_cutoff = current_day.replace(hour=23, minute=59, second=59)
         all_df_slice = global_df[global_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
 
+        # 🌟 計算當日大盤是否在年線之上
+        market_df_slice = market_df[market_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
+        market_above_ma240 = True  # 預設值，避免資料不足時直接卡死
+        
+        if not market_df_slice.empty and len(market_df_slice) >= 240:
+            market_df_slice = market_df_slice.copy()
+            market_df_slice['MA240'] = market_df_slice['close'].rolling(240).mean()
+            m_today = market_df_slice.iloc[-1]
+            if not pd.isna(m_today['MA240']):
+                market_above_ma240 = m_today['close'] > m_today['MA240']
+        
         if all_df_slice.empty:
             print(f"⚠️ {day_str} 數據切片為空，跳過本交易日。")
             current_day += timedelta(days=1)
             continue
 
-        day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict)
+        day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict, market_above_ma240)
 
         #if day_results:
          #   print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的。")
