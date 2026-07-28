@@ -15,7 +15,7 @@ def st_right_side_breakout(df_single):
   df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
 
   # 計算成交量 20 日均量
-  df_single['Vol_MA20'] = df_single['volume'].rolling(20).mean()
+  df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
 
   # 計算 20 日價格最高價（不含當日，用以判斷突破前高）
   df_single['High_20'] = df_single['high'].shift(1).rolling(20).max()
@@ -42,7 +42,7 @@ def st_right_side_breakout(df_single):
 
   close = today['close']
   high_20 = today['High_20']
-  volume = today['volume']
+  volume = today['Trading_Volume']
   vol_ma20 = today['Vol_MA20']
   ma5 = today['MA5']
   ma10 = today['MA10']
