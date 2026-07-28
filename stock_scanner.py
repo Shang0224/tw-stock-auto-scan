@@ -29,9 +29,6 @@ from utils import (
     send_email_report
 )
 
-from strategy.near_ma240 import st_near_ma240_df
-# ... 其他策略匯入省略 ...
-
 def yfinance_scan_ma240():
     """yfinance 雲端定時排程主程式"""
     tz_tw = timezone(timedelta(hours=8))
