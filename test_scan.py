@@ -120,6 +120,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         day_data_cutoff = current_day.replace(hour=23, minute=59, second=59)
         all_df_slice = global_df[global_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
 
+        print(f"\n計算當日大盤是否在年線之上...")
         # 🌟 計算當日大盤是否在年線之上
         market_df_slice = market_df[market_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
         market_above_ma240 = True  # 預設值，避免資料不足時直接卡死
@@ -128,6 +129,8 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
             market_df_slice = market_df_slice.copy()
             market_df_slice['MA240'] = market_df_slice['close'].rolling(240).mean()
             m_today = market_df_slice.iloc[-1]
+            print(f"\npd.isna(m_today['MA240']...")
+            
             if not pd.isna(m_today['MA240']):
                 market_above_ma240 = m_today['close'] > m_today['MA240']
         
