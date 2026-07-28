@@ -136,6 +136,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
             current_day += timedelta(days=1)
             continue
 
+        print(f"\n進入scan_stocks_df_list...")
         day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict, market_above_ma240)
 
         #if day_results:
