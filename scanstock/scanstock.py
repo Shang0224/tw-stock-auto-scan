@@ -28,7 +28,7 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map, market_abo
             print(f"************{ sid }*******************************--------------")
 
                     
-            is_hit, detail_info = algo_func(df_single=df_single)
+            #is_hit, detail_info = algo_func(df_single=df_single)
             
             # 🌟 將大盤狀態傳給策略函數（若策略支援該參數）
             # 透過 inspect 或直接傳參數，若策略函數有定義 market_above_ma240 則傳入
