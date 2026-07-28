@@ -5,7 +5,7 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
   """***右側交易突破選股策略（調整版：第一種符合條件二，第二種符合條件二且通過條件一濾網）***"""
 
   #改寫自st_right_side_breakout_2026072802, 
-  #符合條件二的
+  #符合條件二的為第一型, 符合條件二並通過條件一濾網的為第二型
 
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
   if not market_above_ma240:
@@ -122,10 +122,10 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
 
   if is_type_2:
     status = (
-        '[右側策略] 第二種(勝率極高)：短線強勢動能與均線交叉發散, 並結構突破'
+        '[右側策略] 第二型：$勝率極高$ 短線強勢動能與均線交叉發散, 並結構突破'
     )
   elif is_type_1:
-    status = '[右側策略] 第一種：短線強勢動能與均線交叉發散'
+    status = '[右側策略] 第一型：短線強勢動能與均線交叉發散'
   else:
     status = '未觸發右側訊號'
 
