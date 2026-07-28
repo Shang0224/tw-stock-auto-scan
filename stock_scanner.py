@@ -72,10 +72,24 @@ def yfinance_scan_ma240():
     # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
     market_df = yf_fetch_all_stocks(['^TWII'], start_date, end_date)
 
+    print(f"\n計算當日大盤是否在年線之上...")
+    # 🌟 計算當日大盤是否在年線之上
+    market_df_slice = market_df[market_df['date'] <= start_date.strftime("%Y-%m-%d")]
+    market_above_ma240 = True  # 預設值，避免資料不足時直接卡死
+
+    if not market_df_slice.empty and len(market_df_slice) >= 240:
+        market_df_slice = market_df_slice.copy()
+        market_df_slice['MA240'] = market_df_slice['close'].rolling(240).mean()
+        m_today = market_df_slice.iloc[-1]
+        print(f"\npd.isna(m_today['MA240']...")
+            
+        if not pd.isna(m_today['MA240']):
+            market_above_ma240 = m_today['close'] > m_today['MA240']
+
     source_name = 'yfinance'
 
     try:        
-        results = scan_stocks_df_list(stock_ids, my_strategies, all_df, stock_name_dict)
+        results = scan_stocks_df_list(stock_ids, my_strategies, all_df, stock_name_dict, market_above_ma240)
         
         # 2. 產出本地 CSV 檔案 (有股票才會產檔並回傳路徑，沒股票回傳 None)
         csv_path = save_scan_report(results, source_name, tw_time)
