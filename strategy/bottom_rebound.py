@@ -67,12 +67,18 @@ def st_u_bottom(df_single):
   # C. 價值型穩健築底：嚴格規定年線斜率必須 >= 0.0 (平轉或向上，不開後門)
   is_flattening_slope = ma_slope_20d >= 0.0
 
+  # D. 新增：右側價格確認（當日收盤價不得為 5 日內最低點，必須高於 5 日低點或出現止穩反彈）
+  # 計算 5 日內收盤最低價（用於右側反彈確認）
+  df_single['min_close_5d'] = df_single['close'].rolling(5).min()  
+  is_not_lowest_5d = today['close'] > df_single['min_close_5d'].iloc[-1]
+
   # 今日是否符合右側突破的表態條件
   is_today_right_hit = (
       is_below_ma240
       and is_converged
       and is_volume_up
       and is_flattening_slope
+      and is_not_lowest_5d  # 嚴格過濾 5 日創新低/最低點
   )
 
   # ==================== 4. 核心反向回溯驗證：檢查歷史扎實沉澱 ====================
