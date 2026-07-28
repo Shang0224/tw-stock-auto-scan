@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from scanstock.scanstock import scan_stocks_df_list
 
 # 匯入您要測試的策略
-from strategy.strat_right_side import st_bottom_u_turn_2026071101, st_shakeout_resurrection, st_bottom_u_turn, st_bottom_u_turn_v20260703, st_bottom_u_turn_v2026070301, st_bottom_u_turn_2026070302, st_bottom_u_turn_with_memory, st_washout_phoenix
+from strategy.strat_right_side import st_right_side_breakout
 from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout, st_u_bottom
 from strategy.advanced_ma240 import st_advanced_ma240_df_up
 from strategy.near_ma240 import st_near_ma240_df
@@ -27,7 +27,7 @@ from utils import (
 # =====================================================================
 CHOSEN_SOURCE = 'yf' 
 #CHOSEN_SOURCE = 'fm' 
-TEST_START_DATE = '2021-01-01'
+TEST_START_DATE = '2024-01-01'
 TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
@@ -36,9 +36,9 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
 
-TEST_STRATEGIES = [st_u_bottom]
+TEST_STRATEGIES = [st_right_side_breakout]
+#TEST_STRATEGIES = [st_u_bottom]
 #TEST_STRATEGIES = [st_bottom_u_turn]
-#TEST_STRATEGIES = [st_shakeout_resurrection]
 #TEST_STRATEGIES = [st_washout_phoenix]
 #TEST_STRATEGIES = [st_bottom_u_turn_with_memory]
 #TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_u_turn_v20260703] #, st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout]
