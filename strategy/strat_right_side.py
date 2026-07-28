@@ -1,7 +1,12 @@
 import pandas as pd
 
-def st_right_side_breakout(df_single):
-  """***右側交易突破選股策略（優化版：新增乖離率與盤整扎實度過濾）***"""
+def st_right_side_breakout(df_single, market_above_ma240=True):
+  """***右側交易突破選股策略（優化版：新增新增乖離率與盤整扎實度過濾與大盤年線過濾與乖離率防禦）***"""
+    
+  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
+  if not market_above_ma240:
+    return False, {}
+
   if df_single.empty or len(df_single) < 120:
     return False, {}
 
