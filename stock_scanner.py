@@ -6,7 +6,23 @@ import requests
 
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
-from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
+#from untils.untils import send_line_message, fm_fetch_all_stocks, yf_fetch_all_stocks, send_email_with_csv, upload_to_nas, cleanup_local_file
+
+# 🌟 完美導入你專屬的 utils 程式庫工具
+from utils import (
+    get_stock_name_dict,
+    parse_stock_ids,
+    yf_fetch_all_stocks,
+    fm_fetch_all_stocks,
+    save_multi_day_report, # 🌟 新增：專門處理多日格式化的存檔函數
+    archive_and_cleanup,   # 負責排程專用的備份與清理
+    send_email_report,
+    save_multi_day_report,
+    calculate_one_year_extremes
+)
+
+
+
 from strategy.near_ma240 import st_near_ma240, st_near_ma240_df
 from scanstock.scanstock import scan_stocks_df_list
 from strategy.advanced_ma240 import st_advanced_ma240, st_advanced_ma240_df, st_advanced_ma240_df_up
@@ -50,6 +66,9 @@ def yfinance_scan_ma240():
     
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
     if all_df.empty: return
+
+    # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
+    market_df = yf_fetch_all_stocks(['^TWII'], start_date, end_date)
 
     source_name = 'yfinance'
 
