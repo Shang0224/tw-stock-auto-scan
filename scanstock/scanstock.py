@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import os
 import requests
 
-def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
+def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map, market_above_ma240=True):
 
     final_hits = []
     grouped = all_df.groupby('stock_id')
@@ -30,6 +30,15 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
                     
             is_hit, detail_info = algo_func(df_single=df_single)
             
+            # 🌟 將大盤狀態傳給策略函數（若策略支援該參數）
+            # 透過 inspect 或直接傳參數，若策略函數有定義 market_above_ma240 則傳入
+            import inspect
+            sig = inspect.signature(algo_func)
+            if 'market_above_ma240' in sig.parameters:
+                is_hit, detail_info = algo_func(df_single=df_single, market_above_ma240=market_above_ma240)
+            else:
+                is_hit, detail_info = algo_func(df_single=df_single)
+
             if is_hit:                                
                 any_hit = True
                 # 紀錄策略名稱
@@ -37,6 +46,7 @@ def scan_stocks_df_list(stock_ids, algo_func_list, all_df, stock_map):
                 # 【關鍵】將詳細內容合併進這一列
                 #print(f"{algo_func.__name__} - detail_info : {detail_info}")
                 hit_row.update(detail_info)
+
         
         if any_hit:
             # 將串列轉為字串方便 CSV 儲存
