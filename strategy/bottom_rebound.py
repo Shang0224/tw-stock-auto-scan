@@ -155,7 +155,7 @@ def st_u_bottom(df_single):
       '收盤': today['close'],
       '策略階段': strategy_stage,
       '訊號動作': action_signal,
-      '停損': f{stop_loss}%,
+      '停損': f"{stop_loss}%",
       '距離年線': f"{round(dist_ratio * 100, 2)}%",
       '年線20日斜率': f"{round(ma_slope_20d * 100, 2)}%",
       '近10日價格波動度': f"{round(price_cv * 100, 2)}%",
@@ -293,7 +293,7 @@ def st_bottom_v_turn(df_single):
   info = {
       '收盤': close,
       '5日線': round(ma5, 2),
-      '停損': f{stop_loss}%,
+      '停損': f'{stop_loss}%',
       '季線(MA60)': round(ma60, 2),
       '年線(MA240)': round(ma240, 2),
       '季線20日斜率': f'{round(ma60_slope * 100, 2)}%',
