@@ -304,6 +304,8 @@ def st_bottom_v_turn(df_single):
 
 def st_bottom_v_turn_2026072701(df_single):
   """***V 轉選股策略（條件一已升級：限制季線必須向上、加入年線與未來 20 日季線高扣抵防禦）***增加季線高扣抵會導致篩選掉高報酬的股票, 故放棄"""
+  #對應回測資料為yf_test_st_bottom_v_turn_range_2015-01-01_to_2025-09-30_20260726_2313
+  # yf_test_st_bottom_v_turn_range_2021-01-01_to_2025-09-30_20260726_2126
   if df_single.empty or len(df_single) < 280:
     return False, {}
 
