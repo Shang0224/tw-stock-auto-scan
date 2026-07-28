@@ -20,7 +20,13 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
   
     for sid in stock_ids:
         # 自動補齊台股後綴 (若使用者只輸入 2330)
-        ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
+        #ticker_id = f"{sid}.TW" if "." not in str(sid) else sid
+
+        # 🌟 修正：如果是以 '^' 開頭的指數（如 '^TWII'），或是已經帶有 '.' 的代號，就不加 '.TW'
+        if str(sid).startswith("^") or "." in str(sid):
+            ticker_id = str(sid)
+        else:
+            ticker_id = f"{sid}.TW"
                
         try:
             # yfinance 下載資料
