@@ -6,6 +6,7 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
 
   #改寫自st_right_side_breakout_2026072802, 
   #符合條件二的為第一型, 符合條件二並通過條件一濾網的為第二型
+  #輸出結果為yf_test_st_right_side_breakout_range_2024-01-01_to_2025-09-30_20260728_1854
 
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
   if not market_above_ma240:
