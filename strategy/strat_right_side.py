@@ -198,6 +198,7 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
       '20日區間振幅': f'{round(range_20 * 100, 2)}%',
       '建議停損參考價': recent_low, #這裡可以考慮分第一型與第二型用不同停損, 第一型用20%
       '策略狀態': status,
+      '年線位置': '上' if market_above_ma240 else '下',
   }
 
   return is_hit, info
