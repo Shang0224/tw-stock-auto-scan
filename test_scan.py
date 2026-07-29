@@ -180,11 +180,10 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     if collected_range_results:
         # 1. 蒐集當次測試的所有策略名稱
         strat_names = [strat.__name__ for strat in strategies]
-        #strat_header_line = f"# 🧪 測試策略清單: {', '.join(strat_names)}\n"
         
         # 根據是否為區間測試，動態組合日期標示
         date_range_label = f"{start_date_str} ~ {end_date_str}" if is_range_test else f"{start_date_str}"
-        strat_header_line = f"# 🧪 測試策略清單: {', '.join(strat_names)} | 📅 掃描區間: {date_range_label}\n"
+        strat_header_line = f"#測試策略清單:, {', '.join(strat_names)} , | , 掃描區間: {date_range_label}\n"
         
         # 為了主檔名乾淨，主檔名仍可用第一個策略或 multi 代表
         strat_label = strat_names[0] if len(strat_names) == 1 else f"multi_strat_{len(strat_names)}"
