@@ -333,13 +333,13 @@ def st_right_side_breakout_2026072802(df_single, market_above_ma240=True):
 
   info = {
       '收盤': close,
+      '策略狀態': status,
       '5日線': round(ma5, 2),
       '20日線(MA20)': round(ma20, 2),
       '季線(MA60)': round(ma60, 2),
       '20MA乖離率': f'{round(bias_20 * 100, 2)}%',
       '20日區間振幅': f'{round(range_20 * 100, 2)}%',
       '建議停損參考價': recent_low,
-      '策略狀態': status,
   }
 
   return is_hit, info
