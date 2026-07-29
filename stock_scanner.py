@@ -56,7 +56,7 @@ def yfinance_scan_ma240():
 
     print(f"\n計算當日大盤是否在年線之上...")
     # 🌟 計算當日大盤是否在年線之上
-    market_df_slice = market_df[market_df['date'] <= start_date.strftime("%Y-%m-%d")]
+    market_df_slice = market_df[market_df['date'] <= end_date]
     market_above_ma240 = True  # 預設值，避免資料不足時直接卡死
 
     print(f"\n進入if...")
