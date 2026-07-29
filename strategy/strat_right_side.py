@@ -1,9 +1,5 @@
 import pandas as pd
 
-
-@strategy_metadata(
-    name="右側突破策略", description="結合短線強勢動能與箱型突破的多頭選股"
-)
 def st_right_side_breakout(df_single, market_above_ma240=True):
 """右側突破策略
    結合短線強勢動能與箱型突破的右側策略多頭選股
