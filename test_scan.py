@@ -21,7 +21,8 @@ from utils import (
     archive_and_cleanup,   # 負責排程專用的備份與清理
     send_email_report,
     save_multi_day_report,
-    calculate_one_year_extremes
+    calculate_one_year_extremes,
+    align_and_normalize_results
 )
 
 # =====================================================================
