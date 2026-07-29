@@ -13,6 +13,8 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
   if not market_above_ma240:
     return False, {}
 
+  print(f"\n 執行st_right_side_breakout, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+  
   if df_single.empty or len(df_single) < 120:
     return False, {}
 
