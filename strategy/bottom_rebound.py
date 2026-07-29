@@ -1,19 +1,72 @@
-from FinMind.data import DataLoader
-import pandas as pd
+# 1. Python 標準函式庫 (Standard Libraries)
 from datetime import datetime, timedelta
 import time
 
+# 2. 第三方套件 (Third-Party Packages)
+from FinMind.data import DataLoader
 import numpy as np
 import pandas as pd
 
 def st_u_bottom(df_single):
-  """***U底生命週期策略 v2 (價值型穩健築底反向回溯驗證架構)***
+  """U底籌碼沉澱突破
+     穩健築底反向回溯60日驗證籌碼是否沉澱
+
+  ======================================================================
+  一、 策略核心邏輯與設計精神 (Strategy Overview)
+  ======================================================================
+  - 核心觸發：以右側突破 (BUY) 作為第一主動觸發點。
+  - 嚴格年線過濾：要求當下年線 20 日斜率必須 >= 0.0% (平轉或向上)，拒絕空頭接刀。
+  - 反向回溯驗證：當右側突破成立時，固定回溯過去 60 個交易日（約 3 個月），
+    檢查是否經歷過扎實的左側籌碼沉澱（累積符合條件達 10 天以上）。
+  - 風控目標：確保打底扎實、拒絕短線假突破與高風險深水區回檔。
+
+  ======================================================================
+  二、 技術指標與共用基準計算 (Technical Indicators)
+  ======================================================================
+  - 移動平均線：MA5、MA20、MA60、MA240 (年線)
+  - 基礎位置檢查：
+    * 價格相對年線位置：收盤價必須在年線下方 (`today['close'] < today['MA240']`)
+    * 年線 20 日斜率 (`ma_slope_20d`)：過去 21 個交易日的年線變化率
+    * 距離年線乖離率 (`dist_ratio`)：(收盤價 - MA240) / MA240
+  - 扣抵分析：計算未來 20 日的扣抵斜率 (`deduct_slope`)
+
+  ======================================================================
+  三、 階段二：右側突破判定 (Today's Breakout Conditions)
+  ======================================================================
+  【今日表態觸發條件 (is_today_right_hit)】
+    - 均線糾結度 (`dispersion`)：MA5、MA20、MA60 波動範圍小於 5% (`< 0.05`)
+    - 帶量轉強 (`is_volume_up`)：今日成交量大於 5 日均量的 1.3 倍以上
+    - 年線平轉或向上 (`is_flattening_slope`)：MA240 20日斜率 >= 0.0%
+    - 5日價格確認 (`is_not_lowest_5d`)：今日收盤價非 5 日內最低點，具備止穩反彈特徵
+
+  ======================================================================
+  四、 核心反向回溯驗證：歷史扎實沉澱檢視 (Historical Sediment Check)
+  ======================================================================
+  - 回溯天數 (`LOOKBACK_DAYS`)：固定回溯過去 60 個交易日。
+  - 單日沉澱判定標準 (`sediment_count`)：
+    * 歷史價位處於年線下方
+    * 歷史年線斜率未強烈下彎 (`hist_slope >= -0.005`)
+    * 歷史乖離率位於 -25% 至 -2% 之間
+    * 歷史價格波動度壓縮（前 10 日標準差/均值 <= 2%）
+  - 扎實度門檻：回溯窗內累積符合上述特徵必須達到 **>= 10 天**，方視為有效沉澱。
+
+  ======================================================================
+  五、 最终狀態封裝與輸出分流 (Classification & Output)
+  ======================================================================
+  - 觸發成功 (`BUY`)：今日右側突破條件成立，且前方經 >= 10 天的扎實長期沉澱。
+  - 未觸發 (`NONE`)：無效突破、年線下彎或前置沉澱天數不足。
+  - 輸出字典 (`info`)：包含收盤價、策略階段、訊號動作、停損比例、距離年線、
+    年線斜率、近10日波動度、中短期糾結度、今日量比及回溯沉澱天數評估。
+  ======================================================================
+
 
   策略邏輯： - 以右側突破 (BUY) 作為第一主動觸發點。 - 嚴格年線過濾：要求當下年線 20 日斜率必須 >= 0.0% (平轉或向上)，拒絕空頭接刀。 -
   當右側突破成立時，固定回溯過去 60 個交易日（約3個月），檢查是否經歷過扎實的左側籌碼沉澱 (累積至少 10 天以上)。 -
   確保打底扎實、拒絕短線假突破與高風險深水區回檔。
   """
-  LOOKBACK_DAYS = 60  # 直接寫死回溯天數為 60 個交易日（約 3 個月）
+  
+  LOOKBACK_DAYS = 60  # 直接寫死回溯天數為 60 個交易日（約 3 個月）  
+  SEDIMENT_COUNT_DAYS = 10 #要求的沉澱天數
 
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
     return False, {}
@@ -124,21 +177,21 @@ def st_u_bottom(df_single):
       if hist_below and hist_downward and hist_stabilized and hist_discounted:
         sediment_count += 1
 
-    # 要求回溯窗內累積必須達到至少 10 天以上的沉澱，才視為扎實築底
-    if sediment_count >= 10:
+    # 要求回溯窗內累積必須達到至少 SEDIMENT_COUNT_DAYS 天以上的沉澱，才視為扎實築底
+    if sediment_count >= SEDIMENT_COUNT_DAYS:
       has_preceding_sediment = True
       validated_sediment_days = sediment_count
 
   # ==================== 5. 最終狀態封裝與輸出分流 ====================
   if is_today_right_hit and has_preceding_sediment:
     strategy_stage = (
-        '【價值型穩健築底驗證成功】前方經扎實長期沉澱(>=10天) ➔ 執行買進'
+        f'【築底驗證成功】前方經長期沉澱(>={validated_sediment_days}天)➔買進'
     )
     action_signal = 'BUY'
     is_hit = True
   else:
     strategy_stage = (
-        '未觸發有效買進訊號 (無效突破、年線下彎或前置沉澱天數不足)'
+        f'未觸發有效買進訊號 (無效突破、年線下彎或沉澱不足{SEDIMENT_COUNT_DAYS}天)'
     )
     action_signal = 'NONE'
     is_hit = False
@@ -153,9 +206,8 @@ def st_u_bottom(df_single):
   
   info = {
       '收盤': today['close'],
-      '策略階段': strategy_stage,
-      '訊號動作': action_signal,
-      '停損': f"{stop_loss}%",
+      '策略狀態': strategy_stage,
+      '停損價': f"{stop_loss}%",
       '距離年線': f"{round(dist_ratio * 100, 2)}%",
       '年線20日斜率': f"{round(ma_slope_20d * 100, 2)}%",
       '近10日價格波動度': f"{round(price_cv * 100, 2)}%",
@@ -163,11 +215,11 @@ def st_u_bottom(df_single):
       '今日量比': (
           f"{round(today['Trading_Volume']/vol_ma5, 2) if vol_ma5 > 0 else 0}x"
       ),
-      '回溯沉澱天數': validated_sediment_days,
+      '沉澱天數': validated_sediment_days,
       '前置沉澱扎實度評估': (
-          f'回溯{LOOKBACK_DAYS}天內符合穩健沉澱特徵共'
-          f' {validated_sediment_days} 天 (門檻>=10天)'
+          (f'{validated_sediment_days}/{LOOKBACK_DAYS}, 門檻{SEDIMENT_COUNT_DAYS}')
       ),
+      '訊號動作': action_signal,
   }
 
   print(f'u_bottom_v2 action:{action_signal} info:{info}')
