@@ -222,7 +222,8 @@ def st_u_bottom(df_single):
       '訊號動作': action_signal,
   }
 
-  print(f'u_bottom_v2 action:{action_signal} info:{info}')
+  
+  #print(f'u_bottom_v2 action:{action_signal} info:{info}')
   return is_hit, info
 
 
