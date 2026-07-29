@@ -187,13 +187,13 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
 
   info = {
       '收盤': close,
+      '策略狀態': status,
+      '停損價': recent_low, #這裡可以考慮分第一型與第二型用不同停損, 第一型用20%
       '5日線': round(ma5, 2),
       '20日線': round(ma20, 2),
       '季線(60)': round(ma60, 2),
       '20MA乖離率': f'{round(bias_20 * 100, 2)}%',
       '20日區間振幅': f'{round(range_20 * 100, 2)}%',
-      '建議停損參考價': recent_low, #這裡可以考慮分第一型與第二型用不同停損, 第一型用20%
-      '策略狀態': status,
       '年線位置': '上' if market_above_ma240 else '下',
   }
 
