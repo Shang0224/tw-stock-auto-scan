@@ -33,8 +33,8 @@ def save_multi_day_report(collected_results, source_name, tw_time):
                 continue
                 
             # 每一天中間隔開雙空行
-            if not is_first_day:
-                f.write("\n")
+            #if not is_first_day:
+            #    f.write("\n")
             
             # 🌟 獨立輸出一行橫線與日期
             #f.write(f"====,=====,==== {date_key} ===========================\n")
@@ -44,11 +44,8 @@ def save_multi_day_report(collected_results, source_name, tw_time):
             day_df = pd.DataFrame(day_list)
             day_df.to_csv(f, index=False, header=is_first_day)
 
-            # 將當天的結果寫入 CSV
-            #day_df = pd.DataFrame(day_list)
-            #day_df.to_csv(f, index=False, header=True)
-            
-            is_first_day = False
+            #除了第一次執行is_first_day為true外, 其他為false
+            is_first_day = False 
             
     return csv_path
 
