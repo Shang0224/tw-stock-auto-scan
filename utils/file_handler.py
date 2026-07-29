@@ -5,6 +5,48 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def align_and_normalize_results(collected_range_results, priority_keys=None):
+  """將 collected_range_results 內的字典進行欄位聯集與對齊預處理，
+
+  確保所有策略產出的 dict 都擁有完全相同的 key 集合，避免報表欄位位移。
+  """
+  if not collected_range_results:
+    return collected_range_results
+
+  if priority_keys is None:
+    priority_keys = [
+        "觸發日期",
+        "代號",
+        "名稱",
+        "收盤",
+        "策略狀態",
+        "停損價",               
+    ]
+
+  # 1. 動態蒐集所有出現過的欄位
+  all_keys = []
+  for day_str, hits in collected_range_results.items():
+    for hit in hits:
+      for key in hit.keys():
+        if key not in all_keys:
+          all_keys.append(key)
+
+  # 2. 組合出最終排序好的欄位清單（優先欄位在前，其餘策略專屬欄位在後）
+  sorted_keys = [k for k in priority_keys if k in all_keys] + [
+      k for k in all_keys if k not in priority_keys
+  ]
+
+  # 3. 統一重新整理每個 hit 字典，確保每個字典都擁有完全相同的 key 集合與乾淨順序
+  for day_str, hits in collected_range_results.items():
+    for i, hit in enumerate(hits):
+      new_hit = {}
+      for k in sorted_keys:
+        new_hit[k] = hit.get(k, None)  # 缺少的欄位自動補 None（輸出時變空白）
+      hits[i] = new_hit
+
+  return collected_range_results
+
+
 def save_multi_day_report(collected_results, source_name, tw_time):
     """
     將多日/多組掃描結果格式化寫入同一個 CSV 檔。
