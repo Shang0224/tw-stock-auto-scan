@@ -109,13 +109,17 @@ def st_u_bottom(df_single):
   dispersion = (
       (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
   )
-  is_converged = dispersion < 0.05
-  #is_converged = dispersion < 0.03
+  #is_converged = dispersion < 0.05
+  is_converged = dispersion < 0.03
 
   # B. 帶量轉強檢查
   vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
+  #is_volume_up = (
+  #    today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
+  #)
+
   is_volume_up = (
-      today['Trading_Volume'] > vol_ma5 * 1.3 if vol_ma5 > 0 else False
+      today['Trading_Volume'] > vol_ma5 * 1.6 if vol_ma5 > 0 else False
   )
 
   # C. 價值型穩健築底：嚴格規定年線斜率必須 >= 0.0 (平轉或向上，不開後門)
