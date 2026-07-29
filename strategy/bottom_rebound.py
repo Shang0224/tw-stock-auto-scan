@@ -110,6 +110,7 @@ def st_u_bottom(df_single):
       (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
   )
   is_converged = dispersion < 0.05
+  #is_converged = dispersion < 0.03
 
   # B. 帶量轉強檢查
   vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
