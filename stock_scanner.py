@@ -59,17 +59,17 @@ def yfinance_scan_ma240():
     market_df_slice = market_df[market_df['date'] <= end_date]
     market_above_ma240 = True  # 預設值，避免資料不足時直接卡死
 
-    print(f"\n進入if...")
     if not market_df_slice.empty and len(market_df_slice) >= 240:
         market_df_slice = market_df_slice.copy()
-        print(f"\n計算MA240..")
+        
         market_df_slice['MA240'] = market_df_slice['close'].rolling(240).mean()
-        m_today = market_df_slice.iloc[-1]
-        print(f"\npd.isna(m_today['MA240']...")
+        m_today = market_df_slice.iloc[-1]        
             
         if not pd.isna(m_today['MA240']):
             market_above_ma240 = m_today['close'] > m_today['MA240']
 
+    print(f"\n{end_date} 是否在年線上 {market_above_ma240}...")
+    
     source_name = 'yfinance'
 
     try:        
