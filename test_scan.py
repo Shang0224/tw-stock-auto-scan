@@ -106,6 +106,19 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         print(f"❌ [{source.upper()} 測試失敗] 抓取歷史資料為空！")
         return
 
+    # 🌟 【關鍵優化】在迴圈外一次性計算完整大盤的 MA240 與布林值
+    market_df = market_df.copy()
+    market_df['date_str'] = pd.to_datetime(market_df['date']).dt.strftime("%Y-%m-%d")
+    market_df['MA240'] = market_df['close'].rolling(240).mean()
+    
+    # 預先算好每一天是否在年線之上 (若 MA240 為 NaN 則預設為 True 或 False 視需求而定)
+    market_df['market_above_ma240'] = market_df['close'] > market_df['MA240']
+    
+    # 建立一個「日期字串 -> 是否在年線之上」的快速查詢字典（Dictionary Look-up）
+    # 如果資料量大，用字典查閱的速度極快
+    market_dict = market_df.set_index('date_str')['market_above_ma240'].to_dict()
+    market_ma_dict = market_df.set_index('date_str')['MA240'].to_dict()
+
     # 用於儲存每日結果的字典
     collected_range_results = {}
 
@@ -121,34 +134,23 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
 
         day_data_cutoff = current_day.replace(hour=23, minute=59, second=59)
         all_df_slice = global_df[global_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
-
-        print(f"\n計算當日大盤是否在年線之上...")
-        # 🌟 計算當日大盤是否在年線之上
-        market_df_slice = market_df[market_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
-        market_above_ma240 = True  # 預設值，避免資料不足時直接卡死
-        
-        if not market_df_slice.empty and len(market_df_slice) >= 240:
-            market_df_slice = market_df_slice.copy()
-            market_df_slice['MA240'] = market_df_slice['close'].rolling(240).mean()
-            m_today = market_df_slice.iloc[-1]
-            print(f"\npd.isna(m_today['MA240']...")
-            
-            if not pd.isna(m_today['MA240']):
-                market_above_ma240 = m_today['close'] > m_today['MA240']
-        
+              
         if all_df_slice.empty:
             print(f"⚠️ {day_str} 數據切片為空，跳過本交易日。")
             current_day += timedelta(days=1)
             continue
 
+        # 🌟 【極速查詢】直接從預先算好的對照表中拿取當日大盤狀態
+        # 如果當天剛好沒有大盤資料（例如遇到非交易日或連續假日），可以往回找最近一個有資料的日期，或預設 True
+        market_above_ma240 = True  
+        if day_str in market_ma_dict and not pd.isna(market_ma_dict[day_str]):
+            market_above_ma240 = market_dict[day_str]
+            print(f"大盤年線狀態 ({day_str}): 在年線之上 -> {market_above_ma240}")
+        else:
+            print(f"⚠️ {day_str} 無對應大盤年線資料，採用預設值 True")
+
         print(f"\n進入scan_stocks_df_list...")
         day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict, market_above_ma240)
-
-        #if day_results:
-         #   print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的。")
-          #  collected_range_results[day_str] = day_results
-        #else:         
-        #    print(f"🔍 {day_str} 掃描完成，無符合標的。")
 
         if day_results:
             # 💡 這裡直接調用來自 utils 的績效計算工具
@@ -162,9 +164,6 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     
                 hit.clear()
                 hit.update(updated_hit)
-                
-                #hit.update({"觸發日期": day_str})                
-                #hit.update(perf)
 
             print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的（已完成績效追蹤）。")
             collected_range_results[day_str] = day_results
