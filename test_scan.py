@@ -178,6 +178,21 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     # 🌟 呼叫全新的工具函數
     # =====================================================================
     if collected_range_results:
+
+        priority_keys_testscan = [
+            "觸發日期",
+            "代號",
+            "名稱",
+            "收盤",
+            "策略狀態",
+            "停損價",
+            "1Y內最高績效",
+            "1Y內最低績效"
+        ]
+        
+        # 🌟 一行搞定欄位對齊與預處理
+        collected_range_results = align_and_normalize_results(collected_range_results, priority_keys = priority_keys_testscan)
+        
         # 1. 蒐集當次測試的所有策略名稱
         strat_names = [strat.__name__ for strat in strategies]
         
