@@ -659,15 +659,6 @@ def st_u_bottom_2026073001(df_single):
   return is_hit, info
 
 def st_bottom_v_turn(df_single, market_above_ma240=True):
-  #修改自st_bottom_v_turn_2026073001, 增加判斷大盤收盤在相對於年線的位置
-  
-  print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-  
-  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
-  if not market_above_ma240:
-    return False, {}
-
-  
   """V轉選股
   【條件一】為穩健築底與短多排列，【條件二】為強勢突破與季線黃金交叉 
 
@@ -716,7 +707,15 @@ def st_bottom_v_turn(df_single, market_above_ma240=True):
     各均線斜率、建議停損參考價（過去 20 日最低價）及策略狀態。
   ======================================================================
   """
+
+  #修改自st_bottom_v_turn_2026073001, 增加判斷大盤收盤在相對於年線的位置
   
+  print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+  
+  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
+  if not market_above_ma240:
+    return False, {}
+    
   #條件一已升級：限制季線必須向上，並加入未來 20 日年線高扣抵防禦, 從st_bottom_v_turn_2026072701退回此版"""
   if df_single.empty or len(df_single) < 280:
     return False, {}
