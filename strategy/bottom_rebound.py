@@ -7,12 +7,12 @@ from FinMind.data import DataLoader
 import numpy as np
 import pandas as pd
 
-def st_bottom_v_turn(df_single, market_above_ma240=True):
+def st_bottom_v_turn_2026073102(df_single, market_above_ma240=True):
   """V轉選股
 
   【條件一】為穩健築底與短多排列，【條件二】為強勢突破與季線黃金交叉
 
-  修改自st_bottom_v_turn_2026073101, 增加前五天內有跳空與量增的判斷, 暫時關閉大盤年線判斷
+  修改自st_bottom_v_turn, 增加前五天內有跳空與量增的判斷, 暫時關閉大盤年線判斷 ---> 失敗, 沒有任何資料有判斷出5日內量縮與跳空, 無效退回原版
   ======================================================================
   一、 策略核心邏輯與設計精神 (Strategy Overview)
   ======================================================================
@@ -871,7 +871,7 @@ def st_u_bottom_2026073001(df_single):
   #print(f'u_bottom_v2 action:{action_signal} info:{info}')
   return is_hit, info
 
-def st_bottom_v_turn_2026073101(df_single, market_above_ma240=True):
+def st_bottom_v_turn(df_single, market_above_ma240=True):
   """V轉選股
   【條件一】為穩健築底與短多排列，【條件二】為強勢突破與季線黃金交叉 
 
