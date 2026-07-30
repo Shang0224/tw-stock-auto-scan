@@ -26,8 +26,8 @@ def st_u_bottom(df_single):
   
   LOOKBACK_DAYS = 60    # 固定回溯天數為 60 個交易日（約 3 個月）  
   SEDIMENT_COUNT_DAYS = 15 # 要求的沉澱天數
-  DISPERSION_THRESHOLD = 0.042 # 中短期均線糾結度
-  VOLUME_RATIO_THRESHOLD = 1.4 # 今日量比門檻
+  DISPERSION_THRESHOLD = 0.05 # 中短期均線糾結度 0.042
+  VOLUME_RATIO_THRESHOLD = 1.3 # 今日量比門檻 1.4
 
   # 需要足夠長歷史資料計算年線(240) + 季線(60) + 回溯天數(60)
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
