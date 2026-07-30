@@ -41,7 +41,7 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
 #TEST_STRATEGIES = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout]
 #TEST_STRATEGIES = [st_bottom_v_turn]
-TEST_STRATEGIES = [st_bottom_u_turn]
+TEST_STRATEGIES = [st_u_bottom]
 #TEST_STRATEGIES = [st_washout_phoenix]
 #TEST_STRATEGIES = [st_bottom_u_turn_with_memory]
 #TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_u_turn_v20260703] #, st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout]
