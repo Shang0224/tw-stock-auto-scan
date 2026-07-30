@@ -658,7 +658,7 @@ def st_u_bottom_2026073001(df_single):
   #print(f'u_bottom_v2 action:{action_signal} info:{info}')
   return is_hit, info
 
-def st_bottom_v_turn(df_single, market_above_ma240=true):
+def st_bottom_v_turn(df_single, market_above_ma240=True):
   #修改自st_bottom_v_turn_2026073001, 增加判斷大盤收盤在相對於年線的位置
   
   print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
