@@ -658,8 +658,194 @@ def st_u_bottom_2026073001(df_single):
   #print(f'u_bottom_v2 action:{action_signal} info:{info}')
   return is_hit, info
 
+def st_bottom_v_turn(df_single, market_above_ma240=true):
+  #修改自st_bottom_v_turn_2026073001, 增加判斷大盤收盤在相對於年線的位置
+  
+  print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+  
+  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
+  if not market_above_ma240:
+    return False, {}
 
-def st_bottom_v_turn(df_single):
+  
+  """V轉選股
+  【條件一】為穩健築底與短多排列，【條件二】為強勢突破與季線黃金交叉 
+
+  ======================================================================
+  一、 策略核心邏輯與設計精神 (Strategy Overview)
+  ======================================================================
+  - 核心目標：捕捉中長線底部成形、季線轉強且短線展現爆發力的 V 轉契機。
+  - 雙軌判定機制：提供兩種不同切入視角的觸發條件（【條件一】為穩健築底與短多排列，
+    【條件二】為強勢突破與季線黃金交叉）。
+  - 風控防禦：嚴格控管年線與季線斜率，並條件一引入年線未來 20 日高扣抵檢視，拒絕空頭深水區。
+
+  ======================================================================
+  二、 技術指標與共用基準計算 (Technical Indicators)
+  ======================================================================
+  - 移動平均線：MA5、MA10、MA20、MA60 (季線)、MA240 (年線)
+  - 斜率與乖離計算：
+    * 季線 20 日斜率 (`MA60_slope`)
+    * 年線 20 日斜率 (`MA240_slope`)
+    * 5日線 5 日斜率 (`MA5_slope`)
+
+  ======================================================================
+  三、 【條件一】穩健築底與短多排列條件 (Condition 1: Stable Base & Short Bullish)
+  ======================================================================
+  - 季線位置：季線必須在年線下方 (`MA60 < MA240`)。
+  - 季線明確向上：季線 20 日斜率 `>= 0.001`。
+  - 年線安全防禦：年線斜率 `>= -0.001`，且具備高扣抵防禦架構「未來 20 日無高扣抵壓力」
+    （扣抵均價不大於現價 1.05 倍，避免年線遭拉彎下行）。
+  - 短均結構：MA5、MA10、MA20 皆在季線下方，但彼此呈現多頭排列 (`MA5 > MA10 > MA20`)。
+
+  ======================================================================
+  四、 【條件二】強勢動能與季線突破條件 (Condition 2: Strong Breakout & Cross)
+  ======================================================================
+  - 基礎位置：季線在年線下方 (`MA60 < MA240`)。
+  - 均線走平或走揚：年線與季線斜率皆 `>= -0.002`。
+  - 突破表態：
+    * 收盤價高於 5 日線 (`Close > MA5`)。
+    * 5 日線向上突破季線（今日 `MA5 > MA60` 且昨日 `MA5 <= MA60`）。
+    * 5 日線具備強勢斜率 (`> 0.005`) 且領先 10/20 日線 (`MA5 > MA10` 且 `MA5 > MA20`)。
+
+  ======================================================================
+  五、 綜合判定與輸出分流 (Classification & Output)
+  ======================================================================
+  - 觸發成功 (`is_hit = True`)：滿足【條件一】或【條件二】其中之一。
+  - 狀態標註 (`status`)：明確標示符合單一條件或雙重條件，提供詳細日誌。
+  - 輸出字典 (`info`)：包含收盤價、5日線、停損比例、季線與年線數值、
+    各均線斜率、建議停損參考價（過去 20 日最低價）及策略狀態。
+  ======================================================================
+  """
+  
+  #條件一已升級：限制季線必須向上，並加入未來 20 日年線高扣抵防禦, 從st_bottom_v_turn_2026072701退回此版"""
+  if df_single.empty or len(df_single) < 280:
+    return False, {}
+
+  df_single = df_single.copy()
+
+  # 計算各天期移動平均線
+  df_single['MA5'] = df_single['close'].rolling(5).mean()
+  df_single['MA10'] = df_single['close'].rolling(10).mean()
+  df_single['MA20'] = df_single['close'].rolling(20).mean()
+  df_single['MA60'] = df_single['close'].rolling(60).mean()  # 季線
+  df_single['MA240'] = df_single['close'].rolling(240).mean()  # 年線
+
+  # 計算均線 20 日斜率
+  df_single['MA60_slope'] = (
+      df_single['MA60'] - df_single['MA60'].shift(20)
+  ) / df_single['MA60'].shift(20)
+  df_single['MA240_slope'] = (
+      df_single['MA240'] - df_single['MA240'].shift(20)
+  ) / df_single['MA240'].shift(20)
+
+  # 計算 5 日線 5 日斜率
+  df_single['MA5_slope'] = (
+      df_single['MA5'] - df_single['MA5'].shift(5)
+  ) / df_single['MA5'].shift(5)
+
+  today = df_single.iloc[-1]
+  prev = df_single.iloc[-2]
+
+  # 防禦性檢查
+  if pd.isna([today['MA60'], today['MA240'], today['MA5']]).any():
+    return False, {}
+
+  close = today['close']
+  ma5 = today['MA5']
+  ma10 = today['MA10']
+  ma20 = today['MA20']
+  ma60 = today['MA60']
+  ma240 = today['MA240']
+  ma60_slope = today['MA60_slope']
+  ma240_slope = today['MA240_slope']
+  ma5_slope = today['MA5_slope']
+
+  # ==================== 【條件一：嚴格優化版】 ====================
+  # 1. 季線在年線下方
+  c1_ma60_below_240 = ma60 < ma240
+
+  # 2. 限制季線必須明確向上（斜率 >= 0.001）
+  c1_ma60_rising = ma60_slope >= 0.001
+
+  # 3. 年線斜率維持安全（>= -0.001），且檢查未來 20 日高扣抵值
+  # 未來 20 日即將移出的歷史價格區間為 240 天前至 220 天前
+  if len(df_single) >= 240:
+    exiting_mean = df_single['close'].iloc[-240:-220].mean()
+    # 若過去扣抵價平均顯著高於現價（超過 1.05 倍），代表未來 20 天面臨高扣抵，年線易受壓下彎
+    c1_no_high_subtraction = exiting_mean <= (close * 1.05)
+  else:
+    c1_no_high_subtraction = True
+
+  c1_ma240_safe = (ma240_slope >= -0.001) and c1_no_high_subtraction
+
+  # 4. 5日、10日、20日亦在季線下方
+  c1_short_below_60 = (ma5 < ma60) and (ma10 < ma60) and (ma20 < ma60)
+
+  # 5. 且 5日、10日、20日形成多頭排列 (MA5 > MA10 > MA20)
+  c1_short_bullish = (ma5 > ma10) and (ma10 > ma20)
+
+  cond_1 = (
+      c1_ma60_below_240
+      and c1_ma60_rising
+      and c1_ma240_safe
+      and c1_short_below_60
+      and c1_short_bullish
+  )
+
+  # ==================== 【條件二】（維持原強勢突破架構） ====================
+  c2_ma60_below_240 = ma60 < ma240
+  c2_ma240_flat_up = ma240_slope >= -0.002
+  c2_ma60_flat_up = ma60_slope >= -0.002
+  c2_close_gt_ma5 = close > ma5
+  c2_ma5_cross = (ma5 > ma60) and (prev['MA5'] <= prev['MA60'])
+  c2_ma5_slope = ma5_slope > 0.005
+  c2_ma5_gt_10_20 = (ma5 > ma10) and (ma5 > ma20)
+
+  cond_2 = (
+      c2_ma60_below_240
+      and c2_ma240_flat_up
+      and c2_ma60_flat_up
+      and c2_close_gt_ma5
+      and c2_ma5_cross
+      and c2_ma5_slope
+      and c2_ma5_gt_10_20
+  )
+
+  # ==================== 【綜合判定與狀態標註】 ====================
+  is_hit = cond_1 or cond_2
+
+  if cond_1 and cond_2:
+    status = '季線下同時符合短多排列與5日線突破'
+  elif cond_1:
+    status = (
+        '季線明確向上,年線無高扣抵,5/10/20季線下短多排列'
+    )
+  elif cond_2:
+    status = (
+        '季線在年線下、年季線皆走平或走揚,5日線強勢突破季線且高於10/20日'
+    )
+  else:
+    status = '未觸發訊號'
+
+  # 計算近期停損參考價（過去 20 天最低價）
+  recent_low = df_single['close'].iloc[-20:].min()
+  #stop_loss = 0.2
+  info = {
+      '收盤': close,
+      '策略狀態': status,
+      '停損價': recent_low,
+      '5日線': round(ma5, 2),
+      '季線(60)': round(ma60, 2),
+      '年線(240)': round(ma240, 2),
+      '5日線5日斜率': f'{round(ma5_slope * 100, 2)}%',
+      '季線20日斜率': f'{round(ma60_slope * 100, 2)}%',
+      '年線20日斜率': f'{round(ma240_slope * 100, 2)}%',
+  }
+
+  return is_hit, info
+
+
+def st_bottom_v_turn_2026073001(df_single):
   """V轉選股
   【條件一】為穩健築底與短多排列，【條件二】為強勢突破與季線黃金交叉 
 
