@@ -7,10 +7,12 @@ from FinMind.data import DataLoader
 import numpy as np
 import pandas as pd
 
-def st_u_bottom_240(df_single):
+def st_u_bottom(df_single, market_above_ma240=True):
   """U底籌碼沉澱突破
      穩健築底反向回溯60日驗證籌碼是否沉澱
 
+     修正自st_u_bottom_2026073001, 增加大盤在年線以上或以下的判斷, 年線以下就不執行策略
+      
   ======================================================================
   一、 策略核心邏輯與設計精神 (Strategy Overview)
   ======================================================================
@@ -64,12 +66,17 @@ def st_u_bottom_240(df_single):
   當右側突破成立時，固定回溯過去 60 個交易日（約3個月），檢查是否經歷過扎實的左側籌碼沉澱 (累積至少 10 天以上)。 -
   確保打底扎實、拒絕短線假突破與高風險深水區回檔。
   """
+  print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+  
+  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
+  if not market_above_ma240:
+    return False, {}
   
   LOOKBACK_DAYS = 60  # 直接寫死回溯天數為 60 個交易日（約 3 個月）  
   SEDIMENT_COUNT_DAYS = 15 #要求的沉澱天數
   DISPERSION_THRESHOLD = 0.042 #中短期均線糾結度
   VOLUME_RATIO_THRESHOLD = 1.4 #今日量比為今日量與20日均量的比值
-
+  
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
     return False, {}
 
@@ -234,7 +241,7 @@ def st_u_bottom_240(df_single):
   return is_hit, info
 
 
-def st_u_bottom(df_single):
+def st_u_bottom_2026073001(df_single):
   """U底籌碼沉澱突破
      穩健築底反向回溯60日驗證籌碼是否沉澱
 
