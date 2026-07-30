@@ -66,7 +66,9 @@ def st_u_bottom(df_single):
   """
   
   LOOKBACK_DAYS = 60  # 直接寫死回溯天數為 60 個交易日（約 3 個月）  
-  SEDIMENT_COUNT_DAYS = 10 #要求的沉澱天數
+  SEDIMENT_COUNT_DAYS = 15 #要求的沉澱天數
+  DISPERSION_THRESHOLD = 0.042 #中短期均線糾結度
+  VOLUME_RATIO_THRESHOLD = 1.4 #今日量比為今日量與20日均量的比值
 
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
     return False, {}
@@ -110,7 +112,7 @@ def st_u_bottom(df_single):
       (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
   )
   #is_converged = dispersion < 0.05
-  is_converged = dispersion < 0.03
+  is_converged = dispersion < DISPERSION_THRESHOLD
 
   # B. 帶量轉強檢查
   vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
@@ -119,7 +121,7 @@ def st_u_bottom(df_single):
   #)
 
   is_volume_up = (
-      today['Trading_Volume'] > vol_ma5 * 1.6 if vol_ma5 > 0 else False
+      today['Trading_Volume'] > vol_ma5 * VOLUME_RATIO_THRESHOLD if vol_ma5 > 0 else False
   )
 
   # C. 價值型穩健築底：嚴格規定年線斜率必須 >= 0.0 (平轉或向上，不開後門)
