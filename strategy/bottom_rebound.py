@@ -7,9 +7,9 @@ from FinMind.data import DataLoader
 import numpy as np
 import pandas as pd
 
-def st_u_bottom(df_single):
+def st_u_bottom(df_single, market_above_ma240=True):
 
-  #修改自修正自st_u_bottom_2026073001, 增加季線扣抵值的判斷
+  #修改自修正自st_u_bottom_2026073001, 增加季線扣抵值的判斷, 再增加大盤年線判斷
   
   """U底籌碼沉澱突破 (含修正後的精準季線扣抵過濾)
 
@@ -23,11 +23,20 @@ def st_u_bottom(df_single):
     檢查是否經歷過扎實的左側籌碼沉澱（累積符合條件達 15 天以上）。
   - 風控目標：確保打底扎實、拒絕短線假突破與高風險深水區回檔。
   """
+  print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
   
+  # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
+  if not market_above_ma240:
+    return False, {}
+   
   LOOKBACK_DAYS = 60    # 固定回溯天數為 60 個交易日（約 3 個月）  
   SEDIMENT_COUNT_DAYS = 15 # 要求的沉澱天數
   DISPERSION_THRESHOLD = 0.05 # 中短期均線糾結度 0.042
   VOLUME_RATIO_THRESHOLD = 1.3 # 今日量比門檻 1.4
+
+  # 設定容忍上限系數（允許扣抵價高於現價，但限制在合理安全範圍內）
+  MAX_DEDUCT_TOLERANCE = 1.15  # 扣抵最大值最多比現價高 15%
+  MEAN_DEDUCT_TOLERANCE = 1.05 # 扣抵平均值最多比現價高 5%
 
   # 需要足夠長歷史資料計算年線(240) + 季線(60) + 回溯天數(60)
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
@@ -63,9 +72,7 @@ def st_u_bottom(df_single):
   deduct_max = future_ma60_deduct.max()
   deduct_mean = future_ma60_deduct.mean()
 
-  # 設定容忍上限系數（允許扣抵價高於現價，但限制在合理安全範圍內）
-  MAX_DEDUCT_TOLERANCE = 1.15  # 扣抵最大值最多比現價高 15%
-  MEAN_DEDUCT_TOLERANCE = 1.05 # 扣抵平均值最多比現價高 5%
+
 
   # 季線扣抵過濾條件：扣抵值可以比現價高，但「不可以高過收盤價太多」
   is_ma60_deduct_favorable = (
