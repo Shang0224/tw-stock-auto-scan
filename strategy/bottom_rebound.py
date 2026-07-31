@@ -175,7 +175,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
       if dispersion_pct < 2.0:
         tag_label = '逆勢黃金狙擊➔必買進'
       else:
-        tag_label = '逆勢過渡標的➔可買進'
+        tag_label = '逆勢過渡標的➔必買進, 爆發力強'
 
     strategy_stage = (f'【築底驗證成功】{tag_label}')
     is_hit = True
