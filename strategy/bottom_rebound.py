@@ -27,8 +27,8 @@ def st_u_bottom(df_single, market_above_ma240=True):
   )
 
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
-  if not market_above_ma240:
-    return False, {}
+  #if not market_above_ma240:
+  #  return False, {}
 
   # ==================== 參數配置區（可於此自由調整） ====================
   LOOKBACK_DAYS = 60  # 固定回溯天數為 60 個交易日
