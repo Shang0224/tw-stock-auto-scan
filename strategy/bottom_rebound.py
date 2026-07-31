@@ -1420,14 +1420,14 @@ def st_bottom_v_turn(df_single, market_above_ma240=True):
   is_hit = cond_1 or cond_2
 
   if cond_1 and cond_2:
-    status = '季線下同時符合短多排列與5日線突破'
+    status = '季線下同時符合短多排列與5日線突破➔必買進, 罕見要記錄'
   elif cond_1:
     status = (
-        '季線明確向上,年線無高扣抵,5/10/20季線下短多排列'
+        '季線明確向上,年線無高扣抵,5/10/20季線下短多排列➔必買進'
     )
   elif cond_2:
     status = (
-        '季線在年線下、年季線皆走平或走揚,5日線強勢突破季線且高於10/20日'
+        '季線在年線下、年季線皆走平或走揚,5日線強勢突破季線且高於10/20日➔可買進'
     )
   else:
     status = '未觸發訊號'
