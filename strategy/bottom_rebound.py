@@ -25,7 +25,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
   # ==================== 參數配置區（可於此自由調整） ====================
   LOOKBACK_DAYS = 60  # 固定回溯天數為 60 個交易日
   SEDIMENT_COUNT_DAYS = 15  # 要求的沉澱天數
-  DISPERSION_THRESHOLD = 0.05  # 中短期均線糾結度
+  DISPERSION_THRESHOLD = 0.03  # 中短期均線糾結度, 從0.05收縮至0.03
   VOLUME_RATIO_THRESHOLD = 1.3  # 今日量比門檻
 
   # OLS 篩選條件變數定義
