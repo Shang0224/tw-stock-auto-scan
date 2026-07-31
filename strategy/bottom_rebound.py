@@ -41,8 +41,8 @@ def st_u_bottom(df_single, market_above_ma240=True):
   MEAN_DEDUCT_TOLERANCE = 1.05
 
   
-  MA240_SLOPE_THRESHOLD = 0.2 # OLS 最小平方法計算過去 20 天 MA240 的斜率條件值
-  OLS_R2_THRESHOLD = 0.6 #OLS 最小平方法計算過去 20 天 MA240 的R平方擬合度條件值
+  MA240_SLOPE_THRESHOLD = -0.1 # OLS 最小平方法計算過去 20 天 MA240 的斜率條件值
+  OLS_R2_THRESHOLD = 0.3 #OLS 最小平方法計算過去 20 天 MA240 的R平方擬合度條件值
 
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
     return False, {}
