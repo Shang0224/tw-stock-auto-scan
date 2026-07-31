@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 # 3. 自訂函數庫 (Third-Party Packages)
-from .strategy_utils import check_recent_gap, check_recent_volume_shrink, calculate_ols_slope_and_r2
+from .strategy_utils import check_recent_gap, check_volume_condition, calculate_ols_slope_and_r2
 
 def st_u_bottom(df_single, market_above_ma240=True):
   """U底籌碼沉澱突破 (整合 OLS 擬合過濾；跳空與量縮改為純輸出檢測)
