@@ -186,7 +186,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
       '5日內曾有跳空': '有' if has_5d_gap else '無',
       '5日內曾有量縮': (
           f'有 (最低量比 {min_5d_vol_ratio}x)'
-          if has_5d_shrink
+          if has_5d_surge
           else f'無 (最低量比 {min_5d_vol_ratio}x)'
       ),
       '季線扣抵均值': round(deduct_mean, 2),
