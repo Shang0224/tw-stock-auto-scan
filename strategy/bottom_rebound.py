@@ -18,6 +18,9 @@ def st_u_bottom(df_single, market_above_ma240=True):
   - 季線扣抵過濾：要求當前季線（MA60）未來 20 日的扣抵包袱不得過高。
   - 動態特徵輸出：5日內跳空與量縮狀態為純輸出，不影響進場判定。
   - 支援雙軌輸出：無論大盤在年線上下，皆進行完整篩選，並在狀態中特別標註大盤位置。
+
+  修改自st_u_bottom_20260703104, 將大盤在年線下時抓到的股票特別輸出為強力買進
+  
   """
   # ==================== 參數配置區（可於此自由調整） ====================
   LOOKBACK_DAYS = 60  # 固定回溯天數為 60 個交易日
@@ -149,7 +152,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
   if is_today_right_hit and has_preceding_sediment:
     # 🌟 核心修改：依據大盤位置進行標註分流，兩者皆視為有效觸發 (is_hit = True)
     if not market_above_ma240:
-      strategy_stage = f'【🔥 大盤年線下-超跌強彈】築底驗證成功(R2={round(ols_r2,2)})➔買進'
+      strategy_stage = f'【🔥 大盤年線下-超跌強彈】築底驗證成功(R2={round(ols_r2,2)})➔強力買進'
       action_signal = 'BUY (年線下)'
     else:
       strategy_stage = f'【📈 大盤年線上】築底驗證成功(R2={round(ols_r2,2)})➔買進'
@@ -169,7 +172,6 @@ def st_u_bottom(df_single, market_above_ma240=True):
   info = {
       '收盤': today['close'],
       '策略狀態': strategy_stage,
-      '大盤狀態': '年線以下 (超跌區)' if not market_above_ma240 else '年線以上 (多頭區)',
       '停損價': f'{stop_loss}%',
       '距離年線': f'{round(dist_ratio * 100, 2)}%',
       '年線OLS斜率': f'{round(ols_slope, 2)}%',
