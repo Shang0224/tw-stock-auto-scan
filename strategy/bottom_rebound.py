@@ -1983,8 +1983,9 @@ def st_bottom_v_turn_2026072701(df_single):
   return is_hit, info
 
 def st_bottom_v_turn_2026072602(df_single):
-   """***V 轉選股策略（條件一/二獨立觸發，並依策略屬性自動套用對應的量能檢核狀態）, 增加量能判斷***"""
+  """***V 轉選股策略（條件一/二獨立觸發，並依策略屬性自動套用對應的量能檢核狀態）, 增加量能判斷***"""
   #測試這個程式, 這個程式是第一個出現兩個條件同時成立的判斷
+
   if df_single.empty or len(df_single) < 280:
     return False, {}
 
