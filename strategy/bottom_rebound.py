@@ -103,8 +103,8 @@ def st_u_bottom(df_single, market_above_ma240=True):
   # 🌟 E. 調用獨立函數：檢測 5 日內跳空與量縮狀態（純輸出用，不作為阻擋條件）
   recent_6d_slice = df_single.iloc[-6:].copy()
   has_5d_gap = check_recent_gap(recent_6d_slice)
-  has_5d_shrink, min_5d_vol_ratio = check_recent_volume_shrink(
-      df_single.iloc[-5:].copy(), shrink_ratio=0.7
+  has_5d_surge, max_5d_vol_ratio = check_volume_condition(
+    df_single.iloc[-5:].copy(), threshold=2.0, is_surge=True
   )
 
   # 今日是否符合右側突破的表態條件（不再包含跳空/量縮阻擋）
