@@ -170,10 +170,10 @@ def st_u_bottom(df_single, market_above_ma240=True):
       if dispersion_pct < 1.5:
         tag_label = 'S級多頭極致收斂➔必買進'
       else:
-        tag_label = 'A級多頭順勢跟隨➔必買進'
+        tag_label = 'A級多頭順勢跟隨➔可買進'
     else:
       if dispersion_pct < 2.0:
-        tag_label = '逆勢黃金狙擊➔可買進'
+        tag_label = '逆勢黃金狙擊➔必買進'
       else:
         tag_label = '逆勢過渡標的➔可買進'
 
