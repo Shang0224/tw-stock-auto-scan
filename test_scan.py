@@ -39,10 +39,10 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
 
-TEST_STRATEGIES = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout]
+#TEST_STRATEGIES = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout]
 #TEST_STRATEGIES = [st_bottom_v_turn]
 #TEST_STRATEGIES = [st_u_bottom]
-#TEST_STRATEGIES = [st_washout_phoenix]
+TEST_STRATEGIES = [st_bottom_v_turn_2026072602]
 #TEST_STRATEGIES = [st_bottom_u_turn_with_memory]
 #TEST_STRATEGIES = [st_bottom_u_turn, st_bottom_u_turn_v20260703] #, st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout]
 #TEST_STRATEGIES = [st_bottom_u_turn_v2026070301, st_bottom_u_turn_2026070302]
