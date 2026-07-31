@@ -190,7 +190,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
   info = {
       '收盤': today['close'],
       '策略狀態': strategy_stage,
-      '停損價': f'{today['close'] * stop_loss}%',
+      '停損價': f'{today["close"] * stop_loss}%',
       '距離年線': f'{round(dist_ratio * 100, 2)}%',
       '年線OLS斜率': f'{round(ols_slope, 2)}%',
       '年線R平方': round(ols_r2, 2),
