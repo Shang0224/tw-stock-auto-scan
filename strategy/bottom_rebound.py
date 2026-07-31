@@ -14,21 +14,25 @@ def st_u_bottom(df_single, market_above_ma240=True):
   """U底籌碼沉澱突破 (整合 OLS 擬合過濾；跳空與量縮改為純輸出檢測)
 
   - 核心觸發：以右側突破 (BUY) 作為第一主動觸發點。
-  - 年線過濾：利用 OLS 迴歸斜率與 R平方 進行平滑度與方向過濾（參數可於上方調整）。
+  - 年線過濾：利用 OLS 迴歸斜率與 R平方 進行平滑度與方向過濾。
   - 季線扣抵過濾：要求當前季線（MA60）未來 20 日的扣抵包袱不得過高。
-  - 動態特徵輸出：5日內跳空與量縮狀態為純輸出，不影響進場判定。
-  - 支援雙軌輸出：無論大盤在年線上下，皆進行完整篩選，並在狀態中特別標註大盤位置。
+  - 籌碼過濾：限制沉澱天數 <= 30 天，且糾結度 <= 3%（動態標籤分級）。
 
-  修改自st_u_bottom_20260703104, 將大盤在年線下時抓到的股票特別輸出為強力買進
-  
+  修改自st_u_bottom_20260703104, 限制沉澱天數 <= 30 天，且糾結度 <= 3%（動態標籤分級）。輸出時, 大盤在年線上糾結度1.5%,年線下2.0%的股票區隔輸出
   """
+  print(
+      f"\n 執行st_u_bottom, 目前是否年在線上"
+      f" {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+  )
+
   # ==================== 參數配置區（可於此自由調整） ====================
   LOOKBACK_DAYS = 60  # 固定回溯天數為 60 個交易日
   SEDIMENT_COUNT_DAYS = 15  # 要求的沉澱天數
-  DISPERSION_THRESHOLD = 0.03  # 中短期均線糾結度, 從0.05收縮至0.03
+  MAX_SEDIMENT_DAYS = 30  # 最大允許沉澱天數上限
+  DISPERSION_THRESHOLD = 0.03  # 中短期均線糾結度上限改為 3%
   VOLUME_RATIO_THRESHOLD = 1.3  # 今日量比門檻
 
-  # OLS 篩選條件變數定義
+  # 🌟 OLS 篩選條件變數定義
   OLS_SLOPE_THRESHOLD = -0.04  # MA240 OLS 最小斜率門檻
   OLS_R2_MIN = 0.80  # MA240 OLS R平方擬合度下限
   OLS_R2_MAX = 0.94  # MA240 OLS R平方擬合度上限
@@ -50,7 +54,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
 
   today = df_single.iloc[-1]
 
-  # 共同基底檢查：個股本身必須在年線下方（符合U底超跌區特性）
+  # 共同基底檢查：必須在年線下方（依照您原函數的邏輯維持）
   is_below_ma240 = today['close'] < today['MA240']
 
   # 利用 OLS 最小平方法計算過去 20 天 MA240 的斜率與 R平方擬合度
@@ -71,12 +75,14 @@ def st_u_bottom(df_single, market_above_ma240=True):
   )
 
   # ==================== 3. 階段二：右側突破判定 (今日表態條件) ====================
+  # A. 均線糾結度檢查 (5/20/60)
   ma_list = [today['MA5'], today['MA20'], today['MA60']]
   dispersion = (
       (max(ma_list) - min(ma_list)) / min(ma_list) if min(ma_list) > 0 else 1
   )
-  is_converged = dispersion < DISPERSION_THRESHOLD
+  is_converged = dispersion <= DISPERSION_THRESHOLD  # 限制在 3% 以內
 
+  # B. 帶量轉強檢查
   vol_ma5 = df_single['Trading_Volume'].rolling(5).mean().iloc[-1]
   is_volume_up = (
       today['Trading_Volume'] > vol_ma5 * VOLUME_RATIO_THRESHOLD
@@ -84,14 +90,17 @@ def st_u_bottom(df_single, market_above_ma240=True):
       else False
   )
 
+  # C. 價值型穩健築底：結合 OLS 斜率與 R平方甜蜜點
   is_smooth_uptrend = (
       ols_slope >= OLS_SLOPE_THRESHOLD
       and OLS_R2_MIN <= ols_r2 <= OLS_R2_MAX
   )
 
+  # D. 右側價格確認（當日收盤價不得為 5 日內最低點）
   df_single['min_close_5d'] = df_single['close'].rolling(5).min()
   is_not_lowest_5d = today['close'] > df_single['min_close_5d'].iloc[-1]
 
+  # E. 檢測 5 日內跳空與量縮狀態
   recent_6d_slice = df_single.iloc[-6:].copy()
   has_5d_gap = check_recent_gap(recent_6d_slice)
   has_5d_surge, max_5d_vol_ratio = check_volume_condition(
@@ -106,7 +115,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
       and is_smooth_uptrend
       and is_not_lowest_5d
       and is_ma60_deduct_favorable
-      and has_5d_surge  # 要求 5 日內曾有爆量
+      and has_5d_surge
   )
 
   # ==================== 4. 核心反向回溯驗證：檢查歷史扎實沉澱 ====================
@@ -123,7 +132,9 @@ def st_u_bottom(df_single, market_above_ma240=True):
 
       idx_in_full = len(df_single) - LOOKBACK_DAYS + i
       if idx_in_full >= 20:
-        hist_window_sub = df_single['MA240'].iloc[idx_in_full - 19 : idx_in_full + 1]
+        hist_window_sub = df_single['MA240'].iloc[
+            idx_in_full - 19 : idx_in_full + 1
+        ]
         hist_slope, _ = calculate_ols_slope_and_r2(hist_window_sub)
       else:
         hist_slope = 0
@@ -144,35 +155,42 @@ def st_u_bottom(df_single, market_above_ma240=True):
       if hist_below and hist_downward and hist_stabilized and hist_discounted:
         sediment_count += 1
 
-    if sediment_count >= SEDIMENT_COUNT_DAYS:
+    if (
+        SEDIMENT_COUNT_DAYS <= sediment_count
+        and sediment_count <= MAX_SEDIMENT_DAYS
+    ):
       has_preceding_sediment = True
       validated_sediment_days = sediment_count
 
-  # ==================== 5. 最終狀態封裝與雙軌標註輸出 ====================
+  # ==================== 5. 動態標籤分級與輸出封裝 ====================
+  dispersion_pct = dispersion * 100
+
   if is_today_right_hit and has_preceding_sediment:
-    # 🌟 核心修改：依據大盤位置進行標註分流，兩者皆視為有效觸發 (is_hit = True)
-    if not market_above_ma240:
-      strategy_stage = f'【🔥 大盤年線下-超跌強彈】築底驗證成功(R2={round(ols_r2,2)})➔強力買進'
-      action_signal = 'BUY (年線下)'
+    if market_above_ma240:
+      if dispersion_pct < 1.5:
+        tag_label = 'S級多頭極致收斂➔必買進'
+      else:
+        tag_label = 'A級多頭順勢跟隨➔必買進'
     else:
-      strategy_stage = f'【📈 大盤年線上】築底驗證成功(R2={round(ols_r2,2)})➔買進'
-      action_signal = 'BUY (年線上)'
+      if dispersion_pct < 2.0:
+        tag_label = '逆勢黃金狙擊➔可買進'
+      else:
+        tag_label = '逆勢過渡標的➔可買進'
+
+    strategy_stage = (f'【築底驗證成功】{tag_label}')
     is_hit = True
   else:
-    strategy_stage = '未觸發有效買進訊號 (OLS平滑度不足、季線扣抵過高、沉澱不足或無爆量)'
-    action_signal = 'NONE'
+    strategy_stage = (
+        '未觸發有效買進訊號 (超過30天沉澱、糾結度>3%或平滑度不足)'
+    )
     is_hit = False
 
-  recent_10d = df_single['close'].iloc[-10:]
-  price_cv = (
-      recent_10d.std() / recent_10d.mean() if recent_10d.mean() > 0 else 0
-  )
   stop_loss = 0.2
 
   info = {
       '收盤': today['close'],
       '策略狀態': strategy_stage,
-      '停損價': f'{stop_loss}%',
+      '停損價': f'{today['close'] * stop_loss}%',
       '距離年線': f'{round(dist_ratio * 100, 2)}%',
       '年線OLS斜率': f'{round(ols_slope, 2)}%',
       '年線R平方': round(ols_r2, 2),
@@ -184,16 +202,14 @@ def st_u_bottom(df_single, market_above_ma240=True):
       ),
       '季線扣抵均值': round(deduct_mean, 2),
       '季線扣抵最高': round(deduct_max, 2),
-      '近10日價格波動度': f'{round(price_cv * 100, 2)}%',
-      '中短期糾結度': f'{round(dispersion * 100, 2)}%',
+      '中短期糾結度': f'{round(dispersion_pct, 2)}%',
       '今日量比': (
           f'{round(today["Trading_Volume"]/vol_ma5, 2) if vol_ma5 > 0 else 0}x'
       ),
       '沉澱天數': validated_sediment_days,
       '前置沉澱扎實度評估': (
-          f'{validated_sediment_days}/{LOOKBACK_DAYS}, 門檻{SEDIMENT_COUNT_DAYS}'
+          f'{validated_sediment_days}/{LOOKBACK_DAYS}, 門檻{SEDIMENT_COUNT_DAYS}~{MAX_SEDIMENT_DAYS}天'
       ),
-      '訊號動作': action_signal,
   }
 
   return is_hit, info
