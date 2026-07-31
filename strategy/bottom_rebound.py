@@ -19,7 +19,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
   - 動態特徵輸出：5日內跳空與量縮狀態為純輸出，不影響進場判定。
 
 
-  修改自st_u_bottom_2026073103, 將OLS與R2做為篩選條件
+  修改自st_u_bottom_2026073103, 將OLS與R2做為篩選條件, 並將爆量列為篩選條件, 
   """
   print(
       f"\n 執行st_u_bottom, 目前是否年在線上"
@@ -119,6 +119,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
       and is_smooth_uptrend
       and is_not_lowest_5d
       and is_ma60_deduct_favorable
+      and has_5d_surge  # 🌟 新增：要求 5 日內必須曾有爆量
   )
 
   # ==================== 4. 核心反向回溯驗證：檢查歷史扎實沉澱 ====================
@@ -169,7 +170,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
     is_hit = True
   else:
     strategy_stage = (
-        '未觸發有效買進訊號 (OLS平滑度不足、季線扣抵過高或沉澱不足)'
+        '未觸發有效買進訊號 (OLS平滑度不足、季線扣抵過高、沉澱不足或無爆量)'  # 🌟 新增「或無爆量」
     )
     action_signal = 'NONE'
     is_hit = False
