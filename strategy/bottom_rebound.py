@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 # 3. 自訂函數庫 (Third-Party Packages)
-from .strategy_utils import check_recent_gap, check_recent_volume_shrink
+from .strategy_utils import check_recent_gap, check_recent_volume_shrink, calculate_ols_slope_and_r2
 
 def st_bottom_v_turn_2026073102(df_single, market_above_ma240=True):
   """V轉選股
