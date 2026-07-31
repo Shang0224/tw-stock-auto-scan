@@ -184,10 +184,10 @@ def st_u_bottom(df_single, market_above_ma240=True):
       '年線OLS斜率': f'{round(ols_slope, 2)}%',
       '年線R平方': round(ols_r2, 2),
       '5日內曾有跳空': '有' if has_5d_gap else '無',
-      '5日內曾有量縮': (
-          f'有 (最低量比 {min_5d_vol_ratio}x)'
+      '5日內曾有爆量': (
+          f'有 (最高量比 {max_5d_vol_ratio}x)'
           if has_5d_surge
-          else f'無 (最低量比 {min_5d_vol_ratio}x)'
+          else f'無 (最高量比 {min_5d_vol_ratio}x)'
       ),
       '季線扣抵均值': round(deduct_mean, 2),
       '季線扣抵最高': round(deduct_max, 2),
