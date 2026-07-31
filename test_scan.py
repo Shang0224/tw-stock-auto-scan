@@ -7,7 +7,7 @@ from scanstock.scanstock import scan_stocks_df_list
 
 # 匯入您要測試的策略
 from strategy.strat_right_side import st_right_side_breakout
-from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, st_bottom_breakout, st_u_bottom
+from strategy.bottom_rebound import st_bottom_v_turn, st_u_bottom, st_bottom_v_turn_2026072602
 from strategy.advanced_ma240 import st_advanced_ma240_df_up
 from strategy.near_ma240 import st_near_ma240_df
 
