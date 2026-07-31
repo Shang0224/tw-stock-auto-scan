@@ -31,9 +31,9 @@ def check_recent_gap(df_subset):
   if df_subset.empty or len(df_subset) < 2:
     return False
 
-  prev_high = df_subset['high'].shift(1)
+  prev_high = df_subset['max'].shift(1)
   # 標準真跳空：當日最低價大於昨日最高價
-  has_gap_up = (df_subset['low'] > prev_high).any()
+  has_gap_up = (df_subset['min'] > prev_high).any()
   return bool(has_gap_up)
 
 
