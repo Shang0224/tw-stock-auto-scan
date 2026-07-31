@@ -36,13 +36,13 @@ def check_recent_gap(df_subset):
   has_gap_up = (df_subset['min'] > prev_high).any()
   return bool(has_gap_up)
 
-
-def check_recent_volume_shrink(df_subset, shrink_ratio=0.7):
-  """檢測傳入的成交紀錄片段（如最近 5 天）內是否有明顯量縮
+def check_volume_condition(df_subset, threshold=2.0, is_surge=True):
+  """通用的成交量變化檢測函數（透過布林值切換爆量或量縮）
 
   :param df_subset: 包含 'Trading_Volume' 的 DataFrame 片段
-  :param shrink_ratio: 量縮門檻（例如成交量低於 20 日均量的 70%）
-  :return: tuple (has_shrink, min_volume_ratio)
+  :param threshold: 判斷門檻（爆量預設 2.0 倍，量縮建議設為 0.7 倍等）
+  :param is_surge: 布林值，True 為檢測爆量，False 為檢測量縮
+  :return: tuple (is_triggered, target_ratio)
   """
   if df_subset.empty:
     return False, 0.0
@@ -52,12 +52,22 @@ def check_recent_volume_shrink(df_subset, shrink_ratio=0.7):
   else:
     vol_ma20 = df_subset['Trading_Volume'].rolling(20).mean()
 
-  # 計算最近片段內的量比 (當日量 / 20日均量)
+  # 計算區間內的量比 (當日量 / 20日均量)
   vol_ratios = df_subset['Trading_Volume'] / vol_ma20
   vol_ratios = vol_ratios.replace([np.inf, -np.inf], np.nan).dropna()
 
   if vol_ratios.empty:
     return False, 0.0
+
+  # 根據布林值決定邏輯
+  if is_surge:
+    target_ratio = vol_ratios.max()
+    is_triggered = (vol_ratios >= threshold).any()
+  else:
+    target_ratio = vol_ratios.min()
+    is_triggered = (vol_ratios <= threshold).any()
+
+  return bool(is_triggered), round(float(target_ratio), 2)
 
   min_ratio = vol_ratios.min()
   has_shrink = (vol_ratios < shrink_ratio).any()
