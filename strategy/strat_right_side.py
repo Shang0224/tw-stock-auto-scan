@@ -176,10 +176,10 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
 
   if is_type_2:
     status = (
-        '第二型：$勝率極高$ 短線強勢動能與均線交叉發散, 並結構突破'
+        '第二型：$勝率極高$ 短線強勢動能與均線交叉發散, 並結構突破➔必買進'
     )
   elif is_type_1:
-    status = '第一型：短線強勢動能與均線交叉發散'
+    status = '第一型：短線強勢動能與均線交叉發散➔可買進'
   else:
     status = '未觸發右側訊號'
 
