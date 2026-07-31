@@ -187,7 +187,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
       '5日內曾有爆量': (
           f'有 (最高量比 {max_5d_vol_ratio}x)'
           if has_5d_surge
-          else f'無 (最高量比 {min_5d_vol_ratio}x)'
+          else f'無 (最高量比 {max_5d_vol_ratio}x)'
       ),
       '季線扣抵均值': round(deduct_mean, 2),
       '季線扣抵最高': round(deduct_max, 2),
