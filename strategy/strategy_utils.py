@@ -1,5 +1,26 @@
 import numpy as np
+from scipy.stats import linregress
 
+def calculate_ols_slope_and_r2(series):
+  """計算任意時間序列（如均線）的 OLS 最小平方法迴歸斜率與 R平方擬合度
+
+  :param series: 包含一段數值的 pandas Series
+  :return: tuple (slope_pct, r_squared)
+           - slope_pct: 每日百分比斜率化數值
+           - r_squared: 擬合優度 (0~1)，愈接近 1 代表走勢愈平滑穩定
+  """
+  y = series.dropna().values
+  if len(y) < 2:
+    return 0.0, 0.0
+
+  x = np.arange(len(y))
+  slope, intercept, r_value, p_value, std_err = linregress(x, y)
+  r_squared = r_value**2
+
+  mean_val = np.mean(y)
+  slope_pct = (slope / mean_val) * 100 if mean_val > 0 else 0
+
+  return slope_pct, r_squared
 
 def check_recent_gap(df_subset):
   """檢測傳入的成交紀錄片段（如最近 5 天）內是否有跳空缺口
