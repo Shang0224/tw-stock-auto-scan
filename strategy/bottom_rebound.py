@@ -255,6 +255,10 @@ def st_u_bottom(df_single, market_above_ma240=True):
   MAX_DEDUCT_TOLERANCE = 1.15
   MEAN_DEDUCT_TOLERANCE = 1.05
 
+  
+  MA240_SLOPE_THRESHOLD = 0.2 # OLS 最小平方法計算過去 20 天 MA240 的斜率條件值
+  OLS_R2_THRESHOLD = 0.6 #OLS 最小平方法計算過去 20 天 MA240 的R平方擬合度條件值
+
   if df_single.empty or len(df_single) < (260 + LOOKBACK_DAYS):
     return False, {}
 
@@ -305,7 +309,7 @@ def st_u_bottom(df_single, market_above_ma240=True):
   )
 
   # C. 價值型穩健築底：以 OLS 斜率 >= 0.5% 且 R平方 >= 0.6 作為平滑上升保證
-  is_smooth_uptrend = ols_slope >= 0.5 and ols_r2 >= 0.6
+  is_smooth_uptrend = ols_slope >= MA240_SLOPE_THRESHOLD and ols_r2 >= OLS_R2_THRESHOLD
 
   # D. 右側價格確認（當日收盤價不得為 5 日內最低點）
   df_single['min_close_5d'] = df_single['close'].rolling(5).min()
