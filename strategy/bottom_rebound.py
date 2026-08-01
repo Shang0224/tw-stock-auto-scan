@@ -11,7 +11,8 @@ import pandas as pd
 from .strategy_utils import check_recent_gap, check_volume_condition, calculate_ols_slope_and_r2
 
 def st_u_bottom(df_single, market_above_ma240=True):
-  """U底籌碼沉澱突破 (整合 OLS 擬合過濾；跳空與量縮改為純輸出檢測)
+  """U底籌碼沉澱突破
+  (整合 OLS 擬合過濾；跳空與量縮改為純輸出檢測)
 
   - 核心觸發：以右側突破 (BUY) 作為第一主動觸發點。
   - 年線過濾：利用 OLS 迴歸斜率與 R平方 進行平滑度與方向過濾。
