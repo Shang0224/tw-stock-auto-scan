@@ -1317,7 +1317,7 @@ def st_bottom_v_turn(df_single, market_above_ma240=True):
 
   #修改自st_bottom_v_turn_2026073001, 增加判斷大盤收盤在相對於年線的位置
   
-  print(f"\n 執行st_u_bottom, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+  print(f"\n 執行st_bottom_v_turn, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
   
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
   if not market_above_ma240:
