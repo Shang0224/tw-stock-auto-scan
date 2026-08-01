@@ -24,7 +24,7 @@ def send_line_summary(results, source_name, tw_time, status_col_name='策略狀�
         message_text = f"📅 [{source_name}] 掃描完成: {now_str}\n=== 精選名單 ===\n\n{short_report.to_string(index=False)}"
     
     # 實際執行 LINE 發送 (依據你的實戰需求暫時註解或啟用)
-    # send_line_message(message_text)
+    send_line_message(message_text)
     print(f"📢 [LINE 訊息已就緒]:\n{message_text}\n")
 
 
