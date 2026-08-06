@@ -70,7 +70,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
                                 
                 if end_date in df.index:
                     print(f"---{ticker_id} 在 {end_date} 的完整資料 ---")
-                    print(df.loc[end_date])  # 此時 loc[end_date] 還是有效的！
+                    #print(df.loc[end_date])  # 此時 loc[end_date] 還是有效的！
                 else:
                     print(f"找不到 {end_date}")
                 
