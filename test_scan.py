@@ -22,7 +22,8 @@ from utils import (
     send_email_report,
     save_multi_day_report,
     calculate_one_year_extremes,
-    align_and_normalize_results
+    align_and_normalize_results,
+    get_fm_trading_days
 )
 
 # =====================================================================
@@ -79,15 +80,6 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     
     fetch_start_str = (start_date - timedelta(days=500)).strftime("%Y-%m-%d")
     
-    #print(f"📡 正在抓取全段歷史數據緩衝 ({fetch_start_str} ~ {fetch_end_str})...")
-    #if source.lower() == 'yf':
-    #    global_df = yf_fetch_all_stocks(stock_ids, fetch_start_str, fetch_end_str)
-    #elif source.lower() == 'fm':
-    #    global_df = fm_fetch_all_stocks(dl, stock_ids, fetch_start_str, fetch_end_str)
-    #else:
-    #    raise ValueError("❌ 未知的資料來源設定，僅支援 'yf' 或 'fm'")
-
-
     # ----------------------------------------------------
     # 1. 在抓取個股歷史數據時，同時抓取大盤指數 (以 Yahoo Finance ^TWII 為例)
     # ----------------------------------------------------
@@ -120,18 +112,50 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     market_dict = market_df.set_index('date_str')['market_above_ma240'].to_dict()
     market_ma_dict = market_df.set_index('date_str')['MA240'].to_dict()
 
+    # 🌟 【新增】先批次取得 FinMind 交易日清單（涵蓋歷史區間 + 400天緩衝）
+    print("📡 正在向 FinMind 取得台股交易日歷行事曆...")
+    fetch_end_for_trading_days = (end_date + timedelta(days=400)).strftime("%Y-%m-%d")
+    trading_days_set = get_fm_trading_days(fetch_start_str, fetch_end_for_trading_days)
+    
+    if trading_days_set:
+        print(f"✅ 成功載入 FinMind 交易日清單，共 {len(trading_days_set)} 個交易日。")
+    else:
+        print("⚠️ 無法取得 FinMind 交易日，將自動退回僅過濾週末（Saturday/Sunday）的預設機制。")
+    
     # 用於儲存每日結果的字典
     collected_range_results = {}
 
     # 逐日歷算迴圈
     current_day = start_date
-    while current_day <= end_date:
-        if current_day.weekday() >= 5:  # 自動跳過週末
-            current_day += timedelta(days=1)
-            continue
-            
+    while current_day <= end_date:         
         day_str = current_day.strftime("%Y-%m-%d")
-        print(f"\n⚡ 正在分析日期: {day_str}...")
+
+        # ----------------------------------------------------
+        # 1. 交易日濾網：確認今天台股是否有開市
+        # --------------------------------------
+        if trading_days_set:
+            if day_str not in trading_days_set:
+                current_day += timedelta(days=1)
+                continue
+        else:
+            if current_day.weekday() >= 5:  # Fallback: 自動跳過週末
+                current_day += timedelta(days=1)
+                continue
+
+        # ----------------------------------------------------
+        # 2. 大盤環境濾網：取得今天大盤相對於年線（MA240）的位置
+        # 🌟 【極速查詢】直接從預先算好的對照表中拿取當日大盤狀態
+        # 如果當天剛好沒有大盤資料（例如遇到非交易日或連續假日），可以往回找最近一個有資料的日期，或預設 True
+        # ----------------------------------------------------
+        market_above_ma240 = True  
+        
+        if day_str in market_ma_dict and not pd.isna(market_ma_dict[day_str]):
+            market_above_ma240 = market_dict[day_str]
+        else:
+            print(f"⚠️ {day_str} 無對應大盤年線資料，採用預設值 True")
+        
+
+        print(f"\n⚡ [環境就緒] 正在分析日期: {day_str} | 大盤在年線之上: {market_above_ma240}")
 
         day_data_cutoff = current_day.replace(hour=23, minute=59, second=59)
         all_df_slice = global_df[global_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
@@ -141,16 +165,6 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
             current_day += timedelta(days=1)
             continue
 
-        # 🌟 【極速查詢】直接從預先算好的對照表中拿取當日大盤狀態
-        # 如果當天剛好沒有大盤資料（例如遇到非交易日或連續假日），可以往回找最近一個有資料的日期，或預設 True
-        market_above_ma240 = True  
-        if day_str in market_ma_dict and not pd.isna(market_ma_dict[day_str]):
-            market_above_ma240 = market_dict[day_str]
-            print(f"大盤年線狀態 ({day_str}): 在年線之上 -> {market_above_ma240}")
-        else:
-            print(f"⚠️ {day_str} 無對應大盤年線資料，採用預設值 True")
-
-        print(f"\n進入scan_stocks_df_list...")
         day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict, market_above_ma240)
 
         if day_results:
