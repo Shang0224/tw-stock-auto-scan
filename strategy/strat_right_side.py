@@ -59,7 +59,7 @@ def st_right_side_breakout(df_single, market_above_ma240=True):
   #輸出結果為yf_test_st_right_side_breakout_range_2024-01-01_to_2025-09-30_20260728_1854
   #        yf_test_st_right_side_breakout_range_2015-01-01_to_2025-09-30_20260728_1943
 
-  print(f"\n 執行st_right_side_breakout, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+  #print(f"\n 執行st_right_side_breakout, 目前是否在年線上 {market_above_ma240}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
   
   # 🌟 核心阻擋：若大盤在年線之下，右側突破策略直接不予觸發
   if not market_above_ma240:
