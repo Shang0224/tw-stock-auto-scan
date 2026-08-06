@@ -1,9 +1,36 @@
 # utils/data_fetcher.py
+import os
+import requests
 import yfinance as yf
 import pandas as pd
+import time
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
-import time
+
+def get_fm_trading_days(start_str, end_str):
+    """透過 FinMind API 批次取得指定區間內的台股交易日清單，回傳 Set 集合"""
+    url = "https://api.finmindtrade.com/api/v4/data"
+    parameters = {
+        "dataset": "TaiwanStockTradingDate",
+        "start_date": start_str,
+        "end_date": end_str,
+    }
+    
+    token = os.getenv("FINMIND_TOKEN")
+    if token:
+        parameters["token"] = token
+        
+    try:
+        response = requests.get(url, params=parameters)
+        result = response.json()
+        if result.get("status") == 200 and result.get("data"):
+            df_dates = pd.DataFrame(result["data"])
+            if 'date' in df_dates.columns:
+                return set(pd.to_datetime(df_dates['date']).dt.strftime("%Y-%m-%d"))
+    except Exception as e:
+        print(f"⚠️ 取得 FinMind 交易日清單失敗: {e}")
+        
+    return set()
 
 
 def yf_fetch_all_stocks(stock_ids, start_date, end_date):
