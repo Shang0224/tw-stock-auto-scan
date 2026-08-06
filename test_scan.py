@@ -31,7 +31,7 @@ from utils import (
 # =====================================================================
 CHOSEN_SOURCE = 'yf' 
 #CHOSEN_SOURCE = 'fm' 
-TEST_START_DATE = '2005-01-01'
+TEST_START_DATE = '2025-01-01'
 TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
