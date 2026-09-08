@@ -40,7 +40,7 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
 
-TEST_MONITOR = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout]
+TEST_MONITOR = [mon_high_vol_exit]
 
 
 def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_data, strategies):
