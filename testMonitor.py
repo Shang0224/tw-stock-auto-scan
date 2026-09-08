@@ -43,7 +43,7 @@ STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 TEST_MONITOR = [mon_high_vol_exit]
 
 
-def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_data, strategies):
+def run_monitor_test(source, start_date_str, end_date_str, stock_source, stock_data, strategies):
     """通用策略測試器（支援單日/連續區間自動回測）"""
     tz_tw = timezone(timedelta(hours=8))
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
