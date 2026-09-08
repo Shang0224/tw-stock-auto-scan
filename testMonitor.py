@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, timezone
 from scanstock.scanstock import scan_stocks_df_list
 
 # 匯入您要測試的策略
-from strategy.strat_right_side import st_right_side_breakout
-from strategy.bottom_rebound import st_bottom_v_turn, st_u_bottom, st_bottom_v_turn_2026072602
-from strategy.advanced_ma240 import st_advanced_ma240_df_up
-from strategy.near_ma240 import st_near_ma240_df
+from monitor.monitor import mon_high_vol_exit
+#from strategy.bottom_rebound import st_bottom_v_turn, st_u_bottom, st_bottom_v_turn_2026072602
+#from strategy.advanced_ma240 import st_advanced_ma240_df_up
+#from strategy.near_ma240 import st_near_ma240_df
 
 # 🌟 完美導入你專屬的 utils 程式庫工具
 from utils import (
@@ -190,14 +190,13 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     if collected_range_results:
 
         priority_keys_testscan = [
-            "觸發日期",
-            "代號",
-            "名稱",
             "收盤",
-            "策略狀態",
-            "停損價",
-            "1Y內最高績效",
-            "1Y內最低績效"
+            "開盤",
+            "當日跌幅",
+            "實體黑K幅",
+            "量比(vs MA20)",
+            "是否創120日天量",
+            "監控狀態"
         ]
         
         # 🌟 一行搞定欄位對齊與預處理
