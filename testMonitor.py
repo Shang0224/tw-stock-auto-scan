@@ -265,3 +265,16 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         print(f"ℹ️ 整個測試期間內皆無符合策略之股票，不產出報表與上傳。")
 
     print(f"\n🎉 所有的測試任務已全部執行完畢！")
+
+if __name__ == "__main__":
+    print("=== 進入本機自動化測試環境 ===")
+    
+    run_monitor_test(
+        source=CHOSEN_SOURCE,
+        start_date_str=TEST_START_DATE,
+        end_date_str=TEST_END_DATE,
+        stock_source=STOCK_MODE,
+        stock_data=STOCK_INPUT,
+        strategies=TEST_MONITOR
+    )
+
