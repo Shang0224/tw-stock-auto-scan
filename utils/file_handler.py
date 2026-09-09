@@ -5,6 +5,46 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def process_stock_data(file_path):
+    # 1. 讀取 CSV 檔案 (指定 cp950 編碼以正確讀取中文)
+    df = pd.read_csv(file_path, encoding='cp950')
+    
+    # 2. 擷取需要的欄位：觸發日期、代號、1Y內最高績效、1Y內最低績效
+    target_columns = ['觸發日期', '代號', '1Y內最高績效', '1Y內最低績效']
+    df_subset = df[target_columns].copy()
+    
+    # 3. 將「觸發日期」轉換為日期格式，並提取「年份」新增為輔助欄位
+    df_subset['觸發年份'] = pd.to_datetime(df_subset['觸發日期']).dt.year
+    
+    # 4. 針對「股票代號」與「觸發年份」進行重複資料篩選，一年只取一筆（預設保留第一筆）
+    # 如果希望保留最新或特定條件的那一筆，可以在 drop_duplicates 前先進行排序 (.sort_values)
+    df_unique = df_subset.drop_duplicates(subset=['代號', '觸發年份'], keep='first')
+    
+    # 5. 使用迴圈處理每一項資料
+    processed_data = []
+    for index, row in df_unique.iterrows():
+        trigger_date = row['觸發日期']
+        stock_code   = row['代號']
+        year_highest = row['1Y內最高績效']
+        year_lowest  = row['1Y內最低績效']
+        trigger_year = row['觸發年份']
+        
+        # 建立資料結構（以字典儲存，便於後續運算或轉成 JSON）
+        item = {
+            '觸發日期': trigger_date,
+            '觸發年份': trigger_year,
+            '代號': stock_code,
+            '1Y內最高績效': year_highest,
+            '1Y內最低績效': year_lowest
+        }
+        processed_data.append(item)
+        
+        # --- 可以在這裡加入你的後續邏輯 ---
+        # print(f"處理股票: {stock_code} ({trigger_year}年) -> 最高: {year_highest}, 最低: {year_lowest}")
+        
+    return processed_data
+
+
 def align_and_normalize_results(collected_range_results, priority_keys=None):
   """將 collected_range_results 內的字典進行欄位聯集與對齊預處理，
 
