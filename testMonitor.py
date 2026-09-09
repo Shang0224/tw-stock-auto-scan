@@ -23,7 +23,8 @@ from utils import (
     save_multi_day_report,
     calculate_one_year_extremes,
     align_and_normalize_results,
-    get_fm_trading_days
+    get_fm_trading_days,
+    process_stock_data
 )
 
 # =====================================================================
