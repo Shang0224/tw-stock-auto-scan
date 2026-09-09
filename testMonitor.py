@@ -43,7 +43,7 @@ STOCK_INPUT = os.getenv('MONITOR_STOCK_FILES', 'data/MonitorTestingData.csv')
 TEST_MONITOR = [mon_high_vol_exit]
 
 
-def run_monitor_test(source, start_date_str, end_date_str, stock_source, stock_data, strategies):
+def run_monitor_test(source, start_date_str, end_date_str, stock_source, monitor_stock_data, strategies):
     """通用策略測試器（支援單日/連續區間自動回測）"""
     tz_tw = timezone(timedelta(hours=8))
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
@@ -58,8 +58,8 @@ def run_monitor_test(source, start_date_str, end_date_str, stock_source, stock_d
         is_range_test = False
 
     if stock_source == 'csv':
-        stock_ids = parse_stock_ids(stock_data)
-        source_label = os.path.basename(stock_data)
+        stock_ids = parse_stock_ids(monitor_stock_data)
+        source_label = os.path.basename(monitor_stock_data)
     else:
         stock_ids = stock_data if stock_data else ['2377', '2357']
         source_label = f"CustomList({len(stock_ids)}檔)"
@@ -274,7 +274,7 @@ if __name__ == "__main__":
         start_date_str=TEST_START_DATE,
         end_date_str=TEST_END_DATE,
         stock_source=STOCK_MODE,
-        stock_data=STOCK_INPUT,
+        monitor_stock_data=MONITOR_STOCK_FILES,
         strategies=TEST_MONITOR
     )
 
