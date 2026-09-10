@@ -62,7 +62,7 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     latest_date_str = max(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
   
 
-    mode_label = f"區間測試 ({earliest_date_str} ~ {latest_date_str})" if is_range_test else f"單日測試 ({start_date_str})"
+    mode_label = f"區間測試 ({earliest_date_str} ~ {latest_date_str})"
     print(f"🧪 [測試啟動] 模式：{mode_label} | 來源：{source.upper()} | 標的：{source_label}")
 
     stock_name_dict, dl = get_stock_name_dict()
