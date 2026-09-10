@@ -24,7 +24,7 @@ from utils import (
     calculate_one_year_extremes,
     align_and_normalize_results,
     get_fm_trading_days,
-    process_stock_data
+    process_monitor_stock_data
 )
 
 # =====================================================================
@@ -49,7 +49,7 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     tz_tw = timezone(timedelta(hours=8))
     
     if stock_source == 'csv':
-        stock_ids = parse_stock_ids(monitor_stock_data)
+        monitor_stocks = process_monitor_stock_data(monitor_stock_data)
         source_label = os.path.basename(monitor_stock_data)
     #else:
     #    stock_ids = stock_data if stock_data else ['2377', '2357']
@@ -58,10 +58,9 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     # 直接取得最早與最晚的觸發日期字串（使用 datetime 確保未補零的日期格式能正確比較）
     earliest_date_str = min(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
     latest_date_str = max(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
+  
 
-    
-
-    mode_label = f"區間測試 ({start_date_str} ~ {end_date_str})" if is_range_test else f"單日測試 ({start_date_str})"
+    mode_label = f"區間測試 ({earliest_date_str} ~ {latest_date_str})" if is_range_test else f"單日測試 ({start_date_str})"
     print(f"🧪 [測試啟動] 模式：{mode_label} | 來源：{source.upper()} | 標的：{source_label}")
 
     stock_name_dict, dl = get_stock_name_dict()
@@ -77,11 +76,11 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     # ----------------------------------------------------
     print(f"📡 正在抓取全段歷史數據緩衝與大盤指數 ({fetch_start_str} ~ {fetch_end_str})...")
     if source.lower() == 'yf':
-        global_df = yf_fetch_all_stocks(stock_ids, fetch_start_str, fetch_end_str)
+        global_df = yf_fetch_monitor_stocks(monitor_stocks)
         # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
         market_df = yf_fetch_all_stocks(['^TWII'], fetch_start_str, fetch_end_str)
     elif source.lower() == 'fm':
-        global_df = fm_fetch_all_stocks(dl, stock_ids, fetch_start_str, fetch_end_str)
+        #global_df = yf_fetch_monitor_stocks(dl, stock_ids, fetch_start_str, fetch_end_str)
         # FinMind 對應的大盤代碼，可依你的 FinMind 資料源調整（例如 'TAIEX' 或指數代碼）
         market_df = fm_fetch_all_stocks(dl, ['TAIEX'], fetch_start_str, fetch_end_str)
     else:
