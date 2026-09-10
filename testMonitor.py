@@ -51,9 +51,15 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     if stock_source == 'csv':
         stock_ids = parse_stock_ids(monitor_stock_data)
         source_label = os.path.basename(monitor_stock_data)
-    else:
-        stock_ids = stock_data if stock_data else ['2377', '2357']
-        source_label = f"CustomList({len(stock_ids)}檔)"
+    #else:
+    #    stock_ids = stock_data if stock_data else ['2377', '2357']
+    #    source_label = f"CustomList({len(stock_ids)}檔)"
+
+    # 直接取得最早與最晚的觸發日期字串（使用 datetime 確保未補零的日期格式能正確比較）
+    earliest_date_str = min(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
+    latest_date_str = max(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
+
+    
 
     mode_label = f"區間測試 ({start_date_str} ~ {end_date_str})" if is_range_test else f"單日測試 ({start_date_str})"
     print(f"🧪 [測試啟動] 模式：{mode_label} | 來源：{source.upper()} | 標的：{source_label}")
@@ -61,10 +67,10 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     stock_name_dict, dl = get_stock_name_dict()
     
     #fetch_end_str = end_date.strftime("%Y-%m-%d")
-    # 建議將遠端抓取資料的結束時間往後推 400 天，確保完整的未來績效能被計算到
-    fetch_end_str = (end_date + timedelta(days=400)).strftime("%Y-%m-%d")
-    
-    fetch_start_str = (start_date - timedelta(days=500)).strftime("%Y-%m-%d")
+
+    # 用以下區間取得大盤資料的時間區間
+    fetch_end_str = (latest_date_str + timedelta(days=545)).strftime("%Y-%m-%d")    
+    fetch_start_str = (earliest_date_str - timedelta(days=365)).strftime("%Y-%m-%d")
     
     # ----------------------------------------------------
     # 1. 在抓取個股歷史數據時，同時抓取大盤指數 (以 Yahoo Finance ^TWII 為例)
