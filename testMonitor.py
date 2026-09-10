@@ -25,7 +25,8 @@ from utils import (
     align_and_normalize_results,
     get_fm_trading_days,
     process_monitor_stock_data,
-    yf_fetch_monitor_stocks
+    yf_fetch_monitor_stocks,
+    calculate_forward_horizon_returns
 )
 
 # =====================================================================
@@ -170,7 +171,11 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
                         hit_record.update(detail_info)
                     else:
                         hit_record["詳細資訊"] = str(detail_info)
-                    
+
+                    # 計算觸發後多個時間視野的前瞻績效並加入紀錄
+                    horizon_perf = calculate_forward_horizon_returns(stock_id, current_date_str, global_df, horizons=[3, 5, 10, 20])
+                    hit_record.update(horizon_perf)
+                
                     stock_hits.append(hit_record)
                 
             if stock_hits:
