@@ -55,7 +55,7 @@ def yf_fetch_monitor_stocks(monitor_stocks, days_before=365, days_after=548):
                 # 5. 欄位名稱標準化
                 df.columns = [col.lower().replace(' ', '_') for col in df.columns]
                 if 'volume' in df.columns:
-                    df.rename(columns={'volume': 'trading_volume'}, inplace=True)
+                    df.rename(columns={'volume': 'Trading_Volume'}, inplace=True)
                 if 'high' in df.columns:
                     df.rename(columns={'high': 'max'}, inplace=True)
                 if 'low' in df.columns:
