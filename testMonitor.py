@@ -114,152 +114,18 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     else:
         print("⚠️ 無法取得 FinMind 交易日，將自動退回僅過濾週末（Saturday/Sunday）的預設機制。")
     
-    # 用於儲存每日結果的字典
-    collected_range_results = {}
-
-    # 逐日歷算迴圈
-    current_day = start_date
-    while current_day <= end_date:         
-        day_str = current_day.strftime("%Y-%m-%d")
-
-        # ----------------------------------------------------
-        # 1. 交易日濾網：確認今天台股是否有開市
-        # --------------------------------------
-        if trading_days_set:
-            if day_str not in trading_days_set:
-                current_day += timedelta(days=1)
-                continue
-        else:
-            if current_day.weekday() >= 5:  # Fallback: 自動跳過週末
-                current_day += timedelta(days=1)
-                continue
-
-        # ----------------------------------------------------
-        # 2. 大盤環境濾網：取得今天大盤相對於年線（MA240）的位置
-        # 🌟 【極速查詢】直接從預先算好的對照表中拿取當日大盤狀態
-        # 如果當天剛好沒有大盤資料（例如遇到非交易日或連續假日），可以往回找最近一個有資料的日期，或預設 True
-        # ----------------------------------------------------
-        market_above_ma240 = True  
-        
-        if day_str in market_ma_dict and not pd.isna(market_ma_dict[day_str]):
-            market_above_ma240 = market_dict[day_str]
-        else:
-            print(f"⚠️ {day_str} 無對應大盤年線資料，採用預設值 True")
-        
-
-        print(f"\n⚡ [環境就緒] 正在分析日期: {day_str} | 大盤在年線之上: {market_above_ma240}")
-
-        day_data_cutoff = current_day.replace(hour=23, minute=59, second=59)
-        all_df_slice = global_df[global_df['date'] <= day_data_cutoff.strftime("%Y-%m-%d")]
-              
-        if all_df_slice.empty:
-            print(f"⚠️ {day_str} 數據切片為空，跳過本交易日。")
-            current_day += timedelta(days=1)
-            continue
-
-        day_results = scan_stocks_df_list(stock_ids, strategies, all_df_slice, stock_name_dict, market_above_ma240)
-
-        if day_results:
-            # 💡 這裡直接調用來自 utils 的績效計算工具
-            for hit in day_results:
-                perf = calculate_one_year_extremes(hit["代號"], day_str, global_df)
-                
-                # 🌟 先建立包含「觸發日期」的字典，確保它在第一個鍵值
-                updated_hit = {"觸發日期": day_str}
-                updated_hit.update(hit)   # 放原本 hit 的欄位（如代號、名稱...）
-                updated_hit.update(perf)  # 放 1Y最高/最低績效
+    if not global_df.empty:
+    # 依照股票代號與觸發日期進行分組（因為同一檔股票可能在不同年份都有觸發紀錄）
+    grouped = final_df.groupby(['stock_id', 'trigger_date'])
     
-                hit.clear()
-                hit.update(updated_hit)
-
-            print(f"🔍 {day_str} 掃描完成，找到 {len(day_results)} 檔符合標的（已完成績效追蹤）。")
-            collected_range_results[day_str] = day_results
-        else:
-            print(f"🔍 {day_str} 掃描完成，無符合標的。")
-
-        current_day += timedelta(days=1)
+    for (stock_id, trigger_date), group_df in grouped:
+        print("=" * 60)
+        print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date} | 共 {len(group_df)} 筆交易日資料")
+        print("=" * 60)
         
-    print(f"\n📊 [分析完畢] 開始整合數據、產出報表並準備上船...")
-
-    # =====================================================================
-    # 🌟 呼叫全新的工具函數
-    # =====================================================================
-    if collected_range_results:
-
-        priority_keys_testscan = [
-            "收盤",
-            "開盤",
-            "當日跌幅",
-            "實體黑K幅",
-            "量比(vs MA20)",
-            "是否創120日天量",
-            "監控狀態"
-        ]
-        
-        # 🌟 一行搞定欄位對齊與預處理
-        collected_range_results = align_and_normalize_results(collected_range_results, priority_keys = priority_keys_testscan)
-        
-        # 1. 蒐集當次測試的所有策略名稱
-        strat_names = [strat.__name__ for strat in strategies]
-        
-        # 根據是否為區間測試，動態組合日期標示
-        date_range_label = f"{start_date_str} ~ {end_date_str}" if is_range_test else f"{start_date_str}"
-        strat_header_line = f"#測試策略清單:, {', '.join(strat_names)} , | , 掃描區間: {date_range_label}\n"
-        
-        # 為了主檔名乾淨，主檔名仍可用第一個策略或 multi 代表
-        strat_label = strat_names[0] if len(strat_names) == 1 else f"multi_strat_{len(strat_names)}"
-        output_name = f"{source.lower()}_test_{strat_label}"
-        
-        now_time = datetime.now(timezone(timedelta(hours=8)))
-        
-        #output_name = f"{source.lower()}_test"
-        #now_time = datetime.now(timezone(timedelta(hours=8)))
-        
-        # 1. 🌟 直接調用 utils 的新函數，一行程式碼搞定格式化產檔
-        csv_path = save_multi_day_report(collected_range_results, output_name, now_time)
-        print(f"✅ [報表產出成功] 已透過 utils.save_multi_day_report 格式化輸出：{csv_path}")
-
-        # 3. 📝 【核心亮點】將策略清單動態插隊寫入檔案第一行
-        if csv_path and os.path.exists(csv_path):
-            try:
-                # 讀出原本的內容
-                with open(csv_path, 'r', encoding='utf-8-sig') as f:
-                    original_content = f.read()
-                
-                # 將策略清單放在第一行，後面接原本的內容重新寫入
-                with open(csv_path, 'w', encoding='utf-8-sig') as f:
-                    f.write(strat_header_line)
-                    f.write(original_content)
-                
-                print(f"✍️  [策略註記成功] 已將策略名稱寫入檔案第一行：{strat_header_line.strip()}")
-            except Exception as e:
-                print(f"⚠️  [寫入策略註腳失敗] 錯誤: {e}")
-
-        
-        # 2. 訊息派發：Email 發送完整報告
-        send_email_report(csv_path)
-
-        # 3. 🟢 呼叫 utils 內的封存與清理工具上傳 NAS
-        if os.path.exists(csv_path):
-            current_time_str = now_time.strftime("%Y%m%d_%H%M")
-            if is_range_test:
-                remote_filename = f"{output_name}_range_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
-            else:
-                remote_filename = f"{output_name}_report_{current_time_str}.csv"
-                
-            remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/test_reports/{remote_filename}"
-            
-            try:
-                print(f"📦 啟動 utils 遠端封存與清理流程...")
-                archive_and_cleanup(
-                    local_file_path=csv_path,
-                    remote_path=remote_test_path
-                )
-                print(f"🚀 [NAS 同步成功] 檔案已送達遠端：test_reports/{remote_filename}")
-            except Exception as e:
-                print(f"⚠️ [自動封存/上傳失敗] 錯誤: {e}")
-    else:
-        print(f"ℹ️ 整個測試期間內皆無符合策略之股票，不產出報表與上傳。")
+        # 印出該股票該區間的資料（此處印出前 5 筆示範，若要全部印出可移除 .head()）
+        print(group_df.head())
+        print("\n" + "-" * 60 + "\n")
 
     print(f"\n🎉 所有的測試任務已全部執行完畢！")
 
