@@ -38,9 +38,9 @@ def mon_high_vol_exit(df_single):
     # 計算相較於昨日收盤的實際跌幅比例
     price_change_pct = (today['close'] - yesterday['close']) / yesterday['close']
     
-    # 計算當日總振幅與上影線
-    total_range = today['high'] - today['low']
-    upper_shadow = today['high'] - max(today['open'], today['close'])
+    # 計算當日總振幅與上影線（欄位名稱改用 max 與 min）
+    total_range = today['max'] - today['min']
+    upper_shadow = today['max'] - max(today['open'], today['close'])
     
     # 🌟 【上影線防呆過濾】總振幅必須大於昨日收盤的 1.5%，且上影線佔總振幅 40% 以上才算有效長上影線
     range_pct = total_range / yesterday['close'] if yesterday['close'] > 0 else 0
@@ -69,8 +69,8 @@ def mon_high_vol_exit(df_single):
     info = {
         "收盤": today['close'],
         "開盤": today['open'],
-        "最高": today['high'],
-        "最低": today['low'],
+        "最高": today['max'],
+        "最低": today['min'],
         "是否符合高檔位階": "是(接近60日高點且在均線之上)" if is_at_high_level else "否",
         "當日漲跌幅": f"{round(price_change_pct * 100, 2)}%",
         "當日總振幅": f"{round(range_pct * 100, 2)}%",
