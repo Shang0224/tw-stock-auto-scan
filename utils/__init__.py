@@ -5,7 +5,7 @@ from utils.data_fetcher import yf_fetch_all_stocks, fm_fetch_all_stocks, get_fm_
 from utils.notifier import send_line_message, send_email_with_csv, send_line_summary, send_email_report
 from utils.storage import upload_to_nas
 from utils.file_handler import parse_stock_ids, get_stock_name_dict, send_report, cleanup_local_file, archive_and_cleanup, save_scan_report, save_multi_day_report, align_and_normalize_results, process_monitor_stock_data
-from utils.analytics import calculate_one_year_extremes, calculate_fixed_horizon_returns
+from utils.analytics import calculate_one_year_extremes, calculate_fixed_horizon_returns, calculate_forward_horizon_returns
 
 
 
@@ -15,5 +15,6 @@ __all__ = [
     'send_line_message', 'send_email_with_csv', 'send_line_summary', 'send_email_report',
     'upload_to_nas',
     'parse_stock_ids', 'get_stock_name_dict', 'send_report', 'cleanup_local_file', 'archive_and_cleanup', 'save_scan_report', 'save_multi_day_report',
-    'calculate_one_year_extremes', 'calculate_fixed_horizon_returns', 'align_and_normalize_results', 'get_fm_trading_days', 'process_monitor_stock_data', 'yf_fetch_monitor_stocks'
+    'calculate_one_year_extremes', 'calculate_fixed_horizon_returns', 'align_and_normalize_results', 'get_fm_trading_days', 'process_monitor_stock_data', 'yf_fetch_monitor_stocks',
+    'calculate_forward_horizon_returns'
 ]
