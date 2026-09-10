@@ -65,5 +65,5 @@ def mon_high_vol_exit(df_single):
         "監控狀態": status
     }
 
-    print(f"is_hit:{is_hit}, info:{info}\n")
+    #print(f"is_hit:{is_hit}, info:{info}\n")
     return is_hit, info
