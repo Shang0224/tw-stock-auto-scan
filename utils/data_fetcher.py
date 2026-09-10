@@ -7,10 +7,14 @@ import time
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
-def yf_fetch_monitor_stocks(monitor_stocks):
+def yf_fetch_monitor_stocks(monitor_stocks, days_before=365, days_after=548):
     """
     接收 monitor_stocks (字典列表)，針對每一筆資料的股票代號與觸發日期，
-    自動計算「觸發日期前 1 年」到「觸發日期後 1 年半 (約 548 天)」的交易資料並進行下載與合併。
+    自動計算「觸發日期前 days_before 天」到「觸發日期後 days_after 天」的交易資料並進行下載與合併。
+    
+    :param monitor_stocks: list, 包含股票代號與觸發日期的字典列表
+    :param days_before: int, 觸發日期往前推的天數 (預設 365 天，即 1 年)
+    :param days_after: int, 觸發日期往後推的天數 (預設 548 天，即約 1 年半)
     """
     all_data = []
     
@@ -23,9 +27,9 @@ def yf_fetch_monitor_stocks(monitor_stocks):
         # 1. 將觸發日期字串轉為 datetime 物件
         trigger_dt = datetime.strptime(trigger_date_str.replace('-', '/'), '%Y/%m/%d')
         
-        # 2. 計算觸發日期前 1 年 (-365 天) 與後 1 年半 (+548 天)
-        start_dt = trigger_dt - timedelta(days=365)
-        end_dt = trigger_dt + timedelta(days=548)
+        # 2. 依照傳入的變數計算前後區間天數
+        start_dt = trigger_dt - timedelta(days=days_before)
+        end_dt = trigger_dt + timedelta(days=days_after)
         
         start_date = start_dt.strftime('%Y-%m-%d')
         # 因為 yfinance 結束日期不包含當天，故需將 end_date 再加 1 天
