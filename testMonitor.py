@@ -127,10 +127,16 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
             print("=" * 60)
             print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date} | 共 {len(group_df)} 筆交易日資料")
             print("=" * 60)
-        
+
+
+             mon_high_vol_exit(group_df)
+            
+
             # 印出該股票該區間的資料（此處印出前 5 筆示範，若要全部印出可移除 .head()）
-            print(group_df.head())
-            print("\n" + "-" * 60 + "\n")
+            #print(group_df.head())
+            #print("\n" + "-" * 60 + "\n")
+
+            
 
     print(f"\n🎉 所有的測試任務已全部執行完畢！")
 
