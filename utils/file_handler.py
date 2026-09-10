@@ -25,6 +25,8 @@ def process_stock_data(file_path):
     for index, row in df_unique.iterrows():
         trigger_date = row['觸發日期']
         stock_code   = row['代號']
+        stock_name   = row['名稱']
+        close        = row['收盤']
         year_highest = row['1Y內最高績效']
         year_lowest  = row['1Y內最低績效']
         trigger_year = row['觸發年份']
@@ -34,6 +36,8 @@ def process_stock_data(file_path):
             '觸發日期': trigger_date,
             '觸發年份': trigger_year,
             '代號': stock_code,
+            '名稱': stock_name,
+            '收盤': close,
             '1Y內最高績效': year_highest,
             '1Y內最低績效': year_lowest
         }
