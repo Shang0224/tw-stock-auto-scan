@@ -43,6 +43,8 @@ STOCK_INPUT = os.getenv('MONITOR_STOCK_FILES', 'data/MonitorTestingData.csv')
 
 TEST_MONITOR = [mon_high_vol_exit]
 
+DAYS_BEFORE = 365
+DAYS_AFTER = 548
 
 def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     """通用策略測試器（支援單日/連續區間自動回測）"""
@@ -68,15 +70,15 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     #fetch_end_str = end_date.strftime("%Y-%m-%d")
 
     # 用以下區間取得大盤資料的時間區間
-    fetch_end_str = (latest_date_str + timedelta(days=545)).strftime("%Y-%m-%d")    
-    fetch_start_str = (earliest_date_str - timedelta(days=365)).strftime("%Y-%m-%d")
+    fetch_end_str = (latest_date_str + timedelta(days=DAYS_AFTER)).strftime("%Y-%m-%d")    
+    fetch_start_str = (earliest_date_str - timedelta(days=DAYS_BEFORE)).strftime("%Y-%m-%d")
     
     # ----------------------------------------------------
     # 1. 在抓取個股歷史數據時，同時抓取大盤指數 (以 Yahoo Finance ^TWII 為例)
     # ----------------------------------------------------
     print(f"📡 正在抓取全段歷史數據緩衝與大盤指數 ({fetch_start_str} ~ {fetch_end_str})...")
     if source.lower() == 'yf':
-        global_df = yf_fetch_monitor_stocks(monitor_stocks)
+        global_df = yf_fetch_monitor_stocks(monitor_stocks, days_before=DAYS_BEFORE, days_after=DAYS_AFTER)
         # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
         market_df = yf_fetch_all_stocks(['^TWII'], fetch_start_str, fetch_end_str)
     elif source.lower() == 'fm':
