@@ -10,7 +10,7 @@ def process_stock_data(file_path):
     df = pd.read_csv(file_path, encoding='cp950')
     
     # 2. 擷取需要的欄位：觸發日期、代號、1Y內最高績效、1Y內最低績效
-    target_columns = ['觸發日期', '代號', '1Y內最高績效', '1Y內最低績效']
+    target_columns = ['觸發日期', '代號', '名稱', '收盤', '1Y內最高績效', '1Y內最低績效']
     df_subset = df[target_columns].copy()
     
     # 3. 將「觸發日期」轉換為日期格式，並提取「年份」新增為輔助欄位
