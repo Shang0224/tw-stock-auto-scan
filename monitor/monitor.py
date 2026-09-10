@@ -23,11 +23,11 @@ def mon_high_vol_exit(df_single):
     is_near_high = today['close'] >= (today['Close_Max60'] * 0.95)
     is_at_high_level = is_above_ma and is_near_high
     
-    # --- 核心判斷 2: 極端量能條件 (2.5倍均量或 60日天量) ---
+    # --- 核心判斷 2: 極端量能條件 (2.5倍均量且創60日天量) ---
     vol_ma20 = today['Vol_MA20']
     is_volume_multiple = today['Trading_Volume'] > (vol_ma20 * 2.5) if vol_ma20 > 0 else False
     is_rolling_max_vol = today['Trading_Volume'] >= today['Vol_Max60']
-    is_extreme_volume = is_volume_multiple or is_rolling_max_vol
+    is_extreme_volume = is_volume_multiple and is_rolling_max_vol
     
     # --- 核心判斷 3: 殺傷力 K 棒形態 (黑K與長上影線過濾) ---
     is_black_candle = today['close'] < today['open']
