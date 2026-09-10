@@ -2,8 +2,7 @@ import pandas as pd
 
 def mon_high_vol_exit(df_single):
     """
-    出場/風險監控：高檔極端爆量與出貨形態綜合判斷
-    核心邏輯：60日波段高檔確認 + 2.5倍以上極端量能或60日天量 + 殺傷力黑K/長上影線
+    出場/風險監控：高檔極端爆量與出貨形態綜合判斷（含黑K長度與振幅過濾防呆）
     """
     # 基礎檢查：需要至少 120 筆以上資料來確保均線與滾動視窗計算穩定
     if df_single.empty or len(df_single) < 120:
@@ -19,13 +18,9 @@ def mon_high_vol_exit(df_single):
     today = df_single.iloc[-1]
     yesterday = df_single.iloc[-2]
     
-    # --- 核心判斷 1: 高檔位階過濾 (結合均線與 60 日波段高點) ---
-    # 條件 1: 價格必須在短中期均線之上 (MA20 與 MA60)
+    # --- 核心判斷 1: 高檔位階過濾 ---
     is_above_ma = (today['close'] > today['MA20']) and (today['close'] > today['MA60'])
-    
-    # 條件 2: 價格必須位在 60 日內的高檔區 (收盤價大於等於 60 天最高價的 95%)
     is_near_high = today['close'] >= (today['Close_Max60'] * 0.95)
-    
     is_at_high_level = is_above_ma and is_near_high
     
     # --- 核心判斷 2: 極端量能條件 (2.5倍均量或 60日天量) ---
@@ -34,18 +29,33 @@ def mon_high_vol_exit(df_single):
     is_rolling_max_vol = today['Trading_Volume'] >= today['Vol_Max60']
     is_extreme_volume = is_volume_multiple or is_rolling_max_vol
     
-    # --- 核心判斷 3: 殺傷力 K 棒形態 (黑K吞噬/跌幅深 或 高檔長上影線) ---
+    # --- 核心判斷 3: 殺傷力 K 棒形態 (黑K與長上影線過濾) ---
     is_black_candle = today['close'] < today['open']
+    
+    # 計算實體黑K跌幅比例（開盤價減去收盤價佔開盤價的比例）
     body_drop_pct = (today['open'] - today['close']) / today['open']
+    
+    # 計算相較於昨日收盤的實際跌幅比例
     price_change_pct = (today['close'] - yesterday['close']) / yesterday['close']
     
-    # 計算上影線比例 (上影線長度大於當日總振幅的 40%)
-    total_range = today['max'] - today['min']
-    upper_shadow = today['max'] - max(today['open'], today['close'])
-    is_long_upper_shadow = (upper_shadow / total_range > 0.4) if total_range > 0 else False
+    # 計算當日總振幅與上影線
+    total_range = today['high'] - today['low']
+    upper_shadow = today['high'] - max(today['open'], today['close'])
     
-    # 有效出貨形態：(黑K且跌幅顯著) 或 (長上影線且伴隨回檔)
+    # 🌟 【上影線防呆過濾】總振幅必須大於昨日收盤的 1.5%，且上影線佔總振幅 40% 以上才算有效長上影線
+    range_pct = total_range / yesterday['close'] if yesterday['close'] > 0 else 0
+    is_significant_range = range_pct > 0.015  # 總振幅大於 1.5%
+    is_long_upper_shadow = is_significant_range and ((upper_shadow / total_range) > 0.4) if total_range > 0 else False
+    
+    # 🌟 【黑K殺傷力過濾】
+    # 必須同時滿足：
+    # 1. 確實收黑K (is_black_candle)
+    # 2. 具備實質跌幅：實體黑K跌幅超過 1.5% (body_drop_pct > 0.015) 
+    #    或者與昨日收盤相比實際跌幅超過 2.0% (price_change_pct < -0.02)
+    # 藉此過濾掉微幅收黑的雜訊，確保具備足夠的下殺破壞力
     is_black_distribution = is_black_candle and (body_drop_pct > 0.015 or price_change_pct < -0.02)
+    
+    # 有效出貨形態：符合殺傷力的黑K出貨 或 具備足夠振幅的長上影線且伴隨回檔
     is_shadow_distribution = is_long_upper_shadow and price_change_pct < 0
     is_valid_distribution = is_black_distribution or is_shadow_distribution
     
@@ -59,10 +69,11 @@ def mon_high_vol_exit(df_single):
     info = {
         "收盤": today['close'],
         "開盤": today['open'],
-        "最高": today['max'],
-        "最低": today['min'],
+        "最高": today['high'],
+        "最低": today['low'],
         "是否符合高檔位階": "是(接近60日高點且在均線之上)" if is_at_high_level else "否",
         "當日漲跌幅": f"{round(price_change_pct * 100, 2)}%",
+        "當日總振幅": f"{round(range_pct * 100, 2)}%",
         "實體黑K幅": f"{round(body_drop_pct * 100, 2)}%",
         "量比(vs MA20)": f"{vol_ratio}x",
         "是否創60日天量": "是" if is_rolling_max_vol else "否",
