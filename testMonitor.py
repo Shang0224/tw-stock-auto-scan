@@ -121,7 +121,7 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     
     if not global_df.empty:
         # 依照股票代號與觸發日期進行分組（因為同一檔股票可能在不同年份都有觸發紀錄）
-        grouped = final_df.groupby(['stock_id', 'trigger_date'])
+        grouped = global_df.groupby(['stock_id', 'trigger_date'])
     
         for (stock_id, trigger_date), group_df in grouped:
             print("=" * 60)
