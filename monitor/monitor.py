@@ -42,9 +42,9 @@ def mon_high_vol_exit(df_single):
     total_range = today['max'] - today['min']
     upper_shadow = today['max'] - max(today['open'], today['close'])
     
-    # 🌟 【上影線防呆過濾】總振幅必須大於昨日收盤的 1.5%，且上影線佔總振幅 40% 以上才算有效長上影線
+    # 🌟 【上影線防呆過濾】總振幅必須大於昨日收盤的 3%，且上影線佔總振幅 40% 以上才算有效長上影線
     range_pct = total_range / yesterday['close'] if yesterday['close'] > 0 else 0
-    is_significant_range = range_pct > 0.015  # 總振幅大於 1.5%
+    is_significant_range = range_pct > 0.03  # 總振幅大於 3%
     is_long_upper_shadow = is_significant_range and ((upper_shadow / total_range) > 0.4) if total_range > 0 else False
     
     # 🌟 【黑K殺傷力過濾】
