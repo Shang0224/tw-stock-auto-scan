@@ -120,21 +120,42 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
         print("⚠️ 無法取得 FinMind 交易日，將自動退回僅過濾週末（Saturday/Sunday）的預設機制。")
     
     if not global_df.empty:
-        # 依照股票代號與觸發日期進行分組（因為同一檔股票可能在不同年份都有觸發紀錄）
-        grouped = global_df.groupby(['stock_id', 'trigger_date'])
+    # 確保日期欄位為 datetime 格式
+    global_df['date_dt'] = pd.to_datetime(global_df['date'])
     
-        for (stock_id, trigger_date), group_df in grouped:
-            print("=" * 60)
-            print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date} | 共 {len(group_df)} 筆交易日資料")
-            print("=" * 60)
+    grouped = global_df.groupby(['stock_id', 'trigger_date'])
 
-
-            is_hit, detail_info = mon_high_vol_exit(group_df)
-            print(f"is_hit : {is_hit} - detail_info : {detail_info}")
+    for (stock_id, trigger_date), group_df in grouped:
+        print("=" * 60)
+        print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date}")
+        print("=" * 60)
+        
+        # 1. 將觸發日期轉為 datetime，並計算一年後的截止日
+        trigger_dt = datetime.strptime(str(trigger_date).replace('-', '/'), '%Y/%m/%d')
+        one_year_later_dt = trigger_dt + timedelta(days=365)
+        
+        # 2. 篩選出從 trigger_date 到一年內的交易日作為迴圈基準
+        mask = (group_df['date_dt'] >= trigger_dt) & (group_df['date_dt'] <= one_year_later_dt)
+        trigger_period_df = group_df.loc[mask].sort_values('date_dt')
+        
+        # 3. 逐交易日進行迴圈
+        for _, row in trigger_period_df.iterrows():
+            current_dt = row['date_dt']
+            current_date_str = row['date']
             
-            # 印出該股票該區間的資料（此處印出前 5 筆示範，若要全部印出可移除 .head()）
-            #print(group_df.head())
-            #print("\n" + "-" * 60 + "\n")
+            # 4. 從 group_df 取出「該計算日期向前的資料片段」
+            # 這裡抓取該股票在 group_df 中小於等於當前計算日期的所有歷史資料
+            # 若只需要限制固定的回溯天數（例如往前 1 年），可調整為：
+            # (group_df['date_dt'] >= current_dt - timedelta(days=365)) & (group_df['date_dt'] <= current_dt)
+            history_slice = group_df[group_df['date_dt'] <= current_dt].copy()
+            
+            # 5. 傳入 mon_high_vol_exit 進行判斷
+            is_matched = mon_high_vol_exit(history_slice)
+            
+            if is_matched:
+                print(f"  ⚡ 於 {current_date_str} 符合條件")
+                
+        print("\n" + "-" * 60 + "\n")
 
             
 
