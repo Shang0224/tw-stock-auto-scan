@@ -44,20 +44,10 @@ STOCK_INPUT = os.getenv('MONITOR_STOCK_FILES', 'data/MonitorTestingData.csv')
 TEST_MONITOR = [mon_high_vol_exit]
 
 
-def run_monitor_test(source, start_date_str, end_date_str, stock_source, monitor_stock_data, strategies):
+def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     """通用策略測試器（支援單日/連續區間自動回測）"""
     tz_tw = timezone(timedelta(hours=8))
-    start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
     
-    if end_date_str:
-        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
-        if end_date < start_date:
-            raise ValueError("❌ 結束日期不能小於開始日期！")
-        is_range_test = True
-    else:
-        end_date = start_date
-        is_range_test = False
-
     if stock_source == 'csv':
         stock_ids = parse_stock_ids(monitor_stock_data)
         source_label = os.path.basename(monitor_stock_data)
