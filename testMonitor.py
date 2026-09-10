@@ -107,8 +107,7 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
 
     # 🌟 【新增】先批次取得 FinMind 交易日清單（涵蓋歷史區間 + 400天緩衝）
     print("📡 正在向 FinMind 取得台股交易日歷行事曆...")
-    fetch_end_for_trading_days = (end_date + timedelta(days=400)).strftime("%Y-%m-%d")
-    trading_days_set = get_fm_trading_days(fetch_start_str, fetch_end_for_trading_days)
+    trading_days_set = get_fm_trading_days(fetch_start_str, fetch_end_str)
     
     if trading_days_set:
         print(f"✅ 成功載入 FinMind 交易日清單，共 {len(trading_days_set)} 個交易日。")
