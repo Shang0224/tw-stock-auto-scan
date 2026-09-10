@@ -40,8 +40,8 @@ def mon_high_vol_exit(df_single):
     price_change_pct = (today['close'] - yesterday['close']) / yesterday['close']
     
     # 計算上影線比例 (上影線長度大於當日總振幅的 40%)
-    total_range = today['high'] - today['low']
-    upper_shadow = today['high'] - max(today['open'], today['close'])
+    total_range = today['max'] - today['min']
+    upper_shadow = today['max'] - max(today['open'], today['close'])
     is_long_upper_shadow = (upper_shadow / total_range > 0.4) if total_range > 0 else False
     
     # 有效出貨形態：(黑K且跌幅顯著) 或 (長上影線且伴隨回檔)
@@ -59,8 +59,8 @@ def mon_high_vol_exit(df_single):
     info = {
         "收盤": today['close'],
         "開盤": today['open'],
-        "最高": today['high'],
-        "最低": today['low'],
+        "最高": today['max'],
+        "最低": today['min'],
         "是否符合高檔位階": "是(接近60日高點且在均線之上)" if is_at_high_level else "否",
         "當日漲跌幅": f"{round(price_change_pct * 100, 2)}%",
         "實體黑K幅": f"{round(body_drop_pct * 100, 2)}%",
