@@ -1,6 +1,39 @@
 # utils/analytics.py
 import pandas as pd
 
+def calculate_forward_horizon_returns(stock_id, trigger_date_str, global_df, horizons=[3, 5, 10, 20]):
+    """
+    【前瞻區間績效】計算特定股票在條件觸發後，多個不同時間視野（如 3, 5, 10, 20 天）後的報酬率與股價。
+    """
+    df_stock = global_df[global_df['stock_id'] == stock_id].sort_values('date').reset_index(drop=True)
+    if df_stock.empty: return {}
+    
+    trigger_idx_list = df_stock[df_stock['date'] <= trigger_date_str].index
+    if len(trigger_idx_list) == 0: return {}
+    
+    trigger_idx = trigger_idx_list[-1]
+    entry_price = df_stock.loc[trigger_idx, 'close']
+    
+    perf_results = {}
+    
+    for h in horizons:
+        target_idx = trigger_idx + h
+        if target_idx < len(df_stock):
+            target_row = df_stock.iloc[target_idx]
+            target_date = target_row['date']
+            target_price = target_row['close']
+            
+            if entry_price > 0:
+                return_val = ((target_price - entry_price) / entry_price) * 100
+                perf_results[f"T+{h}日績效"] = f"{round(return_val, 2)}% ({target_date}, 價:{target_price})"
+            else:
+                perf_results[f"T+{h}日績效"] = "基準價異常"
+        else:
+            perf_results[f"T+{h}日績效"] = "資料不足 (未滿交易日)"
+            
+    return perf_results
+
+
 def calculate_one_year_extremes(stock_id, trigger_date_str, global_df):
     """
     【區間極值績效】計算特定股票在觸發日期之後，一年內(240個交易日)的最高與最低績效。
