@@ -7,7 +7,10 @@ from utils.storage import upload_to_nas
 
 def process_monitor_stock_data(file_path):
     # 1. 讀取 CSV 檔案 (指定 cp950 編碼以正確讀取中文)
-    df = pd.read_csv(file_path, encoding='cp950')
+    df = pd.read_csv(file_path, encoding='big5')
+
+    # 🔍 加上這行來檢查實際讀到什麼欄位
+    print("📋 實際讀取到的 CSV 欄位名稱:", df.columns.tolist())
     
     # 2. 擷取需要的欄位：觸發日期、代號、1Y內最高績效、1Y內最低績效
     target_columns = ['觸發日期', '代號', '名稱', '收盤', '1Y內最高績效', '1Y內最低績效']
