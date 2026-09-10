@@ -51,6 +51,7 @@ def yf_fetch_monitor_stocks(monitor_stocks, days_before=365, days_after=548):
                 # 附加識別欄位：股票代號與對應的觸發日期
                 df['stock_id'] = sid
                 df['trigger_date'] = trigger_date_str
+                df['name'] = item['名稱'] 
                 
                 # 5. 欄位名稱標準化
                 df.columns = [col.lower().replace(' ', '_') for col in df.columns]
