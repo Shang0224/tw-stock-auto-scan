@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from scanstock.scanstock import scan_stocks_df_list
 
 # 匯入您要測試的策略
-from monitor.monitor import mon_high_vol_exit
+from monitor.monitor import mon_high_vol_exit, mon_ma5_break_advanced
 #from strategy.bottom_rebound import st_bottom_v_turn, st_u_bottom, st_bottom_v_turn_2026072602
 #from strategy.advanced_ma240 import st_advanced_ma240_df_up
 #from strategy.near_ma240 import st_near_ma240_df
@@ -43,7 +43,7 @@ STOCK_INPUT = os.getenv('MONITOR_STOCK_FILES', 'data/MonitorTestingData.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
 
-TEST_MONITOR = [mon_high_vol_exit]
+TEST_MONITOR = [mon_high_vol_exit, mon_ma5_break_advanced]
 
 DAYS_BEFORE = 365
 DAYS_AFTER = 548
