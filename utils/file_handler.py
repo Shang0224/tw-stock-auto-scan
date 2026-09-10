@@ -7,7 +7,7 @@ from utils.storage import upload_to_nas
 
 def process_monitor_stock_data(file_path):
     # 1. 讀取 CSV 檔案 (指定 cp950 編碼以正確讀取中文)
-    df = pd.read_csv(file_path, encoding='big5')
+    df = pd.read_csv(file_path, encoding='cp950')
 
     # 🔍 加上這行來檢查實際讀到什麼欄位
     print("📋 實際讀取到的 CSV 欄位名稱:", df.columns.tolist())
