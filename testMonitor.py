@@ -24,7 +24,8 @@ from utils import (
     calculate_one_year_extremes,
     align_and_normalize_results,
     get_fm_trading_days,
-    process_monitor_stock_data
+    process_monitor_stock_data,
+    yf_fetch_monitor_stocks
 )
 
 # =====================================================================
