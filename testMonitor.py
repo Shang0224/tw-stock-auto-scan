@@ -130,22 +130,8 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
 
 
             is_hit, detail_info = mon_high_vol_exit(group_df)
+            print(f"is_hit : {is_hit} - detail_info : {detail_info}")
             
-            if is_hit:                                
-                any_hit = True
-                # 紀錄策略名稱
-                hit_row["觸發策略"].append(algo_func.__doc__.strip().split('\n')[0])
-                # 【關鍵】將詳細內容合併進這一列
-                #print(f"{algo_func.__name__} - detail_info : {detail_info}")
-                hit_row.update(detail_info)
-            
-
-            if any_hit:
-                # 將串列轉為字串方便 CSV 儲存
-                hit_row["觸發策略"] = ", ".join(hit_row["觸發策略"])
-                #hit_row["策略狀態"] = ", ".join(hit_row["策略狀態"])
-                final_hits.append(hit_row)
-    
             # 印出該股票該區間的資料（此處印出前 5 筆示範，若要全部印出可移除 .head()）
             #print(group_df.head())
             #print("\n" + "-" * 60 + "\n")
