@@ -150,10 +150,11 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
                 history_slice = group_df[group_df['date_dt'] <= current_dt].copy()
             
                 # 5. 傳入 mon_high_vol_exit 進行判斷
-                is_matched = mon_high_vol_exit(history_slice)
+                is_hit, detail_info = mon_high_vol_exit(history_slice)
             
-                if is_matched:
+                if is_hit:
                     print(f"  ⚡ 於 {current_date_str} 符合條件")
+                    print(f"{detail_info}\n\n")
                 
         print("\n" + "-" * 60 + "\n")
 
