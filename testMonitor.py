@@ -135,7 +135,7 @@ if __name__ == "__main__":
     run_monitor_test(
         source=CHOSEN_SOURCE,
         stock_source=STOCK_MODE,
-        monitor_stock_data=MONITOR_STOCK_FILES,
+        monitor_stock_data=STOCK_INPUT,
         strategies=TEST_MONITOR
     )
 
