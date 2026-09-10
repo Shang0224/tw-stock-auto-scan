@@ -8,12 +8,12 @@ def mon_high_vol_exit(df_single):
     if df_single.empty or len(df_single) < 120:
         return False, {}
 
-    # 1. 計算技術指標與位階
+    # 1. 計算技術指標與位階, 用 shift(1) 抓取「過去 60 日（不含今日）」的高點與天量，才具有比較意義
     df_single['MA20'] = df_single['close'].rolling(20).mean()
     df_single['MA60'] = df_single['close'].rolling(60).mean()
-    df_single['Close_Max60'] = df_single['close'].rolling(60).max() # 過去 60 個交易日最高價 (約一季高檔)
+    df_single['Close_Max60'] = df_single['close'].shift(1).rolling(60).max() # 過去 60 個交易日最高價 (約一季高檔)
     df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
-    df_single['Vol_Max60'] = df_single['Trading_Volume'].rolling(60).max()
+    df_single['Vol_Max60'] = df_single['Trading_Volume'].shift(1).rolling(60).max()
     
     today = df_single.iloc[-1]
     yesterday = df_single.iloc[-2]
