@@ -215,7 +215,7 @@ if collected_range_results:
     if csv_path and os.path.exists(csv_path):
         current_time_str = now_time.strftime("%Y%m%d_%H%M")
         remote_filename = f"{output_name}_{current_time_str}.csv"
-        remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/test_reports/{remote_filename}"
+        remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/monitor_reports/{remote_filename}"
         
         try:
             print(f"📦 啟動 utils 遠端封存與清理流程...")
