@@ -56,7 +56,7 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     #else:
     #    stock_ids = stock_data if stock_data else ['2377', '2357']
     #    source_label = f"CustomList({len(stock_ids)}檔)"
-
+   
     # 直接取得最早與最晚的觸發日期字串（使用 datetime 確保未補零的日期格式能正確比較）
     earliest_date_str = min(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
     latest_date_str = max(monitor_stocks, key=lambda x: datetime.strptime(x['觸發日期'], '%Y/%m/%d'))['觸發日期']
@@ -70,8 +70,12 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
     #fetch_end_str = end_date.strftime("%Y-%m-%d")
 
     # 用以下區間取得大盤資料的時間區間
-    fetch_end_str = (latest_date_str + timedelta(days=DAYS_AFTER)).strftime("%Y-%m-%d")    
-    fetch_start_str = (earliest_date_str - timedelta(days=DAYS_BEFORE)).strftime("%Y-%m-%d")
+    latest_dt = datetime.strptime(latest_date_str.replace('/', '-'), "%Y-%m-%d")
+    earliest_dt = datetime.strptime(earliest_date_str.replace('/', '-'), "%Y-%m-%d")
+
+    # 2. 加上 timedelta 後再格式化為字串
+    fetch_end_str = (latest_dt + timedelta(days=DAYS_AFTER)).strftime("%Y-%m-%d")   
+    fetch_start_str = (earliest_dt - timedelta(days=DAYS_BEFORE)).strftime("%Y-%m-%d")
     
     # ----------------------------------------------------
     # 1. 在抓取個股歷史數據時，同時抓取大盤指數 (以 Yahoo Finance ^TWII 為例)
