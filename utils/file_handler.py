@@ -5,7 +5,7 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
-def process_stock_data(file_path):
+def process_monitor_stock_data(file_path):
     # 1. 讀取 CSV 檔案 (指定 cp950 編碼以正確讀取中文)
     df = pd.read_csv(file_path, encoding='cp950')
     
