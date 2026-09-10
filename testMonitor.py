@@ -120,40 +120,40 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
         print("⚠️ 無法取得 FinMind 交易日，將自動退回僅過濾週末（Saturday/Sunday）的預設機制。")
     
     if not global_df.empty:
-    # 確保日期欄位為 datetime 格式
-    global_df['date_dt'] = pd.to_datetime(global_df['date'])
+        # 確保日期欄位為 datetime 格式
+        global_df['date_dt'] = pd.to_datetime(global_df['date'])
     
-    grouped = global_df.groupby(['stock_id', 'trigger_date'])
+        grouped = global_df.groupby(['stock_id', 'trigger_date'])
 
-    for (stock_id, trigger_date), group_df in grouped:
-        print("=" * 60)
-        print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date}")
-        print("=" * 60)
+        for (stock_id, trigger_date), group_df in grouped:
+            print("=" * 60)
+            print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date}")
+            print("=" * 60)
         
-        # 1. 將觸發日期轉為 datetime，並計算一年後的截止日
-        trigger_dt = datetime.strptime(str(trigger_date).replace('-', '/'), '%Y/%m/%d')
-        one_year_later_dt = trigger_dt + timedelta(days=365)
+            # 1. 將觸發日期轉為 datetime，並計算一年後的截止日
+            trigger_dt = datetime.strptime(str(trigger_date).replace('-', '/'), '%Y/%m/%d')
+            one_year_later_dt = trigger_dt + timedelta(days=365)
         
-        # 2. 篩選出從 trigger_date 到一年內的交易日作為迴圈基準
-        mask = (group_df['date_dt'] >= trigger_dt) & (group_df['date_dt'] <= one_year_later_dt)
-        trigger_period_df = group_df.loc[mask].sort_values('date_dt')
+            # 2. 篩選出從 trigger_date 到一年內的交易日作為迴圈基準
+            mask = (group_df['date_dt'] >= trigger_dt) & (group_df['date_dt'] <= one_year_later_dt)
+            trigger_period_df = group_df.loc[mask].sort_values('date_dt')
         
-        # 3. 逐交易日進行迴圈
-        for _, row in trigger_period_df.iterrows():
-            current_dt = row['date_dt']
-            current_date_str = row['date']
+            # 3. 逐交易日進行迴圈
+            for _, row in trigger_period_df.iterrows():
+                current_dt = row['date_dt']
+                current_date_str = row['date']
             
-            # 4. 從 group_df 取出「該計算日期向前的資料片段」
-            # 這裡抓取該股票在 group_df 中小於等於當前計算日期的所有歷史資料
-            # 若只需要限制固定的回溯天數（例如往前 1 年），可調整為：
-            # (group_df['date_dt'] >= current_dt - timedelta(days=365)) & (group_df['date_dt'] <= current_dt)
-            history_slice = group_df[group_df['date_dt'] <= current_dt].copy()
+                # 4. 從 group_df 取出「該計算日期向前的資料片段」
+                # 這裡抓取該股票在 group_df 中小於等於當前計算日期的所有歷史資料
+                # 若只需要限制固定的回溯天數（例如往前 1 年），可調整為：
+                # (group_df['date_dt'] >= current_dt - timedelta(days=365)) & (group_df['date_dt'] <= current_dt)
+                history_slice = group_df[group_df['date_dt'] <= current_dt].copy()
             
-            # 5. 傳入 mon_high_vol_exit 進行判斷
-            is_matched = mon_high_vol_exit(history_slice)
+                # 5. 傳入 mon_high_vol_exit 進行判斷
+                is_matched = mon_high_vol_exit(history_slice)
             
-            if is_matched:
-                print(f"  ⚡ 於 {current_date_str} 符合條件")
+                if is_matched:
+                    print(f"  ⚡ 於 {current_date_str} 符合條件")
                 
         print("\n" + "-" * 60 + "\n")
 
