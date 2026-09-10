@@ -115,17 +115,17 @@ def run_monitor_test(source, stock_source, monitor_stock_data, strategies):
         print("⚠️ 無法取得 FinMind 交易日，將自動退回僅過濾週末（Saturday/Sunday）的預設機制。")
     
     if not global_df.empty:
-    # 依照股票代號與觸發日期進行分組（因為同一檔股票可能在不同年份都有觸發紀錄）
-    grouped = final_df.groupby(['stock_id', 'trigger_date'])
+        # 依照股票代號與觸發日期進行分組（因為同一檔股票可能在不同年份都有觸發紀錄）
+        grouped = final_df.groupby(['stock_id', 'trigger_date'])
     
-    for (stock_id, trigger_date), group_df in grouped:
-        print("=" * 60)
-        print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date} | 共 {len(group_df)} 筆交易日資料")
-        print("=" * 60)
+        for (stock_id, trigger_date), group_df in grouped:
+            print("=" * 60)
+            print(f"📊 股票代號: {stock_id} | 觸發日期: {trigger_date} | 共 {len(group_df)} 筆交易日資料")
+            print("=" * 60)
         
-        # 印出該股票該區間的資料（此處印出前 5 筆示範，若要全部印出可移除 .head()）
-        print(group_df.head())
-        print("\n" + "-" * 60 + "\n")
+            # 印出該股票該區間的資料（此處印出前 5 筆示範，若要全部印出可移除 .head()）
+            print(group_df.head())
+            print("\n" + "-" * 60 + "\n")
 
     print(f"\n🎉 所有的測試任務已全部執行完畢！")
 
@@ -134,8 +134,6 @@ if __name__ == "__main__":
     
     run_monitor_test(
         source=CHOSEN_SOURCE,
-        start_date_str=TEST_START_DATE,
-        end_date_str=TEST_END_DATE,
         stock_source=STOCK_MODE,
         monitor_stock_data=MONITOR_STOCK_FILES,
         strategies=TEST_MONITOR
