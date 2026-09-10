@@ -8,6 +8,8 @@ def mon_ma5_break_advanced(df_single):
     if df_single.empty or len(df_single) < 65:
         return False, {}
 
+    df_single = df_single.copy() # 建立複本確保安全
+
     # 1. 計算技術指標、量能均線與 5日線扣抵值
     df_single['MA5'] = df_single['close'].rolling(5).mean()
     df_single['MA20'] = df_single['close'].rolling(20).mean()
