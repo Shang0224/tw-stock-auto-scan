@@ -47,6 +47,8 @@ def yfinance_scan_ma240():
 
     end_date = tw_time.strftime("%Y-%m-%d") 
     start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
+
+    print(f"\n抓資料前")
     
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
     if all_df.empty: return
