@@ -1,5 +1,68 @@
 import pandas as pd
 
+
+def mon_ma5_break_advanced(df_single):
+    #def strong_runup_high_volume_reversal(df_single):
+    """
+    進階策略：前段強拉創新高 + 爆量 + 殺長黑 + 高乖離（短線過熱見頂與出貨反轉警訊）
+    """
+    # 基礎檢查：需要至少 60 筆資料來確保均線與均量計算穩定
+    if df_single.empty or len(df_single) < 60:
+        return False, {}
+        
+    # 1. 計算技術指標與量能均線
+    df_single['MA20'] = df_single['close'].rolling(20).mean()
+    df_single['Vol_MA20'] = df_single['volume'].rolling(20).mean()
+    
+    today = df_single.iloc[-1]
+    yesterday = df_single.iloc[-2]
+    
+    # 2. 前置強拉條件：過去 5 個交易日累積漲幅顯著（例如超過 15%）
+    prev_5d_close = (
+        df_single.iloc[-6]['close'] if len(df_single) >= 6 else df_single.iloc[0]['close']
+    )
+    
+    runup_pct = (today['close'] - prev_5d_close) / prev_5d_close
+    is_strong_runup = runup_pct > 0.15
+    
+    # 3. 創高條件：今日的 max 欄位達到過去 20 日內的最高點
+    max_20 = df_single['max'].rolling(20).max().iloc[-1]
+    is_new_high = today['max'] >= max_20
+    
+    # 4. 爆量條件：今日成交量大於 20 日均量的 2 倍以上
+    is_volume_surge = today['volume'] > (today['Vol_MA20'] * 2.0)
+    
+    # 5. 殺長黑條件：收盤價低於開盤價（黑K），且當日跌幅超過 3%
+    daily_return = (today['close'] - yesterday['close']) / yesterday['close']
+    is_long_black = (today['close'] < today['open']) and (daily_return < -0.03)
+    
+    # 6. 高乖離條件：收盤價與 20 日均線的正乖離率超過 10%
+    disparity = (today['close'] - today['MA20']) / today['MA20']
+    is_high_disparity = disparity > 0.10
+    
+    # 綜合判斷：同時滿足強拉、創高、爆量、殺長黑與高乖離
+    is_hit = (
+        is_strong_runup
+        and is_new_high
+        and is_volume_surge
+        and is_long_black
+        and is_high_disparity
+    )
+
+    # 輸出資訊整理
+    status = "🚨 強拉創高後爆量殺長黑(高檔過熱反轉警訊)" if is_hit else "安全/續抱"
+    
+    info = {
+        "收盤": today['close'],
+        "20日均線": round(today['MA20'], 2),
+        "當日漲跌幅": f"{round(daily_return * 100, 2)}%",
+        "近5日累積漲幅": f"{round(runup_pct * 100, 2)}%",
+        "正乖離率": f"{round(disparity * 100, 2)}%",
+        "監控狀態": status,
+    }
+
+    return is_hit, info
+
 def mon_ma5_break_advanced(df_single):
     #def mon_ma5_break_with_recent_volume(df_single):
     """
