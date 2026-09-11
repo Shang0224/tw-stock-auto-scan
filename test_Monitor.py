@@ -42,7 +42,8 @@ STOCK_INPUT = os.getenv('MONITOR_STOCK_FILES', 'data/MonitorTestingData.csv')
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
 
-TEST_MONITOR = [mon_high_vol_exit, mon_ma5_break_advanced]
+TEST_MONITOR = [mon_ma5_break_advanced]
+#TEST_MONITOR = [mon_high_vol_exit, mon_ma5_break_advanced]
 
 DAYS_BEFORE = 365
 DAYS_AFTER = 548
