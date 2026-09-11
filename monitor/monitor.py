@@ -34,15 +34,15 @@ def mon_ma5_break_advanced(df_input):
     is_heavy_volume = today[vol_col] > (vol_ma20 * 1.5) if vol_ma20 > 0 else False
 
     # 4. K 棒實質殺傷力：收在當日相對低位（具備強烈賣壓與黑K）
-    high_col = 'high' if 'high' in df_single.columns else ('max' if 'max' in df_single.columns else 'close')
-    low_col = 'low' if 'low' in df_single.columns else ('min' if 'min' in df_single.columns else 'close')
+    #high_col = 'high' if 'high' in df_single.columns else ('max' if 'max' in df_single.columns else 'close')
+    #low_col = 'low' if 'low' in df_single.columns else ('min' if 'min' in df_single.columns else 'close')
     
-    total_range = today[high_col] - today[low_col]
-    close_position = (today['close'] - today[low_col]) / total_range if total_range > 0 else 0.5
+    total_range = today['max'] - today['min']
+    close_position = (today['close'] - today['min']) / total_range if total_range > 0 else 0.5
     is_weak_close = (close_position < 0.35) and (today['close'] < today['open'])
 
     # 5. 結構破壞：跌破前 3 天內的最低支撐點
-    recent_low = df_single['low'].iloc[-4:-1].min() if len(df_single) >= 4 else yesterday['low']
+    recent_low = df_single['min'].iloc[-4:-1].min() if len(df_single) >= 4 else yesterday['min']
     is_break_recent_low = today['close'] < recent_low
 
     # 綜合判定：高檔過熱 + 破 MA5 + 爆量收低 + 跌破短撐
