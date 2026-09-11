@@ -1,6 +1,6 @@
 import pandas as pd
 
-    def mon_ma5_break_advanced(df_single):
+def mon_ma5_break_advanced(df_single):
     #def mon_ma5_break_with_recent_volume(df_single):
     """
     進階策略：5日線失守 + 最近 3 日內曾出現極端爆量（高檔密集換手與套牢警訊）
