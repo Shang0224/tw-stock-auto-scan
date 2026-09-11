@@ -151,7 +151,7 @@ def run_seven_combine_filter(stock_list):
             s_per_t_today = 0
 
             if not daily_k_df.empty and len(daily_k_df) >= 3:
-                daily_k_df["Total_Shares"] = daily_k_df["turnover_vol"] / 1000
+                daily_k_df["Total_Shares"] = daily_k_df["trading_Volume"] / 1000
                 daily_k_df["Shares_Per_Trans"] = (
                     daily_k_df["Total_Shares"] / daily_k_df["transaction"]
                 )
