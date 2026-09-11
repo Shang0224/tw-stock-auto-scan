@@ -4,9 +4,25 @@ import pandas as pd
 import yfinance as yf
 from FinMind.data import DataLoader
 
+# 🌟 完美導入你專屬的 utils 程式庫工具
+from utils import (
+    get_stock_name_dict,
+    parse_stock_ids,
+    yf_fetch_all_stocks,
+    fm_fetch_all_stocks,
+    save_multi_day_report, # 🌟 新增：專門處理多日格式化的存檔函數
+    archive_and_cleanup,   # 負責排程專用的備份與清理
+    send_email_report,
+    save_multi_day_report,
+    calculate_one_year_extremes,
+    align_and_normalize_results,
+    get_fm_trading_days
+)
+
 # 初始化 FinMind API (免代幣每日有限額，若有 Token 可自行傳入 api_token="...")
 api = DataLoader()
 
+STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
 def calculate_kd(df, n=9, m1=3, m2=3):
     """計算技術指標 KD"""
@@ -269,4 +285,9 @@ if __name__ == "__main__":
         "2881",
         "2308",
     ]
+
+    my_watchlist = parse_stock_ids(STOCK_INPUT)
+
+    print(f"{my_watchlist}")
+    
     run_seven_combine_filter(my_watchlist)
