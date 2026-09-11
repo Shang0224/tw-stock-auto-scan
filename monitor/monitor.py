@@ -1,67 +1,49 @@
 import pandas as pd
 
-def mon_ma5_break_advanced(df_input):
+    def mon_ma5_break_advanced(df_single):
+    #def mon_ma5_break_with_recent_volume(df_single):
     """
-    高檔爆量轉弱預警：乖離過大 + 5日線破線 + 爆量收最低(出貨型態) + 跌破短天期低點
+    進階策略：5日線失守 + 最近 3 日內曾出現極端爆量（高檔密集換手與套牢警訊）
     """
-    if df_input.empty or len(df_input) < 65:
+    # 基礎檢查：需要至少 60 筆資料來確保均線與均量計算穩定
+    if df_single.empty or len(df_single) < 60:
         return False, {}
 
-    df_single = df_input.copy()
-    vol_col = 'Trading_Volume' if 'Trading_Volume' in df_single.columns else 'volume'
-    if vol_col not in df_single.columns:
-        return False, {"error": "找不到成交量欄位"}
-
-    # 計算指標
+    # 1. 計算技術指標與量能均線
     df_single['MA5'] = df_single['close'].rolling(5).mean()
     df_single['MA20'] = df_single['close'].rolling(20).mean()
-    df_single['Vol_MA20'] = df_single[vol_col].rolling(20).mean()
+    df_single['Vol_MA20'] = df_single['Trading_Volume'].rolling(20).mean()
 
     today = df_single.iloc[-1]
     yesterday = df_single.iloc[-2]
 
-    # 1. 基本破線條件：跌破 5 日線
+    # 2. 基礎破線條件：今日跌破 5 日線
     was_above_ma5 = yesterday['close'] >= yesterday['MA5']
     is_below_ma5 = today['close'] < today['MA5']
     is_ma5_break = was_above_ma5 and is_below_ma5
 
-    # 2. 位階與乖離過濾：確保是在一段漲勢過熱後（距離月線大於 6%），避免在橫盤糾結處誤判
-    bias_ma20 = (today['close'] - today['MA20']) / today['MA20']
-    is_overextended = bias_ma20 > 0.06  
-
-    # 3. 升級版量價異常：爆量（> MA20 的 1.5 倍）
-    vol_ma20 = today['Vol_MA20']
-    is_heavy_volume = today[vol_col] > (vol_ma20 * 1.5) if vol_ma20 > 0 else False
-
-    # 4. K 棒實質殺傷力：收在當日相對低位（具備強烈賣壓與黑K）
-    #high_col = 'high' if 'high' in df_single.columns else ('max' if 'max' in df_single.columns else 'close')
-    #low_col = 'low' if 'low' in df_single.columns else ('min' if 'min' in df_single.columns else 'close')
-    
-    total_range = today['max'] - today['min']
-    close_position = (today['close'] - today['min']) / total_range if total_range > 0 else 0.5
-    is_weak_close = (close_position < 0.35) and (today['close'] < today['open'])
-
-    # 5. 結構破壞：跌破前 3 天內的最低支撐點
-    recent_low = df_single['min'].iloc[-4:-1].min() if len(df_single) >= 4 else yesterday['min']
-    is_break_recent_low = today['close'] < recent_low
-
-    # 綜合判定：高檔過熱 + 破 MA5 + 爆量收低 + 跌破短撐
-    is_hit = (
-        is_overextended
-        and is_ma5_break
-        and is_heavy_volume
-        and is_weak_close
-        and is_break_recent_low
+    # 3. 🌟 範圍爆量條件：檢查最近 3 個交易日（含今日）內，是否有任何一日出現極端爆量（> 2倍 20日均量）
+    recent_3d = df_single.iloc[-3:]
+    has_recent_high_volume = any(
+        row['Trading_Volume'] > (row['Vol_MA20'] * 2.0) 
+        for _, row in recent_3d.iterrows() if row['Vol_MA20'] > 0
     )
 
-    vol_ratio = round(today[vol_col] / vol_ma20, 2) if vol_ma20 > 0 else 0
-    status = "⚠️ 【高檔爆量出貨／波段回檔預警】" if is_hit else "安全/續抱"
+    # 4. 位階過濾：確保原本處於多頭架構中（收盤價高於 MA20）
+    is_uptrend = today['close'] > today['MA20']
+
+    # 綜合判斷
+    is_hit = is_uptrend and is_ma5_break and has_recent_high_volume
+
+    # 輸出資訊整理
+    price_change_pct = (today['close'] - yesterday['close']) / yesterday['close']
+    status = "🚨 5日線破線且3日內伴隨爆量(重度套牢/出貨警訊)" if is_hit else "安全/續抱"
 
     info = {
         "收盤": today['close'],
-        "月線乖離率": f"{round(bias_ma20 * 100, 2)}%",
-        "量比(vs MA20)": f"{vol_ratio}x",
-        "收盤位置": f"{round(close_position * 100, 1)}% (近低點)",
+        "5日線": round(today['MA5'], 2),
+        "當日漲跌幅": f"{round(price_change_pct * 100, 2)}%",
+        "近3日是否有極端爆量": "是" if has_recent_high_volume else "否",
         "監控狀態": status
     }
 
