@@ -36,6 +36,7 @@ def yfinance_scan_ma240():
     
     files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
+    print(f"\n抓資料前")
     
     #my_strategies = [st_near_ma240_df, st_bottom_v_turn, st_bottom_breakout] # 策略列表
     my_strategies = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout] # 策略列表
@@ -48,7 +49,7 @@ def yfinance_scan_ma240():
     end_date = tw_time.strftime("%Y-%m-%d") 
     start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
 
-    print(f"\n抓資料前")
+    print(f"\nyf_fetch_all_stocks前")
     
     all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
     if all_df.empty: return
