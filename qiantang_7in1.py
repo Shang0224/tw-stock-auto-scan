@@ -245,8 +245,8 @@ def run_seven_combine_filter(stock_list):
                 stock_dashboard[stock_id] = {
                     "股票代號": stock_id,
                     "名稱":stock_name,
-                    "今日收盤": round(close_today, 2),
-                    "今日成交量(張)": int(vol_today_txt),
+                    "收盤": round(close_today, 2),
+                    "成交量(張)": int(vol_today_txt),
                     "符合公式總數": len(stock_hit_formulas),
                     "符合公式明細": "、".join(stock_hit_formulas),
                 }
@@ -272,8 +272,8 @@ def run_seven_combine_filter(stock_list):
                 columns=[
                     "股票代號",
                     "名稱",
-                    "今日收盤",
-                    "今日成交量(張)",
+                    "收盤",
+                    "成交量(張)",
                     "符合公式總數",
                     "符合公式明細",
                 ]
