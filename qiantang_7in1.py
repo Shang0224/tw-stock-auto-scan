@@ -275,7 +275,7 @@ def run_seven_combine_filter(stock_list):
     # 🌟 直接呼叫您原本在 utils 裡的 archive_and_cleanup 函數執行 NAS 上傳與清理
     print(f"📦 [備份啟動] 準備透過 utils 模組將 Excel 報告上傳至 NAS...\n file_name : {file_name}  prod_remote_path : {prod_remote_path}")
     
-    archive_and_cleanup(file_name, prod_remote_path)
+    archive_and_cleanup(os.path.abspath(file_name), prod_remote_path)
 
 if __name__ == "__main__":
     # 您可以自由替換或擴充這個台股代號清單（例如填入您觀察的所有個股）
