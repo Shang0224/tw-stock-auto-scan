@@ -34,6 +34,12 @@ jobs:
     # 步驟四：執行選股核心主程式
     # 備註：請確保您的 Python 檔名叫 qiantang_7in1.py，若不同請在下方修改
     - name: Run Qiantang 7-in-1 system
+      env:
+        NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
+        NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
+        NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
+        NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
+        NAS_SFTP_PATH: ${{ secrets.NAS_SFTP_PATH }}
       run: |
         python qiantang_7in1.py
 
