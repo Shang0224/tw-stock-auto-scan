@@ -14,7 +14,7 @@ def send_qiantang_7in1_line_summary(results, tw_time):
     """【單一職責】純粹處理 LINE 的文字摘要發送。不管有沒有股票都要通知狀態。"""
     now_str = tw_time.strftime('%Y-%m-%d %H:%M')
     
-    if not results.empty:
+    if results.empty:
         message_text = f"📅 [錢塘潮7合1] {now_str}\n今日無符合條件之股票。"
     else:
         report = pd.DataFrame(results)
