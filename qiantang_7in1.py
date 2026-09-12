@@ -307,7 +307,7 @@ def run_seven_combine_filter(stock_list):
                 ]
             )
     
-    send_qiantang_7in1_line_summary(line_msg_df)
+    send_qiantang_7in1_line_summary(line_msg_df, tw_time)
 
 if __name__ == "__main__":
     # 您可以自由替換或擴充這個台股代號清單（例如填入您觀察的所有個股）
