@@ -10,7 +10,7 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-def send_qiantang_7in1_line_summary(results, tw_time, report_cols):
+def send_qiantang_7in1_line_summary(results, tw_time):
     """【單一職責】純粹處理 LINE 的文字摘要發送。不管有沒有股票都要通知狀態。"""
     now_str = tw_time.strftime('%Y-%m-%d %H:%M')
     
@@ -18,8 +18,8 @@ def send_qiantang_7in1_line_summary(results, tw_time, report_cols):
         message_text = f"📅 [錢塘潮7合1] {now_str}\n今日無符合條件之股票。"
     else:
         report = pd.DataFrame(results)
-        report = report.sort_values(by=['觸發策略', '代號'], ascending=[False, True])
-        short_report = report[report_cols]
+        report = report.sort_values(by=['代號'], ascending=[False, True])
+        short_report = report
         message_text = f"📅 [錢塘潮7合1] 掃描完成: {now_str}\n=== 精選名單 ===\n\n{short_report.to_string(index=False)}"
     
     # 實際執行 LINE 發送 (依據你的實戰需求暫時註解或啟用)
