@@ -57,6 +57,9 @@ def run_seven_combine_filter(stock_list):
     today_str = tw_time.strftime("%Y-%m-%d")
     start_str = (tw_time.date() - timedelta(days=90)).strftime("%Y-%m-%d")
 
+    #取得股票代號與名稱的字典
+    stock_name_dict, dl = get_stock_name_dict()
+    
     # 初始化 7 個公式的篩選結果清單
     results = {
         "F1_主力大買": [],
@@ -178,9 +181,11 @@ def run_seven_combine_filter(stock_list):
             # ==========================================
             # 3. 執行 7 大公式邏輯審查
             # ==========================================
+            stock_name = stock_name_dict.get(stock_id, "未知")
             stock_hit_formulas = []
             stock_info = {
                 "股票代號": stock_id,
+                "名稱":stock_name,
                 "今日收盤": round(close_today, 2),
                 "今日成交量(張)": int(vol_today_txt),
             }
@@ -238,24 +243,22 @@ def run_seven_combine_filter(stock_list):
             if stock_hit_formulas:
                 stock_dashboard[stock_id] = {
                     "股票代號": stock_id,
+                    "名稱":stock_name,
                     "今日收盤": round(close_today, 2),
                     "今日成交量(張)": int(vol_today_txt),
                     "符合公式總數": len(stock_hit_formulas),
                     "符合公式明細": "、".join(stock_hit_formulas),
                 }
                 print(
-                    f"🎯 股票 {stock_id} 觸發訊號！符合：{', '.join(stock_hit_formulas)}"
+                    f"🎯 {stock_name}({stock_id}) 觸發訊號！符合：{', '.join(stock_hit_formulas)}"
                 )
 
         except Exception as e:
-            print(f"❌ 處理股票 {stock_id} 時發生異常: {e}")
+            print(f"❌ 處理股票 {stock_name}({stock_id}) 時發生異常: {e}")
 
     # ==========================================
     # 4. 產生多頁籤 Excel 選股報告
-    # ==========================================
-    stock_name_dict, dl = get_stock_name_dict()
-
-    
+    # ==========================================  
     file_name = f"錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
     with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
         # 第一頁：綜合儀表板
@@ -267,6 +270,7 @@ def run_seven_combine_filter(stock_list):
             dashboard_df = pd.DataFrame(
                 columns=[
                     "股票代號",
+                    "名稱",
                     "今日收盤",
                     "今日成交量(張)",
                     "符合公式總數",
