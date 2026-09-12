@@ -57,19 +57,5 @@ jobs:
       run: |
         python qiantang_7in1.py
 
-    # 步驟五：自動將產出的 Excel 選股報告 Commit 並 Push 回您的 GitHub 儲存庫
-    - name: Commit and Push Report
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action Bot"
-        
-        # 檢查是否有新產生的 Excel 檔案，有的話就加入暫存區
-        if ls 錢塘潮選股報告_*.xlsx 1> /dev/null 2>&1; then
-          git add 錢塘潮選股報告_*.xlsx
-          git commit -m "🤖 自動更新：錢塘潮選股報告 ($(date +'%Y-%m-%d'))"
-          git push
-        else
-          echo "找不到產出的 Excel 報告，跳過 Commit 步驟。"
-        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
