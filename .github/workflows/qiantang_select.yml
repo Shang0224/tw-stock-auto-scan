@@ -54,8 +54,6 @@ jobs:
           NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python qiantang_7in1.py
-
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        python qiantang_7in1.py        
