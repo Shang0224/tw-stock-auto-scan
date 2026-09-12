@@ -80,7 +80,7 @@ def run_seven_combine_filter(stock_list):
             # ==========================================
 
             #處理台股代號後綴
-            if str(stock_id).startswith("^") or "." in str(sid):
+            if str(stock_id).startswith("^") or "." in str(stock_id):
                 yf_id = str(stock_id)
             else:
                 yf_id = f"{stock_id}.TW"
