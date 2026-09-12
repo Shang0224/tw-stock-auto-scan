@@ -49,10 +49,13 @@ def calculate_kd(df, n=9, m1=3, m2=3):
 
 
 def run_seven_combine_filter(stock_list):
-    today_str = datetime.date.today().strftime("%Y-%m-%d")
-    start_str = (datetime.date.today() - datetime.timedelta(days=90)).strftime(
-        "%Y-%m-%d"
-    )
+
+    # 取得精確的台灣時間 (UTC+8)
+    tz_tw = timezone(timedelta(hours=8))
+    tw_time = datetime.now(tz_tw)
+    
+    today_str = tw_time.strftime("%Y-%m-%d")
+    start_str = (tw_time.date() - timedelta(days=90)).strftime("%Y-%m-%d")
 
     # 初始化 7 個公式的篩選結果清單
     results = {
@@ -245,9 +248,6 @@ def run_seven_combine_filter(stock_list):
     # 4. 產生多頁籤 Excel 選股報告
     # ==========================================
 
-    # 取得精確的台灣時間 (UTC+8)
-    tz_tw = timezone(timedelta(hours=8))
-    tw_time = datetime.now(tz_tw)
     file_name = f"錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
     with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
         # 第一頁：綜合儀表板
