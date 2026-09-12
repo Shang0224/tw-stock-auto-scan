@@ -35,11 +35,20 @@ jobs:
     # 備註：請確保您的 Python 檔名叫 qiantang_7in1.py，若不同請在下方修改
     - name: Run Qiantang 7-in-1 system
       env:
-        NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
-        NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
-        NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
-        NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
-        NAS_SFTP_PATH: ${{ secrets.NAS_SFTP_PATH }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }} # 確保程式能順利讀到排程事件狀態
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+          STOCK_FILES: ${{ vars.STOCK_FILES }}
+          STOCK_FILES_TEST: ${{ vars.STOCK_FILES_TEST }}
+          FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
+          SENDER_EMAIL: ${{ vars.SENDER_EMAIL }}
+          RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
+          EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
+          NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
+          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'          
+          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
+          NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
+          NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
       run: |
         python qiantang_7in1.py
 
