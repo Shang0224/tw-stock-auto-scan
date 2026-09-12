@@ -295,8 +295,11 @@ def run_seven_combine_filter(stock_list):
     print(f"📦 [備份啟動] 準備透過 utils 模組將 Excel 報告上傳至 NAS...\n file_name : {file_name}  prod_remote_path : {prod_remote_path}")
     
     archive_and_cleanup(os.path.abspath(file_name), prod_remote_path)
-  
-    send_qiantang_7in1_line_summary(dashboard_df, tw_time)
+
+    # 篩選出符合公式總數大於 3 個的強勢股再傳給 LINE
+    line_target_df = dashboard_df[dashboard_df["符合公式總數"] > 3] if not dashboard_df.empty else dashboard_df
+    
+    send_qiantang_7in1_line_summary(line_target_df, tw_time)
 
 if __name__ == "__main__":
     # 您可以自由替換或擴充這個台股代號清單（例如填入您觀察的所有個股）
