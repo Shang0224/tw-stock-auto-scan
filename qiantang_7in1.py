@@ -18,7 +18,8 @@ from utils import (
     save_multi_day_report,
     calculate_one_year_extremes,
     align_and_normalize_results,
-    get_fm_trading_days
+    get_fm_trading_days,
+    send_qiantang_7in1_line_summary
 )
 
 # 初始化 FinMind API (免代幣每日有限額，若有 Token 可自行傳入 api_token="...")
