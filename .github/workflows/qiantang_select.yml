@@ -57,4 +57,11 @@ jobs:
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python qiantang_7in1.py        
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 qiantang_7in1.py..."
+            #python test_scan.py
+            python qiantang_7in1.py #強制手動執行正式環境
+          else
+            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 stock_scanner.py..."
+            python qiantang_7in1.py
+          fi     
