@@ -18,7 +18,7 @@ def send_qiantang_7in1_line_summary(results, tw_time):
         message_text = f"📅 [錢塘潮7合1] {now_str}\n今日無符合條件之股票。"
     else:
         report = pd.DataFrame(results)
-        report = report.sort_values(by=['代號', '符合公式總數'], ascending=[True, False])
+        report = report.sort_values(by=['股票代號', '符合公式總數'], ascending=[True, False])
         short_report = report
         message_text = f"📅 [錢塘潮7合1] 掃描完成: {now_str}\n=== 精選名單 ===\n\n{short_report.to_string(index=False)}"
     
