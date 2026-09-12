@@ -2,6 +2,8 @@ import datetime
 import os
 import pandas as pd
 import yfinance as yf
+
+from datetime import datetime, timezone, timedelta
 from FinMind.data import DataLoader
 
 # 🌟 完美導入你專屬的 utils 程式庫工具
@@ -242,7 +244,11 @@ def run_seven_combine_filter(stock_list):
     # ==========================================
     # 4. 產生多頁籤 Excel 選股報告
     # ==========================================
-    file_name = f"錢塘潮選股報告_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+
+    # 取得精確的台灣時間 (UTC+8)
+    tz_tw = timezone(timedelta(hours=8))
+    tw_time = datetime.now(tz_tw)
+    file_name = f"錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
     with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
         # 第一頁：綜合儀表板
         if stock_dashboard:
@@ -270,7 +276,7 @@ def run_seven_combine_filter(stock_list):
 
     print(f"\n🎉 掃描完成！終極報告已成功匯出至：【{os.path.abspath(file_name)}】")
 
-    prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_7in1/{file_name}.xlsx"
+    prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_7in1/{file_name}"
     
     # 🌟 直接呼叫您原本在 utils 裡的 archive_and_cleanup 函數執行 NAS 上傳與清理
     print(f"📦 [備份啟動] 準備透過 utils 模組將 Excel 報告上傳至 NAS...\n file_name : {file_name}  prod_remote_path : {prod_remote_path}")
