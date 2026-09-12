@@ -12,6 +12,33 @@ from email.mime.text import MIMEText
 
 import pandas as pd
 
+import os
+import requests
+
+def send_line_broadcast(message):
+    """透過 LINE Messaging API 發送廣播訊息給所有加好友的用戶"""
+    token = os.getenv("LINE_ACCESS_TOKEN")
+    
+    if not token:
+        print("錯誤：找不到 LINE 的 Access Token (Secrets)")
+        return
+
+    url = "https://api.line.me/v2/bot/message/broadcast"       
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    payload = {
+        "messages": [{"type": "text", "text": message}]
+    }
+    
+    res = requests.post(url, headers=headers, json=payload)
+    if res.status_code == 200:
+        print("LINE 廣播訊息發送成功！")
+    else:
+        print(f"發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
+
+
 def send_qiantang_7in1_line_summary(results, tw_time):
     """【單一職責】處理 LINE 文字摘要發送，具備型態防呆、正確欄位排序與更清晰的排版。"""
     now_str = tw_time.strftime('%Y-%m-%d %H:%M')
@@ -40,23 +67,7 @@ def send_qiantang_7in1_line_summary(results, tw_time):
         )
     
     # 實際執行 LINE 發送與終端機日誌
-    send_line_message(message_text)
-    print(f"📢 [LINE 訊息已就緒]:\n{message_text}\n")
-
-def send_qiantang_7in1_line_summary_old(results, tw_time):
-    """【單一職責】純粹處理 LINE 的文字摘要發送。不管有沒有股票都要通知狀態。"""
-    now_str = tw_time.strftime('%Y-%m-%d %H:%M')
-    
-    if results.empty:
-        message_text = f"📅 [錢塘潮7合1] {now_str}\n今日無符合條件之股票。"
-    else:
-        report = pd.DataFrame(results)
-        report = report.sort_values(by=['股票代號', '符合公式總數'], ascending=[True, False])
-        short_report = report
-        message_text = f"📅 [錢塘潮7合1] 掃描完成: {now_str}\n=== 精選名單 ===\n\n{short_report.to_string(index=False)}"
-    
-    # 實際執行 LINE 發送 (依據你的實戰需求暫時註解或啟用)
-    send_line_message(message_text)
+    send_line_broadcast(message_text)
     print(f"📢 [LINE 訊息已就緒]:\n{message_text}\n")
 
 def send_line_summary(results, source_name, tw_time, status_col_name='策略狀態'):
