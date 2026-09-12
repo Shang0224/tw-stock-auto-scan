@@ -242,7 +242,7 @@ def run_seven_combine_filter(stock_list):
     # ==========================================
     # 4. 產生多頁籤 Excel 選股報告
     # ==========================================
-    file_name = f"錢塘潮選股報告_{datetime.datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"
+    file_name = f"錢塘潮選股報告_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
         # 第一頁：綜合儀表板
         if stock_dashboard:
