@@ -242,7 +242,7 @@ def run_seven_combine_filter(stock_list):
     # ==========================================
     # 4. 產生多頁籤 Excel 選股報告
     # ==========================================
-    file_name = f"錢塘潮選股報告_{today_str}.xlsx"
+    file_name = f"錢塘潮選股報告_{datetime.datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"
     with pd.ExcelWriter(file_name, engine="openpyxl") as writer:
         # 第一頁：綜合儀表板
         if stock_dashboard:
@@ -270,7 +270,7 @@ def run_seven_combine_filter(stock_list):
 
     print(f"\n🎉 掃描完成！終極報告已成功匯出至：【{os.path.abspath(file_name)}】")
 
-    prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_7in1/qiantang_7in1_report_{datetime.datetime.now()}.csv"
+    prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_7in1/{file_name}.xlsx"
     
     # 🌟 直接呼叫您原本在 utils 裡的 archive_and_cleanup 函數執行 NAS 上傳與清理
     print(f"📦 [備份啟動] 準備透過 utils 模組將 Excel 報告上傳至 NAS...\n file_name : {file_name}  prod_remote_path : {prod_remote_path}")
