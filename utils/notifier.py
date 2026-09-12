@@ -10,7 +10,40 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import pandas as pd
+
 def send_qiantang_7in1_line_summary(results, tw_time):
+    """【單一職責】處理 LINE 文字摘要發送，具備型態防呆、正確欄位排序與更清晰的排版。"""
+    now_str = tw_time.strftime('%Y-%m-%d %H:%M')
+    
+    # 1. 型態防呆：無論傳入的是 DataFrame、List 還是 None，統一轉換並檢查是否為空
+    if results is None:
+        df = pd.DataFrame()
+    elif isinstance(results, pd.DataFrame):
+        df = results
+    else:
+        df = pd.DataFrame(results)
+        
+    if df.empty:
+        message_text = f"📅 [錢塘潮7合1] {now_str}\n今日無符合條件之強勢股。"
+    else:
+        # 2. 欄位安全排序：將原本會引發 KeyError 的 '代號' 修正為與主程式一致的 '股票代號'
+        sort_keys = [col for col in ['股票代號', '符合公式總數'] if col in df.columns]
+        if sort_keys:
+            df = df.sort_values(by=sort_keys, ascending=[True, False] if len(sort_keys) > 1 else [False])
+        
+        # 3. 優化訊息排版，加入總檔數統計讓視覺更直觀
+        message_text = (
+            f"📅 [錢塘潮7合1] 掃描完成: {now_str}\n"
+            f"=== 高共振精選名單 (共 {len(df)} 檔) ===\n\n"
+            f"{df.to_string(index=False)}"
+        )
+    
+    # 實際執行 LINE 發送與終端機日誌
+    send_line_message(message_text)
+    print(f"📢 [LINE 訊息已就緒]:\n{message_text}\n")
+
+def send_qiantang_7in1_line_summary_old(results, tw_time):
     """【單一職責】純粹處理 LINE 的文字摘要發送。不管有沒有股票都要通知狀態。"""
     now_str = tw_time.strftime('%Y-%m-%d %H:%M')
     
