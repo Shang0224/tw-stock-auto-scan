@@ -273,7 +273,7 @@ def run_seven_combine_filter(stock_list):
     # 🌟 直接呼叫您原本在 utils 裡的 archive_and_cleanup 函數執行 NAS 上傳與清理
     print("📦 [備份啟動] 準備透過 utils 模組將 Excel 報告上傳至 NAS...")
 
-    prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_7in1/qiantang_7in1_report_{tw_time}.csv"
+    prod_remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_7in1/qiantang_7in1_report_{datetime.datetime.now()}.csv"
     archive_and_cleanup(file_name, prod_remote_path)
 
 if __name__ == "__main__":
