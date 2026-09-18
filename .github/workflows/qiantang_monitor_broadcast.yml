@@ -1,0 +1,40 @@
+name: 錢塘潮持股監控 - 全體廣播版
+
+on:
+  # 每日台灣時間 18:00 (UTC 10:00) 自動執行
+  schedule:
+    - cron: '0 10 * * 1-5'
+  # 支援 GitHub 網頁手動觸發
+  workflow_dispatch:
+
+jobs:
+  run-broadcast-monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 檢查程式碼庫
+        uses: actions/checkout@v3
+
+      - name: 設定 Python 環境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: 安裝依賴套件
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: 執行持股監控 (群發廣播模式)
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+          LINE_ACCESS_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
+          NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
+          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
+          NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
+          NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
+          NAS_SFTP_PATH: ${{ secrets.NAS_SFTP_PATH }}
+        run: |
+          echo "📡 執行全體廣播模式 (讀取 watch_list.csv)..."
+          python main_monitor.py
