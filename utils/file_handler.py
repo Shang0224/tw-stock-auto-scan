@@ -51,6 +51,20 @@ def process_monitor_stock_data(file_path):
         
     return processed_data
 
+def smart_read_csv(file_path):
+    # 測試清單：UTF-8 (現代標準), Big5 (台灣常見), UTF-8-SIG (Excel 專用)
+    encodings = ['utf-8', 'big5', 'utf-8-sig', 'cp950']
+    
+    for enc in encodings:
+        try:
+            df = pd.read_csv(file_path, encoding=enc)
+            print(f"✅ 成功使用 {enc} 編碼讀取檔案！")
+            return df
+        except UnicodeDecodeError:
+            continue
+    
+    print("❌ 找不到匹配的編碼，請檢查檔案格式。")
+    return None
 
 def align_and_normalize_results(collected_range_results, priority_keys=None):
   """將 collected_range_results 內的字典進行欄位聯集與對齊預處理，
