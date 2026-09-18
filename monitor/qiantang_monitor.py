@@ -20,22 +20,22 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     df['MA5'] = df['close'].rolling(5).mean()
     df['MA20'] = df['close'].rolling(20).mean()
     df['MA60'] = df['close'].rolling(60).mean()
-    df['Vol_MA5'] = df['volume'].rolling(5).mean()
-    df['Vol_MA20'] = df['volume'].rolling(20).mean()
+    df['Vol_MA5'] = df['Trading_Volume'].rolling(5).mean()
+    df['Vol_MA20'] = df['Trading_Volume'].rolling(20).mean()
 
     # K 棒型態指標
     df['K_body'] = abs(df['close'] - df['open'])
-    df['Upper_shadow'] = df['high'] - df[['close', 'open']].max(axis=1)
-    df['Lower_shadow'] = df[['close', 'open']].min(axis=1) - df['low']
+    df['Upper_shadow'] = df['max'] - df[['close', 'open']].max(axis=1)
+    df['Lower_shadow'] = df[['close', 'open']].min(axis=1) - df['min']
 
     today = df.iloc[-1]
     prev = df.iloc[-2]
 
     close = round(today['close'], 2)
     open_p = today['open']
-    high = today['high']
-    low = today['low']
-    volume = today['volume']
+    high = today['max']
+    low = today['min']
+    volume = today['Trading_Volume']
     
     # 算當前持股報酬率
     profit_pct = round(((close - cost_price) / cost_price) * 100, 2) if cost_price > 0 else 0.0
