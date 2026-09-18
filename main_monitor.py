@@ -24,11 +24,11 @@ def monitor_portfolio(user_id: str = None):
     
     # 1. 動態判定 CSV 檔名與 LINE 發送模式
     if user_id:
-        csv_file = f"watch_list_{user_id}.csv"
+        csv_file = f"data/watch_list_{user_id}.csv"
         is_broadcast = False
         mode_desc = f"個人專屬模式 [{user_id}]"
     else:
-        csv_file = "watch_list.csv"
+        csv_file = "data/watch_list.csv"
         is_broadcast = True
         mode_desc = "預設全體廣播模式"
 
