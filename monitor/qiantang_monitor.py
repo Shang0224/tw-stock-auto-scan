@@ -46,8 +46,11 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     # ======================================================================
     # 策略 1：【一柱清香】（高檔爆量長上影線 / 避雷針）
     # ======================================================================
-    # 條件：成交量暴漲 > 20日均量 2 倍，且上影線長度 > 實體 K 棒 1.5 倍，或高檔開高走極低長黑
-    is_high_position = close >= df['close'].rolling(60).max() * 0.9  # 近60日高檔區
+    # 條件：成交量暴漲 > 20日均量 2 倍，且上影線長度 > 實體 K 棒 1.5 倍，或高檔開高走極低長黑    
+    max_60_today = df['close'].rolling(60).max().iloc[-1] #取出當天滾動 60 日最大值單一數值
+    
+    is_high_position = close >= (max_60_today * 0.9)
+  
     cond_column_incense = (
         is_high_position 
         and (volume >= today['Vol_MA20'] * 2.0) 
