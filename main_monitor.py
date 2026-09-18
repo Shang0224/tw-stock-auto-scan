@@ -46,7 +46,7 @@ def monitor_portfolio(user_id: str = None):
     
     print(f"📋 [啟動 {mode_desc}] 開始監控 {csv_file} 內共 {len(portfolio_df)} 檔持股...")
 
-    stock_ids = portfolio_df['symbol'].astype(str).tolist()
+    stock_ids = portfolio_df['stock_id'].astype(str).tolist()
     
     # 3. 抓取 K 線數據
     start_date = (tw_time - timedelta(days=200)).strftime("%Y-%m-%d")
