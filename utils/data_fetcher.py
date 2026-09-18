@@ -7,6 +7,106 @@ import time
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
+def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """抓取 FinMind 還原 K 線資料 (taiwan_stock_price_adj)"""
+    all_data = []
+    print(f"📡 串聯抓取 {len(stock_ids)} 檔股票之還原 K 線資料...")
+    
+    for sid in stock_ids:
+        try:
+            df = dl.taiwan_stock_price_adj(stock_id=sid, start_date=start_date, end_date=end_date)
+            if df is None or df.empty:
+                df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+
+            if df is not None and not df.empty:
+                all_data.append(df)
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 還原 K 線失敗: {e}")
+            continue
+            
+    if not all_data:
+        return pd.DataFrame()
+        
+    return pd.concat(all_data, ignore_index=True)
+
+
+def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """抓取 FinMind 三大法人與融資融券籌碼資料"""
+    chip_records = []
+    print(f"📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
+
+    for sid in stock_ids:
+        try:
+            df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
+            df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
+
+            df_chip = pd.DataFrame()
+
+            if df_inst is not None and not df_inst.empty:
+                df_foreign = df_inst[df_inst['name'].str.contains('Foreign', case=False, na=False)]
+                df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
+                df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+
+                df_chip = pd.DataFrame({
+                    'foreign_net': df_foreign_net,
+                    'major_net': df_major_net
+                }).reset_index()
+
+            if df_margin is not None and not df_margin.empty:
+                df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
+                df_margin_sub.rename(columns={
+                    'MarginPurchaseTodayBalance': 'margin_balance',
+                    'ShortSaleTodayBalance': 'short_balance'
+                }, inplace=True)
+
+                if df_chip.empty:
+                    df_chip = df_margin_sub
+                else:
+                    df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
+
+            if not df_chip.empty:
+                df_chip['stock_id'] = sid
+                chip_records.append(df_chip)
+
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
+            continue
+
+    if chip_records:
+        return pd.concat(chip_records, ignore_index=True)
+    return pd.DataFrame()
+
+
+def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """
+    🌟 高階包裝函數：統一取得 FinMind 還原 K 線 + 籌碼資料並自動合併
+    """
+    # 1. 抓取 K 線
+    df_daily = fm_fetch_all_stocks(dl, stock_ids, start_date, end_date)
+    if df_daily.empty:
+        return pd.DataFrame()
+
+    # 2. 抓取籌碼
+    df_chips = fetch_finmind_chips(dl, stock_ids, start_date, end_date)
+
+    # 3. 合併資料
+    if not df_chips.empty:
+        all_df = pd.merge(df_daily, df_chips, on=['stock_id', 'date'], how='left')
+    else:
+        all_df = df_daily
+
+    # 4. 補齊策略所需的預設欄位 (避免 KeyError)
+    for col in ['margin_balance', 'short_balance', 'foreign_net', 'major_net', 'broker_diff']:
+        if col not in all_df.columns:
+            all_df[col] = 0
+        else:
+            all_df[col] = all_df[col].fillna(0)
+
+    return all_df
+
 def yf_fetch_monitor_stocks(monitor_stocks, days_before=365, days_after=548):
     """
     接收 monitor_stocks (字典列表)，針對每一筆資料的股票代號與觸發日期，
