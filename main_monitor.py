@@ -62,7 +62,7 @@ def monitor_portfolio(user_id: str = None):
     grouped = all_df.groupby('stock_id')
 
     for idx, row in portfolio_df.iterrows():
-        sid = str(row['symbol'])
+        sid = str(row['stock_id'])
         sname = row['name']
         cost_price = float(row.get('cost_price', 0))
 
@@ -72,7 +72,7 @@ def monitor_portfolio(user_id: str = None):
         df_single = grouped.get_group(sid).sort_values('date')
         
         # 執行錢塘潮轉空/出貨/換手監控
-        is_hit, info = st_qiantang_sell_monitor(df_single, cost_price=cost_price)
+        is_hit, info = mon_qiantang_sell_monitor(df_single, cost_price=cost_price)
 
         if is_hit:
             info['股票名稱'] = sname
