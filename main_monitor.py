@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime, timezone, timedelta
 
 from utils import (
+    smart_read_csv,
     yf_fetch_all_stocks,
     send_line_message,       # 單推指定用戶 (Push)
     send_line_broadcast,     # 廣播群發 (Broadcast)
@@ -37,7 +38,12 @@ def monitor_portfolio(user_id: str = None):
         return
 
     # 2. 讀取持股清單與成本價
-    portfolio_df = pd.read_csv(csv_file)
+    portfolio_df = smart_read_csv(csv_file)
+
+    if portfolio_df is None or portfolio_df.empty:
+        print(f"❌ 讀取 {csv_file} 失敗或檔案內容為空！")
+        return
+    
     print(f"📋 [啟動 {mode_desc}] 開始監控 {csv_file} 內共 {len(portfolio_df)} 檔持股...")
 
     stock_ids = portfolio_df['symbol'].astype(str).tolist()
