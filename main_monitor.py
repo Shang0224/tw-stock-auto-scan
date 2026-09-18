@@ -38,7 +38,7 @@ def monitor_portfolio(user_id: str = None):
         return
 
     print(f"📋 [啟動 {mode_desc}] 開始監控 {csv_file} 內共 {len(portfolio_df)} 檔持股...")
-    stock_ids = portfolio_df['symbol'].astype(str).tolist()
+    stock_ids = portfolio_df['stock_id'].astype(str).tolist()
     
     # 3. 取得 FinMind DataLoader
     stock_name_dict, dl = get_stock_name_dict()
