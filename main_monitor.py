@@ -57,7 +57,7 @@ def monitor_portfolio(user_id: str = None):
     grouped = all_df.groupby('stock_id')
 
     for idx, row in portfolio_df.iterrows():
-        sid = str(row['symbol'])
+        sid = str(row['stock_id'])
         sname = row.get('name', stock_name_dict.get(sid, "未知"))
         cost_price = float(row.get('cost_price', 0))
 
