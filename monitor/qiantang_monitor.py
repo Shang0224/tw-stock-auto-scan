@@ -14,7 +14,7 @@ def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
     if len(df_single) < 20: return False, {}
     today = df_single.iloc[-1]
     
-    if today.get('volume', 0) < profile.get('min_vol', 1000):
+    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
         return False, {}
         
     high, low, close, open_p = today['max'], today['min'], today['close'], today['open']
@@ -23,8 +23,8 @@ def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
     
     upper_shadow = high - max(open_p, close)
     is_high_shadow = (upper_shadow / total_range) >= 0.50
-    vol_ma5 = df_single['volume'].iloc[-6:-1].mean()
-    is_vol_burst = today['volume'] > (vol_ma5 * 2.0)
+    vol_ma5 = df_single['Trading_Volume'].iloc[-6:-1].mean()
+    is_vol_burst = today['Trading_Volume'] > (vol_ma5 * 2.0)
     
     is_hit = is_high_shadow and is_vol_burst
     info = {
@@ -40,12 +40,12 @@ def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
     if len(df_single) < 20: return False, {}
     today, prev = df_single.iloc[-1], df_single.iloc[-2]
     
-    if today.get('volume', 0) < profile.get('min_vol', 1000):
+    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
         return False, {}
 
     is_black_k = today['close'] < today['open']
-    is_engulf = (today['open'] >= prev['close']) and (today['close'] < prev['low'])
-    is_high_vol = today['volume'] > df_single['volume'].iloc[-6:-1].mean() * 1.5
+    is_engulf = (today['open'] >= prev['close']) and (today['close'] < prev['min'])
+    is_high_vol = today['Trading_Volume'] > df_single['Trading_Volume'].iloc[-6:-1].mean() * 1.5
     
     is_hit = is_black_k and is_engulf and is_high_vol
     info = {
@@ -62,7 +62,7 @@ def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict):
     today = df_single.iloc[-1]
     
     surge_mult = profile.get('surge_mult', 1.0)
-    vol_burst = today.get('volume', 0) > (df_single['volume'].iloc[-20:-1].max() * 0.9)
+    vol_burst = today.get('Trading_Volume', 0) > (df_single['Trading_Volume'].iloc[-20:-1].max() * 0.9)
     pct_change = abs(today['close'] - today['open']) / today['open']
     is_stagnant = pct_change < (0.01 * surge_mult)
     
@@ -103,7 +103,7 @@ def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
     
     ma20 = df_single['close'].iloc[-20:].mean()
     is_break_ma20 = (df_single['close'].iloc[-2] >= ma20) and (today['close'] < ma20)
-    is_heavy_vol = today.get('volume', 0) > profile.get('min_vol', 1000)
+    is_heavy_vol = today.get('Trading_Volume', 0) > profile.get('min_vol', 1000)
     
     is_hit = is_break_ma20 and is_heavy_vol
     info = {
