@@ -36,7 +36,7 @@ MONITOR_MAP = {
     mon_qiantang_kd_dead_cross: True,
 
     # --- 未來自訂賣訊 ---
-    mon_custom_ma_cross: True,
+    #mon_custom_ma_cross: True,
 }
 
 # 動態匯出目前啟用的 Monitor 函數清單
