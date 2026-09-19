@@ -271,10 +271,3 @@ def parse_stock_ids(files_env):
             print(f"❌ 讀取 {file} 失敗: {e}")
     return list(set(stock_ids))
 
-
-def get_stock_name_dict():
-    """獲取全市場基本資訊名稱字典"""
-    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")    
-    dl = DataLoader(token=finmindtoken)
-    df_info = dl.taiwan_stock_info()
-    return dict(zip(df_info['stock_id'], df_info['stock_name'])), dl
