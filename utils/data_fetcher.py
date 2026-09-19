@@ -77,9 +77,9 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
                 chip_records.append(df_chip)
 
                 # 🌟 印出當前股票的籌碼 DataFrame 內容
-                print(f"\n📊 --- 股票 {sid} 籌碼資料 ---")
-                print(df_chip.to_string(index=False))  # to_string(index=False) 可隱藏預設的索引欄位，讓排版更整齊
-                print("-" * 40)
+                #print(f"\n📊 --- 股票 {sid} 籌碼資料 ---")
+                #print(df_chip.to_string(index=False))  # to_string(index=False) 可隱藏預設的索引欄位，讓排版更整齊
+                #print("-" * 40)
 
             time.sleep(0.3)
 
