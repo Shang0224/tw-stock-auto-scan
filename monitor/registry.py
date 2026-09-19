@@ -14,9 +14,9 @@ from monitor.qiantang_monitor import (
 )
 
 # 2. 匯入自訂賣訊
-from monitor.custom_monitor import (
-    mon_custom_ma_cross,
-)
+#from monitor.custom_monitor import (
+#    mon_custom_ma_cross,
+#)
 
 # ==========================================
 # Monitor 總開關字典 (True: 啟用, False: 停用)
