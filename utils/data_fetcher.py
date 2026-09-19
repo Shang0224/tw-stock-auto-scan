@@ -7,6 +7,13 @@ import time
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
+def get_stock_name_dict():
+    """獲取全市場基本資訊名稱字典"""
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")    
+    dl = DataLoader(token=finmindtoken)
+    df_info = dl.taiwan_stock_info()
+    return dict(zip(df_info['stock_id'], df_info['stock_name'])), dl
+
 def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 還原 K 線資料 (taiwan_stock_price_adj)"""
     all_data = []
