@@ -13,10 +13,10 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     """
     
     # 🌟 印出當前股票代號與最新 5 筆資料
-    stock_id = df_single['stock_id'].iloc[-1] if 'stock_id' in df_single.columns else '未知'
-    print(f"\n🔍 [DEBUG] mon_qiantang_sell_monitor 檢視股票: {stock_id} (最新 5 筆)")
-    print(df_single.tail(5).to_string(index=False))
-    print("=" * 60)
+    #stock_id = df_single['stock_id'].iloc[-1] if 'stock_id' in df_single.columns else '未知'
+    #print(f"\n🔍 [DEBUG] mon_qiantang_sell_monitor 檢視股票: {stock_id} (最新 5 筆)")
+    #print(df_single.tail(5).to_string(index=False))
+    #print("=" * 60)
     
     if df_single is None or len(df_single) < 60:
         return False, {}
@@ -38,6 +38,15 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     today = df.iloc[-1]
     prev = df.iloc[-2]
 
+    # 取得指定欄位數值（若不存在則補 0 或 'N/A'）
+    sid = today.get('stock_id', 'N/A')
+    foreign_net = today.get('foreign_net', 0)
+    major_net = today.get('major_net', 0)
+    broker_diff = today.get('broker_diff', 0)
+
+    # 🌟 印出指定欄位內容
+    print(f"📌 [籌碼檢視] 股票: {sid} | 外資買賣超: {foreign_net} | 主力買賣超: {major_net} | 買賣家數差: {broker_diff}")
+    
     close = round(today['close'], 2)
     open_p = today['open']
     high = today['max']
