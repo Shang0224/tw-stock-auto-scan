@@ -67,8 +67,8 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     trust_sell = today.get('investment_trust_net', 0) < 0
     broker_diff_positive = today.get('broker_diff', 0) > 0  # 買賣家數差為正表示籌碼分散到散戶
 
-    print( "---------------------------------------\n")
-    print(f "foreign_sell : {foreign_sell} | trust_sell : {trust_sell} | broker_diff_positive : {broker_diff_positive}")
+    print("---------------------------------------\n")
+    print(f"foreign_sell : {foreign_sell} | trust_sell : {trust_sell} | broker_diff_positive : {broker_diff_positive}")
 
     
     cond_fairy_flowers = is_high_position and foreign_sell and trust_sell and broker_diff_positive
