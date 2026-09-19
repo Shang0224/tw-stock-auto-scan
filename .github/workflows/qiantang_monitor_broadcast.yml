@@ -28,7 +28,7 @@ jobs:
 
       - name: 執行持股監控 (群發廣播模式)
         env:
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+          FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
           LINE_ACCESS_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
