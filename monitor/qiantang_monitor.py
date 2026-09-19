@@ -11,6 +11,13 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     3. 打鐘下課（跌破關鍵防守線/月線失守）
     4. 中途換手 vs 出貨判定
     """
+    
+    # 🌟 印出當前股票代號與最新 5 筆資料
+    stock_id = df_single['stock_id'].iloc[-1] if 'stock_id' in df_single.columns else '未知'
+    print(f"\n🔍 [DEBUG] mon_qiantang_sell_monitor 檢視股票: {stock_id} (最新 5 筆)")
+    print(df_single.tail(5).to_string(index=False))
+    print("=" * 60)
+    
     if df_single is None or len(df_single) < 60:
         return False, {}
 
