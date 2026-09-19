@@ -37,6 +37,9 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
         
     return pd.concat(all_data, ignore_index=True)
 
+import time
+import pandas as pd
+
 def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人、融資融券與分點買賣家數差資料"""
     chip_records = []
@@ -72,18 +75,18 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
                 else:
                     df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
 
-            # 2. 嘗試抓取個股分點明細計算買賣家數差 (broker_diff)
+            # 2. 嘗試抓取個股分點日報計算買賣家數差 (broker_diff)
             df_chip['broker_diff'] = 0  # 先預設為 0
             try:
-                # 呼叫分點買賣明細 API
-                df_broker = dl.taiwan_stock_broker_trading_detail(stock_id=sid, start_date=start_date, end_date=end_date)
+                # 🌟 正確呼叫分點日報 API: taiwan_stock_trading_daily_report
+                df_broker = dl.taiwan_stock_trading_daily_report(stock_id=sid, start_date=start_date, end_date=end_date)
                 
                 if df_broker is not None and not df_broker.empty:
                     # 依日期計算：(有買進的分點數) - (有賣出的分點數)
                     broker_diff_list = []
                     for dt, group in df_broker.groupby('date'):
-                        buy_brokers = (group['buy_volume'] > 0).sum()
-                        sell_brokers = (group['sell_volume'] > 0).sum()
+                        buy_brokers = (group['buy_price'] > 0).sum() if 'buy_price' in group.columns else (group['buy'] > 0).sum()
+                        sell_brokers = (group['sell_price'] > 0).sum() if 'sell_price' in group.columns else (group['sell'] > 0).sum()
                         diff = buy_brokers - sell_brokers
                         broker_diff_list.append({'date': dt, 'broker_diff': diff})
 
@@ -94,11 +97,11 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
                     df_chip = pd.merge(df_chip, df_broker_diff, on='date', how='left')
                     df_chip['broker_diff'] = df_chip['broker_diff'].fillna(0)
                 else:
-                    print(f"⚠️ [Fallback] 股票 {sid} 無分點明細資料 (可能資料未更新)，'broker_diff' 自動補 0")
+                    print(f"⚠️ [Fallback] 股票 {sid} 無分點日報資料 (可能資料未更新或權限限制)，'broker_diff' 自動補 0")
 
             except Exception as e_broker:
                 # 📢 觸發 Fallback 時明確輸出失敗原因
-                print(f"⚠️ [Fallback 觸發] 股票 {sid} 抓取分點資料失敗 (原因: {e_broker})，'broker_diff' 自動降級填補 0")
+                print(f"⚠️ [Fallback 觸發] 股票 {sid} 抓取分點日報失敗 (原因: {e_broker})，'broker_diff' 自動降級填補 0")
 
             # 3. 彙整單檔籌碼紀錄
             if not df_chip.empty:
