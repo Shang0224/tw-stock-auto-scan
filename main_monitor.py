@@ -8,9 +8,11 @@ from utils import (
     send_line_message,
     send_line_broadcast,
     get_stock_name_dict,
-    fm_get_complete_stock_data  # 🌟 更新函式名稱
+    fm_get_complete_stock_data
 )
-from monitor.qiantang_monitor import mon_qiantang_sell_monitor
+# 🌟 匯入新架構的監控執行引擎
+from monitor.engine import scan_sell_signals
+
 
 def monitor_portfolio(user_id: str = None):
     tz_tw = timezone(timedelta(hours=8))
@@ -46,53 +48,32 @@ def monitor_portfolio(user_id: str = None):
     start_date = (tw_time - timedelta(days=200)).strftime("%Y-%m-%d")
     end_date = date_str
     
-    # 🌟 4. 呼叫新的包含前綴函式
+    # 4. 抓取股票歷史與籌碼資料
     all_df = fm_get_complete_stock_data(dl, stock_ids, start_date, end_date)
-    if all_df.empty:
+    if all_df is None or all_df.empty:
         print("⚠️ 無法取得股票歷史與籌碼資料")
         return
 
-    # 5. 逐檔運算技術指標並執行錢塘潮 11 大防禦賣訊監控
-    warnings = []
-    grouped = all_df.groupby('stock_id')
-
-    for idx, row in portfolio_df.iterrows():
-        sid = str(row['stock_id'])
-        sname = row.get('name', stock_name_dict.get(sid, "未知"))
-        cost_price = float(row.get('cost_price', 0))
-
-        if sid not in grouped.groups:
-            continue
-
-        df_single = grouped.get_group(sid).sort_values('date').copy()
-
-        # 輕鬆線與指標試算
-        df_single['easy_line'] = df_single['close'].rolling(20).mean()
-        df_single['easy_b'] = df_single['close'].ewm(span=5).mean()
-        df_single['easy_s'] = df_single['close'].ewm(span=20).mean()
-
-        # 9日 KD 試算
-        low_min = df_single['min'].rolling(9).min()
-        high_max = df_single['max'].rolling(9).max()
-        rsv = (df_single['close'] - low_min) / (high_max - low_min) * 100
-        df_single['K'] = rsv.ewm(com=2).mean()
-        df_single['D'] = df_single['K'].ewm(com=2).mean()
-
-        # 執行 11 大防禦賣訊監控策略
-        is_hit, info = mon_qiantang_sell_monitor(df_single, cost_price=cost_price)
-
-        if is_hit:
-            info['股票名稱'] = sname
-            warnings.append(info)
+    # 🌟 5. 執行持股賣訊防禦監控引擎
+    # （指標計算如 KD、輕鬆線與多策略檢驗已在 monitor 引擎內部自動完成）
+    warnings = scan_sell_signals(
+        portfolio_df=portfolio_df,
+        all_df=all_df
+    )
 
     # 6. 派發 LINE 通知
     if warnings:
-        msg = f"🌊【錢塘潮持股健康檢查警報】{date_str}\n"
+        msg = f"🌊【持股健康檢查警報】{date_str}\n"
         msg += f"偵測到 {len(warnings)} 檔持股出現轉空/出貨訊號：\n\n"
         
         for w in warnings:
-            msg += f"📌 {w['代號']} {w['股票名稱']}\n"
-            msg += f"  • 當前價: ${w['收盤']} (成本: ${w['成本價']} | 報酬: {w['當前報酬']})\n"
+            sname = w.get('stock_name', stock_name_dict.get(str(w['stock_id']), "未知"))
+            cost_p = w.get('cost_price', 'N/A')
+            close_p = w.get('close', 'N/A')
+            ret_str = w.get('return_pct', 'N/A')
+            
+            msg += f"📌 {w['stock_id']} {sname}\n"
+            msg += f"  • 當前價: ${close_p} (成本: ${cost_p} | 報酬: {ret_str})\n"
             msg += f"  • 觸發賣訊: {w['轉空賣訊']}\n"
             msg += f"  • 操作建議: {w['操作建議']}\n"
             msg += "----------------------------------\n"
@@ -104,10 +85,11 @@ def monitor_portfolio(user_id: str = None):
         else:
             send_line_message(user_id, msg)
     else:
-        no_hit_msg = f"📅【錢塘潮持股健康檢查】{date_str}\n今日持股未觸發一柱清香、天女散花或打鐘下課等 11 大轉空賣訊。"
+        no_hit_msg = f"📅【持股健康檢查】{date_str}\n今日持股狀態良好，未觸發任何防禦離場或轉空賣訊。"
         print(f"✅ {no_hit_msg}")
         if is_broadcast:
             send_line_broadcast(no_hit_msg)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
