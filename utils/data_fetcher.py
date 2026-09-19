@@ -37,8 +37,9 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
         
     return pd.concat(all_data, ignore_index=True)
 
-def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+def fetch_finmind_chips_suspend(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人、融資融券與分點買賣家數差資料"""
+    #沒有抓分點買賣資料的權限, 故只能停用
     chip_records = []
     print(f"📡 正在透過 FinMind 抓取籌碼、信用交易與分點資料...")
 
@@ -112,7 +113,7 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
     return pd.DataFrame()
 
 
-def fetch_finmind_chips_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人與融資融券籌碼資料"""
     chip_records = []
     print(f"📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
