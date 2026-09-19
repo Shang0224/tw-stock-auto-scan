@@ -37,8 +37,86 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
         
     return pd.concat(all_data, ignore_index=True)
 
-
 def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """抓取 FinMind 三大法人、融資融券與分點買賣家數差資料"""
+    chip_records = []
+    print(f"📡 正在透過 FinMind 抓取籌碼、信用交易與分點資料...")
+
+    for sid in stock_ids:
+        try:
+            # 1. 抓取三大法人與融資融券
+            df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
+            df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
+
+            df_chip = pd.DataFrame()
+
+            if df_inst is not None and not df_inst.empty:
+                df_foreign = df_inst[df_inst['name'].str.contains('Foreign', case=False, na=False)]
+                df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
+                df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+
+                df_chip = pd.DataFrame({
+                    'foreign_net': df_foreign_net,
+                    'major_net': df_major_net
+                }).reset_index()
+
+            if df_margin is not None and not df_margin.empty:
+                df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
+                df_margin_sub.rename(columns={
+                    'MarginPurchaseTodayBalance': 'margin_balance',
+                    'ShortSaleTodayBalance': 'short_balance'
+                }, inplace=True)
+
+                if df_chip.empty:
+                    df_chip = df_margin_sub
+                else:
+                    df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
+
+            # 2. 嘗試抓取個股分點明細計算買賣家數差 (broker_diff)
+            df_chip['broker_diff'] = 0  # 先預設為 0
+            try:
+                # 呼叫分點買賣明細 API
+                df_broker = dl.taiwan_stock_broker_trading_detail(stock_id=sid, start_date=start_date, end_date=end_date)
+                
+                if df_broker is not None and not df_broker.empty:
+                    # 依日期計算：(有買進的分點數) - (有賣出的分點數)
+                    broker_diff_list = []
+                    for dt, group in df_broker.groupby('date'):
+                        buy_brokers = (group['buy_volume'] > 0).sum()
+                        sell_brokers = (group['sell_volume'] > 0).sum()
+                        diff = buy_brokers - sell_brokers
+                        broker_diff_list.append({'date': dt, 'broker_diff': diff})
+
+                    df_broker_diff = pd.DataFrame(broker_diff_list)
+                    
+                    # 將計算出的 broker_diff 更新回 df_chip
+                    df_chip.drop(columns=['broker_diff'], inplace=True)
+                    df_chip = pd.merge(df_chip, df_broker_diff, on='date', how='left')
+                    df_chip['broker_diff'] = df_chip['broker_diff'].fillna(0)
+                else:
+                    print(f"⚠️ [Fallback] 股票 {sid} 無分點明細資料 (可能資料未更新)，'broker_diff' 自動補 0")
+
+            except Exception as e_broker:
+                # 📢 觸發 Fallback 時明確輸出失敗原因
+                print(f"⚠️ [Fallback 觸發] 股票 {sid} 抓取分點資料失敗 (原因: {e_broker})，'broker_diff' 自動降級填補 0")
+
+            # 3. 彙整單檔籌碼紀錄
+            if not df_chip.empty:
+                df_chip['stock_id'] = sid
+                chip_records.append(df_chip)
+
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
+            continue
+
+    if chip_records:
+        return pd.concat(chip_records, ignore_index=True)
+    return pd.DataFrame()
+
+
+def fetch_finmind_chips_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人與融資融券籌碼資料"""
     chip_records = []
     print(f"📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
