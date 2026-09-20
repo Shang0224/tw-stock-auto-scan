@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
 
-import pandas as pd
-import numpy as np
-
+from config import DEBUG_VERBOSE
 
 # ==========================================
 # 錢塘潮 11 大防禦賣訊
