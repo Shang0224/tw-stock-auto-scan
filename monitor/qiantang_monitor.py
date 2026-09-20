@@ -357,21 +357,78 @@ def mon_qiantang_he_shi(df_single: pd.DataFrame):
     return is_hit, info
 
 
-def mon_qiantang_ni_diu_wo_jian(df_single: pd.DataFrame, profile: dict):
-    """你丟我撿 (主力持續派發/散戶接盤)"""
-    if len(df_single) < 5: return False, {}
-    
-    if 'major_net' in df_single.columns:
-        recent_3_major = df_single['major_net'].iloc[-3:]
-        is_hit = (recent_3_major < 0).all()
-    else:
-        is_hit = False
-        
+import pandas as pd
+
+def mon_qiantang_ni_diu_wo_jian(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """你丟我撿 (主力持續派發 / 散戶接盤)
+
+    核心邏輯：
+    1. 技術面過濾：(輕鬆買盤 A < 輕鬆賣盤 B) 或 (KD指標 K > D，高檔鈍化/背離)
+    2. 籌碼面派發：(主力買賣超 <= 主力賣超門檻 AND 外資買賣超 <= 外資賣超門檻) OR (分點買賣家數差 <= 家數差門檻)
+    """
+    profile = profile or {}
+
+    # 至少需要 5 筆歷史資料
+    if len(df_single) < 5:
+        if verbose:
+            print(f"❌ [你丟我撿] 資料筆數不足 5 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+
+    # --- 1. 從 Profile 讀取籌碼門檻 (未指定則使用預設值) ---
+    major_sell_limit = profile.get('major_sell', -500)  # 主力賣超張數門檻 (負值)
+    foreign_sell_limit = profile.get('foreign_sell', -500)  # 外資賣超張數門檻 (負值)
+    broker_diff_limit = profile.get('broker_diff', -20)  # 家數差門檻 (負數代表籌碼分散/散戶接盤)
+
+    # --- 2. 提取技術面與籌碼面指標數據 ---
+    easy_a = today.get('easy_buy', 0)       # 輕鬆買盤 A
+    easy_b = today.get('easy_sell', 0)      # 輕鬆賣盤 B
+    k_val = today.get('K', 0)
+    d_val = today.get('D', 0)
+
+    major_net = today.get('major_net', 0)      # 主力買賣超 (張)
+    foreign_net = today.get('foreign_net', 0)  # 外資買賣超 (張)
+    broker_diff = today.get('broker_diff', 0)  # 分點買賣家數差 (買家數 - 賣家數)
+
+    # --- 3. 條件邏輯判斷 ---
+    # 技術面條件：輕鬆買盤 < 輕鬆賣盤 OR K > D
+    cond_tech_easy = easy_a < easy_b if ('easy_buy' in df_single.columns and 'easy_sell' in df_single.columns) else True
+    cond_tech_kd = k_val > d_val if ('K' in df_single.columns and 'D' in df_single.columns) else True
+    cond_tech = cond_tech_easy or cond_tech_kd
+
+    # 籌碼面條件：(主力 <= 門檻 AND 外資 <= 門檻) OR 家數差 <= 門檻
+    cond_chip_main = (major_net <= major_sell_limit) and (foreign_net <= foreign_sell_limit)
+    cond_chip_broker = (broker_diff <= broker_diff_limit) if 'broker_diff' in df_single.columns else False
+    cond_chip = cond_chip_main or cond_chip_broker
+
+    # 最終綜合判斷
+    is_hit = cond_tech and cond_chip
+
+    # --- 4. 🔔 詳細數據輸出區塊 (受 verbose 控制) ---
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        print("\n" + "=" * 55)
+        print(f"🔔 [你丟我撿 訊號檢測分析] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond_tech_easy else '✕' }] 1. 輕鬆買賣指標 : A(買) {easy_a:.1f} < B(賣) {easy_b:.1f}")
+        print(f" [{ '✓' if cond_tech_kd else '✕' }] 2. KD 指標狀態   : K值 {k_val:.1f} > D值 {d_val:.1f}")
+        print(f" [{ '✓' if cond_chip_main else '✕' }] 3. 法人賣超門檻 : 主力 {major_net:.0f} (門檻 {major_sell_limit}) & 外資 {foreign_net:.0f} (門檻 {foreign_sell_limit})")
+        print(f" [{ '✓' if cond_chip_broker else '✕' }] 4. 家數差分散   : 買賣家數差 {broker_diff:.0f} <= 門檻 {broker_diff_limit}")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發你丟我撿]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
     info = {
         '轉空賣訊': '你丟我撿',
-        '操作建議': '主力籌碼連續多日流出，呈現出貨格局，反彈宜賣不宜買。'
+        '操作建議': f'主力與外資籌碼持續派發流出(當日主力 {major_net:.0f} 張 / 外資 {foreign_net:.0f} 張)，散戶接盤呈現出貨格局，宜逢高減碼離場。'
     } if is_hit else {}
-    
+
     return is_hit, info
 
 
