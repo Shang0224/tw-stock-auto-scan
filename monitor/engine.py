@@ -39,15 +39,6 @@ def scan_sell_signals(
 ) -> list:
     """
     持股賣訊掃描執行引擎
-    
-    Parameters:
-        portfolio_df (pd.DataFrame): 使用者持股清單 (包含 stock_id, cost_price, profile 等欄位)
-        all_df (pd.DataFrame): 包含歷史價量與籌碼之完整資料庫
-        monitor_list (list, optional): 要執行的 Monitor 函數清單。若為 None，預設載入 ACTIVE_MONITORS。
-        param_profiles (dict, optional): 族群參數對照表。預設載入 PARAM_PROFILES。
-        
-    Returns:
-        list: 觸發警告的持股訊息清單
     """
     if monitor_list is None:
         monitor_list = ACTIVE_MONITORS
@@ -65,9 +56,20 @@ def scan_sell_signals(
         # 成本價與當前報酬率計算
         cost_price = float(row.get('cost_price', 0)) if pd.notnull(row.get('cost_price')) else 0.0
         
-        # 取得設定的族群 profile 參數
-        profile_key = row.get('profile', 'default')
-        profile = param_profiles.get(profile_key, param_profiles.get('default', {}))
+        # 1. 讀取 CSV 內的 category 欄位 (移除首尾空白)
+        category = str(row.get('category', '')).strip()
+
+        # 2. 直接拿 category 查表，若找不到則拋出 ValueError 中斷並警示
+        if category not in param_profiles:
+            valid_keys = list(param_profiles.keys())
+            raise ValueError(
+                f"❌ [設定檔錯誤] 股票 {sid} ({sname}) 的類別 '{category}' 未定義於 PARAM_PROFILES 中！"
+                f"\n可用的類別有：{valid_keys}"
+            )
+
+        # 取得 profile 設定
+        profile = param_profiles[category].copy()
+        profile['category'] = category
 
         # 檢查該檔股票是否有歷史資料
         if sid not in grouped.groups:
@@ -96,10 +98,10 @@ def scan_sell_signals(
             # 依據函數簽名選擇性傳入 profile 參數
             if 'profile' in sig_params:
                 is_hit, info = monitor_func(df_single, profile=profile)
-                print(f"profile : {profile}")
+                print(f"[{sid} {sname}] profile : {profile}")
             else:
                 is_hit, info = monitor_func(df_single)
-                print("no profile")
+                print(f"[{sid} {sname}] no profile")
 
             if is_hit:
                 # 補全警報相關基礎資訊
