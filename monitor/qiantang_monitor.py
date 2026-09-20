@@ -321,17 +321,19 @@ def mon_qiantang_da_zhong_xia_ke(df_single: pd.DataFrame, profile: dict = None):
     )
 
     # --- 🔍 參數細節詳細列印 Debug 區塊 ---
-    print(f"\n  🔍 === [打鐘下課 參數檢查儀表板] ===")
-    print(f"  • 套用族群 Profile  : {profile_category} (原始 major_sell: {base_major_sell})")
-    print(f"  • 動態賣超張數門檻 : <= {major_sell_limit} 張")
-    print(f"  • 今日收盤 / 輕鬆線 : 收盤 ${close:.2f} | 今日輕鬆線 ${easy_line_today:.2f} | 昨日輕鬆線 ${easy_line_yesterday:.2f}")
-    print(f"  • 籌碼數據現況     : 外資買賣超 {foreign_net} 張 | 主力買賣超 {major_net} 張 | 家數差 {broker_diff}")
-    print(f"  • 條件 1 (站上輕鬆線): {cond1_above_easy} ({'PASS' if cond1_above_easy else 'FAIL'})")
-    print(f"  • 條件 2 (輕鬆線下彎): {cond2_easy_down} ({'PASS' if cond2_easy_down else 'FAIL'})")
-    print(f"  • 條件 3 (家數差<=-30): {cond3_broker_diff} ({'PASS' if cond3_broker_diff else 'FAIL'})")
-    print(f"  • 條件 4 (外資大賣)  : {cond4_foreign_sell} ({'PASS' if cond4_foreign_sell else 'FAIL'} -> {foreign_net} <= {major_sell_limit})")
-    print(f"  • 條件 5 (主力大賣)  : {cond5_major_sell} ({'PASS' if cond5_major_sell else 'FAIL'} -> {major_net} <= {major_sell_limit})")
-    print(f"  👉 最終觸發結果     : {'🚨 觸發賣訊' if is_hit else '✅ 安全過關'}\n")
+    # 7. 🔔 詳細數據輸出區塊 (受到 verbose 開關控制)
+    if verbose:
+        print(f"\n  🔍 === [打鐘下課 參數檢查儀表板] ===")
+        print(f"  • 套用族群 Profile  : {profile_category} (原始 major_sell: {base_major_sell})")
+        print(f"  • 動態賣超張數門檻 : <= {major_sell_limit} 張")
+        print(f"  • 今日收盤 / 輕鬆線 : 收盤 ${close:.2f} | 今日輕鬆線 ${easy_line_today:.2f} | 昨日輕鬆線 ${easy_line_yesterday:.2f}")
+        print(f"  • 籌碼數據現況     : 外資買賣超 {foreign_net} 張 | 主力買賣超 {major_net} 張 | 家數差 {broker_diff}")
+        print(f"  • 條件 1 (站上輕鬆線): {cond1_above_easy} ({'PASS' if cond1_above_easy else 'FAIL'})")
+        print(f"  • 條件 2 (輕鬆線下彎): {cond2_easy_down} ({'PASS' if cond2_easy_down else 'FAIL'})")
+        print(f"  • 條件 3 (家數差<=-30): {cond3_broker_diff} ({'PASS' if cond3_broker_diff else 'FAIL'})")
+        print(f"  • 條件 4 (外資大賣)  : {cond4_foreign_sell} ({'PASS' if cond4_foreign_sell else 'FAIL'} -> {foreign_net} <= {major_sell_limit})")
+        print(f"  • 條件 5 (主力大賣)  : {cond5_major_sell} ({'PASS' if cond5_major_sell else 'FAIL'} -> {major_net} <= {major_sell_limit})")
+        print(f"  👉 最終觸發結果     : {'🚨 觸發賣訊' if is_hit else '✅ 安全過關'}\n")
 
     info = {
         '轉空賣訊': '打鐘下課',
