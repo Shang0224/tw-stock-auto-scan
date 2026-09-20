@@ -98,14 +98,6 @@ def scan_sell_signals(
             # 依據函數簽名選擇性傳入 profile 參數
             if 'profile' in sig_params:
                 is_hit, info = monitor_func(df_single, profile=profile)
-                print(f"[{sid} {sname}] profile : {profile}")
-            else:
-                is_hit, info = monitor_func(df_single)
-                print(f"[{sid} {sname}] no profile")
-
-            # 依據函數簽名選擇性傳入 profile 參數
-            if 'profile' in sig_params:
-                is_hit, info = monitor_func(df_single, profile=profile)
                 print(f"[{sid} {sname}] [{monitor_func.__name__}] profile : {profile}")
             else:
                 is_hit, info = monitor_func(df_single)
