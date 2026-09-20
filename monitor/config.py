@@ -1,6 +1,6 @@
 # monitor/config.py
 
-DEFAULT_VERBOSE = True
+DEBUG_VERBOSE = True
 
 PARAM_PROFILES = {
     'TW50': {
