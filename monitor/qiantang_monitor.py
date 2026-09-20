@@ -128,7 +128,7 @@ def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None
 def mon_qiantang_tian_nv_san_hua(
     df_single: pd.DataFrame, 
     profile: dict = None, 
-    verbose: bool = DEFAULT_VERBOSE
+    verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
     """天女散花 (高檔長下影 / 創高爆量籌碼鬆動)
     
@@ -258,7 +258,7 @@ def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
 
 import pandas as pd
 
-def mon_qiantang_da_zhong_xia_ke(df_single: pd.DataFrame, profile: dict = None):
+def mon_qiantang_da_zhong_xia_ke(df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE):
     """打鐘下課 (主力法人大賣/反彈逢下彎均線)
 
     核心邏輯：
