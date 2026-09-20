@@ -96,8 +96,10 @@ def scan_sell_signals(
             # 依據函數簽名選擇性傳入 profile 參數
             if 'profile' in sig_params:
                 is_hit, info = monitor_func(df_single, profile=profile)
+                print(f"profile : {profile}")
             else:
                 is_hit, info = monitor_func(df_single)
+                print("no profile")
 
             if is_hit:
                 # 補全警報相關基礎資訊
