@@ -56,24 +56,74 @@ def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
     return is_hit, info
 
 
-def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict):
-    """明日黃花 (創高爆量滯漲)"""
-    #2天前的收盤 / 3天前的收盤 ≧ 1.065 且 1天前的收盤 ≧ 2天前的收盤 
-    #且 收盤 < 2天前的收盤 且 2天前的成交量  ≧ 3000 且 2天前的成交量 = 2天前的21天成交量最大值 且 融券餘額 > 0
-    if len(df_single) < 20: return False, {}
-    today = df_single.iloc[-1]
+import pandas as pd
+
+def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None):
+    """明日黃花 (創高爆量滯漲)
+
+    核心邏輯：
+    1. 2天前大漲 ≧ 6.5% (c_2 / c_3 >= 1.065)
+    2. 1天前高檔震盪或續強 (c_1 >= c_2)
+    3. 今日收盤跌破2天前收盤 (c_0 < c_2)
+    4. 2天前成交量 ≧ 最低流動性門檻 (由 profile 指定，IC設計股按當日股價動態微調)
+    5. 2天前成交量為近 21 天(含當日)的最大量 (頂部天量換手)
+    6. 融券餘額 > 0
+    """
+    profile = profile or {}
     
-    surge_mult = profile.get('surge_mult', 1.0)
-    vol_burst = today.get('Trading_Volume', 0) > (df_single['Trading_Volume'].iloc[-20:-1].max() * 0.9)
-    pct_change = abs(today['close'] - today['open']) / today['open']
-    is_stagnant = pct_change < (0.01 * surge_mult)
-    
-    is_hit = vol_burst and is_stagnant
+    # 至少需要 24 筆歷史資料以支援 21 天天量視窗計算
+    if len(df_single) < 24:
+        return False, {}
+
+    # 1. 價格位置點 (-1: 今日, -2: 1天前, -3: 2天前, -4: 3天前)
+    c_0 = df_single['close'].iloc[-1]
+    c_1 = df_single['close'].iloc[-2]
+    c_2 = df_single['close'].iloc[-3]
+    c_3 = df_single['close'].iloc[-4]
+
+    # 2. 2天前成交量 (預先假設外部已統一欄位名稱為 Trading_Volume)
+    v_2 = df_single['Trading_Volume'].iloc[-3]
+
+    # 3. 讀取 Profile 中的基礎 min_vol 門檻
+    min_vol = profile.get('min_vol', 1000)
+
+    # 4. 針對 IC 設計 / 高波動族群，依 2 天前(爆量當日)股價進行動態微調
+    profile_name = profile.get('name', '')
+    if 'IC設計' in profile_name or profile.get('category') == 'ic_design':
+        if c_2 >= 1000:
+            min_vol = min(min_vol, 300)   # 超高價千金股：門檻下修至 300 張
+        elif c_2 >= 500:
+            min_vol = min(min_vol, 500)   # 高價股 (500~1000元)：門檻下修至 500 張
+        # 500元以下則維持 profile 原本設定的 800 張
+
+    # --- 條件邏輯判斷 ---
+    # 條件 1：2天前大漲 ≧ 6.5%
+    cond1 = (c_2 / c_3) >= 1.065
+
+    # 條件 2：1天前高檔震盪或續強
+    cond2 = c_1 >= c_2
+
+    # 條件 3：今日收盤跌破 2天前收盤
+    cond3 = c_0 < c_2
+
+    # 條件 4：最低成交量門檻 (自動過濾冷門股，高價 IC 股自動適應)
+    cond4_min_vol = v_2 >= min_vol
+
+    # 條件 5：近 21 天最大量 (代表極致天量爆量，取 iloc[-23:-2] 排除今日與昨日)
+    v_21_max = df_single['Trading_Volume'].iloc[-23:-2].max()
+    cond5_max_vol = v_2 >= v_21_max
+
+    # 條件 6：融券餘額 > 0
+    cond6_short_balance = df_single['Margin_Short_Balance'].iloc[-1] > 0 if 'Margin_Short_Balance' in df_single.columns else True
+
+    # 綜合評估
+    is_hit = cond1 and cond2 and cond3 and cond4_min_vol and cond5_max_vol and cond6_short_balance
+
     info = {
         '轉空賣訊': '明日黃花',
-        '操作建議': '成交量創巨量但股價滯漲，籌碼高檔密集換手派發，隨時有轉空風險。'
+        '操作建議': f'2天前爆出近21天天量(當日股價約 {c_2:.0f} 元，套用門檻 {min_vol} 張)並創高後滯漲，今日跌破爆量當天收盤，主力換手失敗且大量套牢賣壓形成，建議注意轉空風險離場。'
     } if is_hit else {}
-    
+
     return is_hit, info
 
 
