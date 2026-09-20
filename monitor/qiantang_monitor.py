@@ -59,12 +59,12 @@ def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None
     """明日黃花 (創高爆量滯漲)
 
     核心邏輯：
-    1. 2天前大漲 ≧ 6.5% * surge_mult (依族群波動度動態微調暴衝門檻)
-    2. 1天前高檔震盪或續強 (c_1 >= c_2)
-    3. 今日收盤跌破2天前收盤 (c_0 < c_2)
-    4. 2天前成交量 ≧ 最低流動性門檻 (由 profile 指定 min_vol，IC設計高價股按股價階梯自動微調)
-    5. 2天前成交量為近 21 天(含當日)的最大量 (頂部天量換手)
-    6. 融券餘額 > 0
+    1. 2天前大漲 ≧ 6.5% * surge_mult (依族群波動度動態微調暴衝門檻) 且
+    2. 1天前高檔震盪或續強 (c_1 >= c_2) 且
+    3. 今日收盤跌破2天前收盤 (c_0 < c_2) 且
+    4. 2天前成交量 ≧ 最低流動性門檻 (由 profile 指定 min_vol，IC設計高價股按股價階梯自動微調) 且
+    5. 2天前成交量為近 21 天(含當日)的最大量 (頂部天量換手) 且
+    6. 融券餘額 > 0 <--- 這個欄位有沒有資料待確定
     """
     profile = profile or {}
     
@@ -128,24 +128,88 @@ def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None
     return is_hit, info
 
 
-def mon_qiantang_tian_nv_san_hua(df_single: pd.DataFrame, profile: dict):
-    """天女散花 (高檔長下影/籌碼鬆動)"""
-    if len(df_single) < 20: return False, {}
+import pandas as pd
+
+def mon_qiantang_tian_nv_san_hua(df_single: pd.DataFrame, profile: dict = None):
+    """天女散花 (高檔長下影/創高爆量籌碼鬆動)
+
+    核心邏輯：
+    1. 最高價 = 近 10 天最高價 (創階段新高)
+    2. 成交量 = 近 10 天最大成交量 (頂部天量換手)
+    3. 成交量 ≧ 最低流動性門檻 (由 profile 指定 min_vol，IC設計高價股按股價階梯自動微調)
+    4. 當日最高價 / 1天前收盤 > (1 + 0.065 * surge_mult) (衝高強勢拉抬)
+    5. 當日最高價 / 當日收盤 ≧ 1.01 (高檔留上影線或開高走低)
+    6. 長下影線特徵：(min(open, close) - min) / (max - min) >= 0.60
+    7. 融券餘額 > 0
+    """
+    profile = profile or {}
+
+    # 至少需要 15 筆歷史資料支援 10 天視窗運算
+    if len(df_single) < 15:
+        return False, {}
+
     today = df_single.iloc[-1]
-    
+    c_1 = df_single['close'].iloc[-2] # 1天前收盤
+
     total_range = today['max'] - today['min']
-    if total_range == 0: return False, {}
-    
+    if total_range == 0:
+        return False, {}
+
+    # 1. 從 Profile 讀取族群基礎參數
+    base_min_vol = profile.get('min_vol', 1000)
+    surge_mult = profile.get('surge_mult', 1.0)
+    profile_category = profile.get('category', '')
+
+    # 2. 最低成交量門檻微調 (高價 IC 設計股自動調降門檻)
+    min_vol = base_min_vol
+    if profile_category == 'ic_design':
+        if today['close'] >= 1000:
+            min_vol = min(base_min_vol, 300)
+        elif today['close'] >= 500:
+            min_vol = min(base_min_vol, 500)
+
+    # 3. 計算動態拉高衝高門檻 (基準 6.5% 乘以族群波動係數)
+    target_surge_ratio = 1.0 + (0.065 * surge_mult)
+
+    # --- 條件邏輯判斷 ---
+    # 條件 1：當日最高價為近 10 天最大值
+    cond1_max_price = today['max'] >= df_single['max'].iloc[-10:].max()
+
+    # 條件 2：當日成交量為近 10 天最大值
+    cond2_max_vol = today['Trading_Volume'] >= df_single['Trading_Volume'].iloc[-10:].max()
+
+    # 條件 3：成交量 ≧ 最低門檻
+    cond3_min_vol = today['Trading_Volume'] >= min_vol
+
+    # 條件 4：當日最高價 / 1天前收盤 > 動態拉高門檻
+    cond4_surge = (today['max'] / c_1) > target_surge_ratio
+
+    # 條件 5：當日最高價 / 收盤價 ≧ 1.01 (頂部滯漲或震盪)
+    cond5_high_close_ratio = (today['max'] / today['close']) >= 1.01
+
+    # 條件 6：長下影線比例 ≧ 60%
     lower_shadow = min(today['open'], today['close']) - today['min']
-    is_long_lower = (lower_shadow / total_range) >= 0.60
-    is_high_area = today['close'] >= df_single['close'].iloc[-20:].max() * 0.95
-    
-    is_hit = is_long_lower and is_high_area
+    cond6_long_lower = (lower_shadow / total_range) >= 0.60
+
+    # 條件 7：融券餘額 > 0
+    cond7_short_balance = today['Margin_Short_Balance'] > 0 if 'Margin_Short_Balance' in df_single.columns else True
+
+    # 綜合判斷
+    is_hit = (
+        cond1_max_price and 
+        cond2_max_vol and 
+        cond3_min_vol and 
+        cond4_surge and 
+        cond5_high_close_ratio and 
+        cond6_long_lower and 
+        cond7_short_balance
+    )
+
     info = {
         '轉空賣訊': '天女散花',
-        '操作建議': '高檔出現巨量長下影線，代表主力籌碼大幅鬆動控盤不穩，宜逢高分批停利。'
+        '操作建議': f'高檔爆出近10天天量(當日套用門檻 {min_vol} 張)且出現劇烈震盪長下影線，代表主力籌碼大幅鬆動控盤不穩，宜逢高分批停利離場。'
     } if is_hit else {}
-    
+
     return is_hit, info
 
 
