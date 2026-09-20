@@ -37,86 +37,6 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
         
     return pd.concat(all_data, ignore_index=True)
 
-def fetch_finmind_chips_suspend(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
-    """抓取 FinMind 三大法人、融資融券與分點買賣家數差資料"""
-    #沒有抓分點買賣資料的權限, 故只能停用
-    chip_records = []
-    print(f"📡 正在透過 FinMind 抓取籌碼、信用交易與分點資料...")
-
-    for sid in stock_ids:
-        try:
-            # 1. 抓取三大法人與融資融券 (可傳入日期區間)
-            df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
-            df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
-
-            df_chip = pd.DataFrame()
-
-            if df_inst is not None and not df_inst.empty:
-                df_foreign = df_inst[df_inst['name'].str.contains('Foreign', case=False, na=False)]
-                
-                #df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
-                #df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
-                # 轉為張數計算 (除以 1000)
-                df_foreign_net = (df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()) / 1000
-                df_major_net = (df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()) / 1000
-
-                df_chip = pd.DataFrame({
-                    'foreign_net': df_foreign_net,
-                    'major_net': df_major_net
-                }).reset_index()
-
-            if df_margin is not None and not df_margin.empty:
-                df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
-                df_margin_sub.rename(columns={
-                    'MarginPurchaseTodayBalance': 'margin_balance',
-                    'ShortSaleTodayBalance': 'short_balance'
-                }, inplace=True)
-
-                if df_chip.empty:
-                    df_chip = df_margin_sub
-                else:
-                    df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
-
-            # 2. 抓取最新一日分點明細計算買賣家數差 (使用單日參數 date=end_date)
-            df_chip['broker_diff'] = 0  # 預設為 0
-            try:
-                # 🌟 正確傳入單日參數 date=end_date
-                df_broker = dl.taiwan_stock_trading_daily_report(stock_id=sid, date=end_date)
-                
-                if df_broker is not None and not df_broker.empty:
-                    # 判斷欄位名稱 (FinMind 分點欄位通常為 buy/sell 或 buy_volume/sell_volume)
-                    buy_col = 'buy' if 'buy' in df_broker.columns else ('buy_volume' if 'buy_volume' in df_broker.columns else None)
-                    sell_col = 'sell' if 'sell' in df_broker.columns else ('sell_volume' if 'sell_volume' in df_broker.columns else None)
-
-                    if buy_col and sell_col:
-                        buy_brokers = (df_broker[buy_col] > 0).sum()
-                        sell_brokers = (df_broker[sell_col] > 0).sum()
-                        broker_diff = buy_brokers - sell_brokers
-
-                        # 將最新一天的 broker_diff 填入 df_chip 當天紀錄中
-                        df_chip.loc[df_chip['date'] == end_date, 'broker_diff'] = broker_diff
-                else:
-                    print(f"⚠️ [Fallback] 股票 {sid} 於 {end_date} 無分點日報 (可能未開盤或資料未更新)，'broker_diff' 保持 0")
-
-            except Exception as e_broker:
-                print(f"⚠️ [Fallback 觸發] 股票 {sid} 抓取分點日報失敗 (原因: {e_broker})，'broker_diff' 自動降級填補 0")
-
-            # 3. 彙整單檔籌碼紀錄
-            if not df_chip.empty:
-                df_chip['stock_id'] = sid
-                chip_records.append(df_chip)
-
-            time.sleep(0.3)
-
-        except Exception as e:
-            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
-            continue
-
-    if chip_records:
-        return pd.concat(chip_records, ignore_index=True)
-    return pd.DataFrame()
-
-
 def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人與融資融券籌碼資料"""
     chip_records = []
@@ -131,8 +51,13 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
 
             if df_inst is not None and not df_inst.empty:
                 df_foreign = df_inst[df_inst['name'].str.contains('Foreign', case=False, na=False)]
-                df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
-                df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+                
+                #df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
+                #df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+
+                # 轉為張數計算 (除以 1000)
+                df_foreign_net = (df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()) / 1000
+                df_major_net = (df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()) / 1000
 
                 df_chip = pd.DataFrame({
                     'foreign_net': df_foreign_net,
@@ -395,3 +320,84 @@ def fm_fetch_all_stocks(dl, stock_ids, start_date, end_date):
         
     # 一次性垂直合併所有 Dataframe
     return pd.concat(all_data, ignore_index=True)
+
+
+def fetch_finmind_chips_suspend(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """抓取 FinMind 三大法人、融資融券與分點買賣家數差資料"""
+    #沒有抓分點買賣資料的權限, 故只能停用
+    chip_records = []
+    print(f"📡 正在透過 FinMind 抓取籌碼、信用交易與分點資料...")
+
+    for sid in stock_ids:
+        try:
+            # 1. 抓取三大法人與融資融券 (可傳入日期區間)
+            df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
+            df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
+
+            df_chip = pd.DataFrame()
+
+            if df_inst is not None and not df_inst.empty:
+                df_foreign = df_inst[df_inst['name'].str.contains('Foreign', case=False, na=False)]
+                
+                #df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
+                #df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+                # 轉為張數計算 (除以 1000)
+                df_foreign_net = (df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()) / 1000
+                df_major_net = (df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()) / 1000
+
+                df_chip = pd.DataFrame({
+                    'foreign_net': df_foreign_net,
+                    'major_net': df_major_net
+                }).reset_index()
+
+            if df_margin is not None and not df_margin.empty:
+                df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
+                df_margin_sub.rename(columns={
+                    'MarginPurchaseTodayBalance': 'margin_balance',
+                    'ShortSaleTodayBalance': 'short_balance'
+                }, inplace=True)
+
+                if df_chip.empty:
+                    df_chip = df_margin_sub
+                else:
+                    df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
+
+            # 2. 抓取最新一日分點明細計算買賣家數差 (使用單日參數 date=end_date)
+            df_chip['broker_diff'] = 0  # 預設為 0
+            try:
+                # 🌟 正確傳入單日參數 date=end_date
+                df_broker = dl.taiwan_stock_trading_daily_report(stock_id=sid, date=end_date)
+                
+                if df_broker is not None and not df_broker.empty:
+                    # 判斷欄位名稱 (FinMind 分點欄位通常為 buy/sell 或 buy_volume/sell_volume)
+                    buy_col = 'buy' if 'buy' in df_broker.columns else ('buy_volume' if 'buy_volume' in df_broker.columns else None)
+                    sell_col = 'sell' if 'sell' in df_broker.columns else ('sell_volume' if 'sell_volume' in df_broker.columns else None)
+
+                    if buy_col and sell_col:
+                        buy_brokers = (df_broker[buy_col] > 0).sum()
+                        sell_brokers = (df_broker[sell_col] > 0).sum()
+                        broker_diff = buy_brokers - sell_brokers
+
+                        # 將最新一天的 broker_diff 填入 df_chip 當天紀錄中
+                        df_chip.loc[df_chip['date'] == end_date, 'broker_diff'] = broker_diff
+                else:
+                    print(f"⚠️ [Fallback] 股票 {sid} 於 {end_date} 無分點日報 (可能未開盤或資料未更新)，'broker_diff' 保持 0")
+
+            except Exception as e_broker:
+                print(f"⚠️ [Fallback 觸發] 股票 {sid} 抓取分點日報失敗 (原因: {e_broker})，'broker_diff' 自動降級填補 0")
+
+            # 3. 彙整單檔籌碼紀錄
+            if not df_chip.empty:
+                df_chip['stock_id'] = sid
+                chip_records.append(df_chip)
+
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
+            continue
+
+    if chip_records:
+        return pd.concat(chip_records, ignore_index=True)
+    return pd.DataFrame()
+
