@@ -53,8 +53,12 @@ def fetch_finmind_chips_suspend(dl, stock_ids: list, start_date: str, end_date: 
 
             if df_inst is not None and not df_inst.empty:
                 df_foreign = df_inst[df_inst['name'].str.contains('Foreign', case=False, na=False)]
-                df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
-                df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+                
+                #df_foreign_net = df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()
+                #df_major_net = df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()
+                # 轉為張數計算 (除以 1000)
+                df_foreign_net = (df_foreign.groupby('date')['buy'].sum() - df_foreign.groupby('date')['sell'].sum()) / 1000
+                df_major_net = (df_inst.groupby('date')['buy'].sum() - df_inst.groupby('date')['sell'].sum()) / 1000
 
                 df_chip = pd.DataFrame({
                     'foreign_net': df_foreign_net,
