@@ -55,23 +55,20 @@ def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
     
     return is_hit, info
 
-
-import pandas as pd
-
 def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None):
     """明日黃花 (創高爆量滯漲)
 
     核心邏輯：
-    1. 2天前大漲 ≧ 6.5% (c_2 / c_3 >= 1.065)
+    1. 2天前大漲 ≧ 6.5% * surge_mult (依族群波動度動態微調暴衝門檻)
     2. 1天前高檔震盪或續強 (c_1 >= c_2)
     3. 今日收盤跌破2天前收盤 (c_0 < c_2)
-    4. 2天前成交量 ≧ 最低流動性門檻 (由 profile 指定，IC設計股按當日股價動態微調)
+    4. 2天前成交量 ≧ 最低流動性門檻 (由 profile 指定 min_vol，IC設計高價股按股價階梯自動微調)
     5. 2天前成交量為近 21 天(含當日)的最大量 (頂部天量換手)
     6. 融券餘額 > 0
     """
     profile = profile or {}
     
-    # 至少需要 24 筆歷史資料以支援 21 天天量視窗計算
+    # 至少需要 24 筆歷史資料以支援 21 天天量視窗計算 (iloc[-23:-2])
     if len(df_single) < 24:
         return False, {}
 
@@ -81,24 +78,28 @@ def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None
     c_2 = df_single['close'].iloc[-3]
     c_3 = df_single['close'].iloc[-4]
 
-    # 2. 2天前成交量 (預先假設外部已統一欄位名稱為 Trading_Volume)
+    # 2. 2天前成交量
     v_2 = df_single['Trading_Volume'].iloc[-3]
 
-    # 3. 讀取 Profile 中的基礎 min_vol 門檻
-    min_vol = profile.get('min_vol', 1000)
-
-    # 4. 針對 IC 設計 / 高波動族群，依 2 天前(爆量當日)股價進行動態微調
+    # 3. 從 Profile 讀取族群基礎參數
+    base_min_vol = profile.get('min_vol', 1000)
+    surge_mult = profile.get('surge_mult', 1.0)
     profile_name = profile.get('name', '')
-    if 'IC設計' in profile_name or profile.get('category') == 'ic_design':
+
+    # 4. 最低成交量門檻微調 (針對 IC 設計 / 高波動族群，依爆量當日股價下修門檻)
+    min_vol = base_min_vol
+    if 'ic' in profile_name.lower() or 'IC設計' in profile_name or profile.get('category') == 'ic_design':
         if c_2 >= 1000:
-            min_vol = min(min_vol, 300)   # 超高價千金股：門檻下修至 300 張
+            min_vol = min(base_min_vol, 300)   # 千金股：防線下修至 300 張
         elif c_2 >= 500:
-            min_vol = min(min_vol, 500)   # 高價股 (500~1000元)：門檻下修至 500 張
-        # 500元以下則維持 profile 原本設定的 800 張
+            min_vol = min(base_min_vol, 500)   # 高價股：防線下修至 500 張
+
+    # 5. 計算動態大漲門檻 (基準 6.5% 乘以族群波動係數)
+    target_surge_ratio = 1.0 + (0.065 * surge_mult)
 
     # --- 條件邏輯判斷 ---
-    # 條件 1：2天前大漲 ≧ 6.5%
-    cond1 = (c_2 / c_3) >= 1.065
+    # 條件 1：2天前急衝大漲 (依族群波動度調整門檻)
+    cond1 = (c_2 / c_3) >= target_surge_ratio
 
     # 條件 2：1天前高檔震盪或續強
     cond2 = c_1 >= c_2
@@ -106,10 +107,10 @@ def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None
     # 條件 3：今日收盤跌破 2天前收盤
     cond3 = c_0 < c_2
 
-    # 條件 4：最低成交量門檻 (自動過濾冷門股，高價 IC 股自動適應)
+    # 條件 4：最低成交量門檻
     cond4_min_vol = v_2 >= min_vol
 
-    # 條件 5：近 21 天最大量 (代表極致天量爆量，取 iloc[-23:-2] 排除今日與昨日)
+    # 條件 5：近 21 天最大量 (頂部天量，取 iloc[-23:-2] 排除今日與昨日)
     v_21_max = df_single['Trading_Volume'].iloc[-23:-2].max()
     cond5_max_vol = v_2 >= v_21_max
 
