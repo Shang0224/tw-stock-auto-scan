@@ -58,6 +58,8 @@ def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
 
 def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict):
     """明日黃花 (創高爆量滯漲)"""
+    #2天前的收盤 / 3天前的收盤 ≧ 1.065 且 1天前的收盤 ≧ 2天前的收盤 
+    #且 收盤 < 2天前的收盤 且 2天前的成交量  ≧ 3000 且 2天前的成交量 = 2天前的21天成交量最大值 且 融券餘額 > 0
     if len(df_single) < 20: return False, {}
     today = df_single.iloc[-1]
     
