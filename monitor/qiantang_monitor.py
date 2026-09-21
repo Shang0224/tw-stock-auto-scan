@@ -9,7 +9,6 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
-
 def mon_qiantang_tian_nv_san_hua(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -20,7 +19,7 @@ def mon_qiantang_tian_nv_san_hua(
     核心邏輯：
     1. 當日最高價 >= 近 10 天最高價 (創階段新高) 且
     2. 當日成交量 >= 近 10 天最大成交量 (頂部天量換手) 且
-    3. 當日成交量 >= 最低流動性門檻 (高價 IC 設計股自動向下微調，單位：股) 且
+    3. 當日成交量 >= 最低流動性門檻 (profile['min_vol'] 單位為「股」) 且
     4. 當日最高價 / 1天前收盤 > (1 + 0.065 * surge_mult) (衝高強勢拉抬) 且
     5. 當日最高價 / 當日收盤 >= 1.01 (頂部滯漲或震盪留上影線) 且
     6. 長下影線特徵：(min(open, close) - min) / (max - min) >= 0.60 且
@@ -47,9 +46,8 @@ def mon_qiantang_tian_nv_san_hua(
             print("❌ [天女散花] 當日高低價差為 0 (平盤無震盪)")
         return False, {}
 
-    # 1. 讀取 Profile 基礎設定與參數 (將「張」轉為「股」統一單位)
-    base_min_vol_lots = profile.get('min_vol', 1000)
-    base_min_vol = base_min_vol_lots * 1000  # 轉為「股」
+    # 1. 讀取 Profile 基礎設定 (profile['min_vol'] 單位本身即為「股」，預設 1,000 張 = 1,000,000 股)
+    base_min_vol = profile.get('min_vol', 1000 * 1000)
     surge_mult = profile.get('surge_mult', 1.0)
     profile_category = profile.get('category', '')
 
@@ -57,9 +55,9 @@ def mon_qiantang_tian_nv_san_hua(
     min_vol = base_min_vol
     if profile_category == 'ic_design':
         if today['close'] >= 1000:
-            min_vol = min(base_min_vol, 300 * 1000)  # 300 張 = 300,000 股
+            min_vol = min(base_min_vol, 300 * 1000)  # 防線下修至 300,000 股 (300 張)
         elif today['close'] >= 500:
-            min_vol = min(base_min_vol, 500 * 1000)  # 500 張 = 500,000 股
+            min_vol = min(base_min_vol, 500 * 1000)  # 防線下修至 500,000 股 (500 張)
 
     # 3. 計算動態衝高門檻 (基準 6.5% 乘以族群波動係數)
     target_surge_ratio = 1.0 + (0.065 * surge_mult)
@@ -75,7 +73,7 @@ def mon_qiantang_tian_nv_san_hua(
     # 讀取 FinMind 融券欄位 (原始欄位名稱)
     short_balance = today.get('ShortSaleTodayBalance', None)
 
-    # 5. 條件邏輯判斷
+    # 5. 條件邏輯判斷 (全部採用「股」進行股數比對)
     cond1_max_price = today['max'] >= max_10d
     cond2_max_vol = today['Trading_Volume'] >= vol_10d
     cond3_min_vol = today['Trading_Volume'] >= min_vol  # 股數 vs 股數
@@ -106,7 +104,7 @@ def mon_qiantang_tian_nv_san_hua(
         stock_id = today.get('stock_id', '未知個股')
         date_str = str(today.get('date', '最新日'))
         
-        # 轉換為張數以供視覺化呈現
+        # 轉換為張數以供日誌呈現
         today_vol_lots = today['Trading_Volume'] / 1000.0
         vol_10d_lots = vol_10d / 1000.0
         min_vol_lots = min_vol / 1000.0
