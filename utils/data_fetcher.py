@@ -47,6 +47,9 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
             df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
             df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
 
+            print(f"df_inst : {df_inst}")
+            print(f"df_margin : {df_margin}")
+
             df_chip = pd.DataFrame()
 
             if df_inst is not None and not df_inst.empty:
