@@ -7,32 +7,40 @@ PARAM_PROFILES = {
         'name': '台灣50',
         'min_vol': 3000,
         'surge_mult': 0.8,
-        'major_sell': -2000,     # 主力賣超門檻 (張)
-        'foreign_sell': -1500,   # 外資賣超門檻 (張)
-        'broker_diff': -50,      # 分點家數差門檻 (買家 - 賣家，負數代表籌碼分散)
+        # --- 動態比例門檻設定 ---
+        'major_sell_ratio': 0.05,       # 主力賣超佔當日成交量 >= 5.0%
+        'foreign_sell_ratio': 0.04,     # 外資賣超佔當日成交量 >= 4.0%
+        'min_sell_shares': 1500,        # 保底張數：權值股流動性高，至少需賣滿 1,500 張
+        'broker_diff': 50,              # 家數差門檻 (買家數 - 賣家數 >= 50，代表籌碼分散至散戶)
     },
     'MID100': {
         'name': '中型100',
         'min_vol': 1500,
         'surge_mult': 1.0,
-        'major_sell': -1000,
-        'foreign_sell': -800,
-        'broker_diff': -30,
+        # --- 動態比例門檻設定 ---
+        'major_sell_ratio': 0.05,       # 主力賣超佔當日成交量 >= 5.0%
+        'foreign_sell_ratio': 0.05,     # 外資賣超佔當日成交量 >= 5.0%
+        'min_sell_shares': 500,         # 保底張數：至少 500 張 (例如神達成交 6 萬張時，自動鎖定門檻為 3,000 張)
+        'broker_diff': 30,              # 家數差門檻 (買家數 - 賣家數 >= 30)
     },
     'ICDesign': {
         'name': 'IC設計/高波動',
         'min_vol': 800,
         'surge_mult': 1.2,
-        'major_sell': -500,
-        'foreign_sell': -300,    # 高價/高波動股外資賣超數百張影響即顯著
-        'broker_diff': -15,
+        # --- 動態比例門檻設定 ---
+        'major_sell_ratio': 0.04,       # 高價/高波動股籌碼集中，門檻調為 >= 4.0%
+        'foreign_sell_ratio': 0.03,     # 外資賣超佔比 >= 3.0%
+        'min_sell_shares': 200,         # 保底張數：高價股總張數少，200 張即具影響力
+        'broker_diff': 15,              # 家數差門檻 (買家數 - 賣家數 >= 15)
     },
     'default': {
         'name': '預設族群',
         'min_vol': 1000,
         'surge_mult': 1.0,
-        'major_sell': -800,
-        'foreign_sell': -500,
-        'broker_diff': -20,
+        # --- 動態比例門檻設定 ---
+        'major_sell_ratio': 0.05,       # 預設主力賣超佔比 >= 5.0%
+        'foreign_sell_ratio': 0.05,     # 預設外資賣超佔比 >= 5.0%
+        'min_sell_shares': 300,         # 一般個股保底 300 張
+        'broker_diff': 20,              # 家數差門檻 (買家數 - 賣家數 >= 20)
     }
 }
