@@ -7,7 +7,7 @@ from monitor.registry import ACTIVE_MONITORS
 
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
-    """內部輔助函式：預先計算 Monitor 所需之技術指標（輕鬆線、KD等）"""
+    """內部輔助函式：計算單一股票 Monitor 所需之技術指標（輕鬆線、KD等）"""
     df = df_single.copy()
     
     # 輕鬆線指標計算
@@ -19,7 +19,6 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
     low_min = df['min'].rolling(9).min()
     high_max = df['max'].rolling(9).max()
     
-    # 避免分母為 0 的極端情況
     denom = high_max - low_min
     denom = denom.replace(0, np.nan)
     rsv = (df['close'] - low_min) / denom * 100
@@ -31,6 +30,63 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    【全域預處理入口】資料抓取完成後呼叫，一次性預先算好所有股票的技術指標 (KD, 輕鬆線)
+    """
+    if global_df.empty:
+        return global_df
+
+    processed_dfs = []
+    for sid, group_df in global_df.groupby('stock_id'):
+        sorted_group = group_df.sort_values('date').copy()
+        processed_group = _preprocess_technical_indicators(sorted_group)
+        processed_dfs.append(processed_group)
+
+    return pd.concat(processed_dfs, ignore_index=True)
+
+
+def scan_single_stock_monitors(
+    df_single: pd.DataFrame,
+    category: str,
+    monitor_list: list,
+    param_profiles: dict = PARAM_PROFILES
+) -> list:
+    """
+    【核心底層】單一股票的監控策略檢測元件
+    預設輸入的 df_single 已經過全域預處理（含技術指標）
+    """
+    if len(df_single) < 5:
+        return []
+
+    category = str(category).strip()
+    if category not in param_profiles:
+        raise ValueError(
+            f"❌ [設定檔錯誤] 類別 '{category}' 未定義於 PARAM_PROFILES 中！\n"
+            f"可用的類別有：{list(param_profiles.keys())}"
+        )
+
+    profile = param_profiles[category].copy()
+    profile['category'] = category
+
+    hits = []
+    for monitor_func in monitor_list:
+        sig_params = inspect.signature(monitor_func).parameters
+        
+        if 'profile' in sig_params:
+            is_hit, info = monitor_func(df_single, profile=profile)
+        else:
+            is_hit, info = monitor_func(df_single)
+
+        if is_hit:
+            res_info = info if isinstance(info, dict) else {"detail": str(info)}
+            res_info["strategy_name"] = monitor_func.__name__
+            res_info["category"] = category
+            hits.append(res_info)
+
+    return hits
+
+
 def scan_sell_signals(
     portfolio_df: pd.DataFrame,
     all_df: pd.DataFrame,
@@ -38,7 +94,7 @@ def scan_sell_signals(
     param_profiles: dict = PARAM_PROFILES
 ) -> list:
     """
-    持股賣訊掃描執行引擎
+    【持股賣訊掃描】專門處理實盤/廣播的持股比對與報酬率計算
     """
     if monitor_list is None:
         monitor_list = ACTIVE_MONITORS
@@ -52,65 +108,32 @@ def scan_sell_signals(
     for idx, row in portfolio_df.iterrows():
         sid = str(row['stock_id'])
         sname = str(row.get('name', ''))
-        
-        # 成本價與當前報酬率計算
         cost_price = float(row.get('cost_price', 0)) if pd.notnull(row.get('cost_price')) else 0.0
-        
-        # 1. 讀取 CSV 內的 category 欄位 (移除首尾空白)
         category = str(row.get('category', '')).strip()
 
-        # 2. 直接拿 category 查表，若找不到則拋出 ValueError 中斷並警示
-        if category not in param_profiles:
-            valid_keys = list(param_profiles.keys())
-            raise ValueError(
-                f"❌ [設定檔錯誤] 股票 {sid} ({sname}) 的類別 '{category}' 未定義於 PARAM_PROFILES 中！"
-                f"\n可用的類別有：{valid_keys}"
-            )
-
-        # 取得 profile 設定
-        profile = param_profiles[category].copy()
-        profile['category'] = category
-
-        # 檢查該檔股票是否有歷史資料
         if sid not in grouped.groups:
             continue
 
-        # 取出該股 K 線並排序
         df_single = grouped.get_group(sid).sort_values('date').copy()
-        if len(df_single) < 5:
-            continue
+        
+        # 呼叫單股檢測核心 (純粹進行策略觸發判定，不再重複算指標)
+        hits = scan_single_stock_monitors(
+            df_single=df_single,
+            category=category,
+            monitor_list=monitor_list,
+            param_profiles=param_profiles
+        )
 
-        # 計算必要的技術指標
-        df_single = _preprocess_technical_indicators(df_single)
+        if hits:
+            latest_close = float(df_single['close'].iloc[-1])
+            return_pct_str = f"{((latest_close - cost_price) / cost_price) * 100:+.2f}%" if cost_price > 0 else "N/A"
 
-        # 取得最新收盤價與計算報酬率
-        latest_close = float(df_single['close'].iloc[-1])
-        if cost_price > 0:
-            return_pct_val = ((latest_close - cost_price) / cost_price) * 100
-            return_pct_str = f"{return_pct_val:+.2f}%"
-        else:
-            return_pct_str = "N/A"
-
-        # 逐一執行啟用的 Monitor 檢測
-        for monitor_func in monitor_list:
-            sig_params = inspect.signature(monitor_func).parameters
-            
-            # 依據函數簽名選擇性傳入 profile 參數
-            if 'profile' in sig_params:
-                is_hit, info = monitor_func(df_single, profile=profile)
-                #print(f"[{sid} {sname}] [{monitor_func.__name__}] profile : {profile}")
-            else:
-                is_hit, info = monitor_func(df_single)
-                #print(f"[{sid} {sname}] [{monitor_func.__name__}] no profile")
-
-            if is_hit:
-                # 補全警報相關基礎資訊
+            for info in hits:
                 info['stock_id'] = sid
                 info['stock_name'] = sname
                 info['cost_price'] = cost_price if cost_price > 0 else 'N/A'
                 info['close'] = latest_close
                 info['return_pct'] = return_pct_str
-                
                 warnings.append(info)
 
     return warnings
