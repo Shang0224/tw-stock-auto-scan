@@ -45,7 +45,7 @@ def mon_qiantang_ni_diu_wo_jian(
     # 從 Profile 讀取比例門檻與保底張數
     major_ratio = profile.get('major_sell_ratio', 0.05)     # 預設主力賣超佔總成交量 >= 5%
     foreign_ratio = profile.get('foreign_sell_ratio', 0.05) # 預設外資賣超佔總成交量 >= 5%
-    min_sell_shares = profile.get('min_sell_shares', 300)   # 保底張數，防止低量股過於敏感
+    min_sell_shares = profile.get('min_sell_shares', 300*1000)   # 保底股數，防止低量股過於敏感
 
     # 賣超為負數，使用 -max(...) 算出動態上限張數
     if is_valid(volume) and volume > 0:
