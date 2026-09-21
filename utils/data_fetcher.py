@@ -39,7 +39,9 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
     return pd.concat(all_data, ignore_index=True)
 
 def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
-    """抓取 FinMind 三大法人與融資融券籌碼資料，並標準化錢塘潮相關指標"""
+    """抓取 FinMind 三大法人與融資融券籌碼資料，並標準化錢塘潮相關指標
+    未來若有分點資料, 則修改此處
+    """
     chip_records = []
     print(f"📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
 
