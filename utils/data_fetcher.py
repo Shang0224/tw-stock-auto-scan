@@ -129,14 +129,6 @@ def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: s
     else:
         all_df = df_daily
 
-    # 4. 補齊策略所需的預設欄位 (避免 KeyError)
-    for col in ['margin_balance', 'short_balance', 'foreign_net', 'major_net', 'broker_diff']:
-        if col not in all_df.columns:
-            print(f"🆕 [欄位檢查] 缺少欄位 '{col}'，已自動新增並補 0")
-            all_df[col] = 0
-        else:
-            all_df[col] = all_df[col].fillna(0)
-
     return all_df
 
 def yf_fetch_monitor_stocks(monitor_stocks, days_before=365, days_after=548):
