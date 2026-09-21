@@ -5,6 +5,35 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def parse_monitor_stocks(stock_source: str, stock_input) -> list[dict]:
+    """通用股票清單解析器：精準載入 stock_id, name, 以及 category
+    
+    - 支援 stock_source == 'csv': 讀取 CSV 檔案路徑 (str)
+    - 支援 stock_source != 'csv': 直接傳回預先定義好的 List[dict]
+    """
+    # 1. CSV 檔案讀取模式
+    if stock_source == 'csv' and isinstance(stock_input, str):
+        portfolio_df = smart_read_csv(stock_input)
+        if portfolio_df is None or portfolio_df.empty:
+            print(f"❌ 讀取 {stock_input} 失敗或內容為空！")
+            return []
+
+        return [
+            {
+                'stock_id': str(row['stock_id']).strip(),
+                'name': str(row['name']).strip(),
+                'category': str(row['category']).strip()
+            }
+            for _, row in portfolio_df.iterrows()
+        ]
+
+    # 2. 非 CSV 模式：已是整理好的 list[dict]，直接原樣回傳
+    if isinstance(stock_input, list):
+        return stock_input
+
+    print(f"❌ [錯誤] 不支援的 stock_source 或 stock_input 格式！")
+    return []
+
 def process_monitor_stock_data(file_path):
     # 1. 讀取 CSV 檔案 (指定 cp950 編碼以正確讀取中文)
     df = pd.read_csv(file_path, encoding='cp950')
