@@ -61,7 +61,9 @@ TEST_MONITOR = [
     #mon_qiantang_xia_shan_meng_hu,         # 下山猛虎 (主力大幅派發 / 賣壓急湧)
     #mon_qiantang_da_zhong_xia_ke,         # 打鐘下課 (散戶買超增加 / 籌碼趨於分散)
     #mon_qiantang_he_shi,                  # 合十 (多頭籌碼強勢卡位)
+    
     mon_qiantang_ni_diu_wo_jian,          # 你丟我撿 (主力持續派發 / 散戶接盤)
+    
     #mon_qiantang_jiang_long_fu_hu,        # 降龍伏虎 (主力大舉洗盤 / 籌碼沉澱)
     #mon_qiantang_qing_song_xian_zhuan_kong,# 輕鬆轉空, 月下老人 (技術面/籌碼面轉空訊號)
     #mon_qiantang_kd_dead_cross,           # KD 死亡交叉, 可能是地底穿心 (高檔技術面反轉)
