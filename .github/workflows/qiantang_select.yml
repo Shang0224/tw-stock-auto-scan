@@ -2,46 +2,53 @@ name: 錢塘潮七合一自動選股排程
 
 on:
   # 1. 自動排程：台股盤後籌碼約在 15:30~16:00 全數更新完畢
-  # 設定在每週一至週五的台北時間 16:30 (國際標準時 UTC 08:30) 自動執行
+  # 設定在每週一至週五的台北時間 18:00 (國際標準時 UTC 10:00) 自動執行
   schedule:
-    # 分 時 日 月 週 (UTC 時間 10:00 = 台北時間 18:00)
     - cron: '00 10 * * 1-5'
   
-  # 2. 手動觸發：允許您隨時在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
+  # 2. 手動觸發：允許在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
   workflow_dispatch:
 
 jobs:
   stock_screening:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 顯式要求寫入權限
 
     steps:
-    # 步驟一：切換並檢出您的程式碼
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # 步驟一：切換並檢出您的程式碼
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Connect to Tailscale
-      uses: tailscale/github-action@v2
-      with:
-        authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
 
-    # 步驟二：設定 Python 環境 (使用穩定的 3.10 版本)
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-        cache: 'pip' # 開啟快取功能，加速下一次執行
+      # 🟢 連線診斷步驟：印出 Tailscale 狀態並 Ping NAS
+      - name: Diagnostic Tailscale Connection
+        run: |
+          tailscale status
+          echo "正在 Ping NAS 診斷連線..."
+          ping -c 3 ${{ secrets.NAS_VPN_IP }}
 
-    # 步驟三：安裝 Python 必備套件
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      # 步驟二：設定 Python 環境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
 
-    # 步驟四：執行選股核心主程式
-    # 備註：請確保您的 Python 檔名叫 qiantang_7in1.py，若不同請在下方修改
-    - name: Run Qiantang 7-in-1 system
-      env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }} # 確保程式能順利讀到排程事件狀態
+      # 步驟三：安裝 Python 必備套件
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # 步驟四：執行選股核心主程式
+      - name: Run Qiantang 7-in-1 system
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ vars.LINE_USER_ID }}
           STOCK_FILES: ${{ vars.STOCK_FILES }}
@@ -51,17 +58,59 @@ jobs:
           RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
           EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
           NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
-          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'          
-          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
+          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'
+          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
+        run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 qiantang_7in1.py..."
-            #python test_scan.py
-            python qiantang_7in1.py #強制手動執行正式環境
-          else
-            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 stock_scanner.py..."
             python qiantang_7in1.py
-          fi     
+          else
+            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 qiantang_7in1.py..."
+            python qiantang_7in1.py
+          fi
+
+      # 🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
+      - name: Send LINE alert on failure
+        if: failure()
+        env:
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+        run: |
+          python -c "
+          import os, requests
+          token = os.environ.get('LINE_ACCESS_TOKEN')
+          user_id = os.environ.get('LINE_USER_ID')
+          
+          msg = '⚠️ [GitHub Actions 警報] 錢塘潮七合一選股工作流執行失敗！\n可能是 Tailscale 連線逾時或 NAS SFTP 服務異常，請至 GitHub 檢查 Log。'
+          
+          if token and user_id:
+              url = 'https://api.line.me/v2/bot/message/push'
+              headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+              payload = {'to': user_id, 'messages': [{'type': 'text', 'text': msg}]}
+              res = requests.post(url, headers=headers, json=payload)
+              print('LINE 警報發送結果：', res.status_code)
+          "
+
+      # 🔴 步驟六：當前面任一步驟失敗時，寄出 Email 警報
+      - name: Send Email alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.SENDER_EMAIL }}
+          password: ${{ vars.EMAIL_APP_PASSWORD }}
+          subject: ⚠️ [GitHub Actions 警報] 錢塘潮七合一自動選股執行失敗通知
+          to: ${{ vars.RECIPIENT_EMAIL }}
+          from: GitHub Actions Alert
+          body: |
+            您好，
+
+            您的 GitHub Actions 工作流「錢塘潮七合一自動選股排程」在執行時發生錯誤！
+            可能是 Tailscale VPN 連線失敗或 NAS SFTP 傳輸中斷。
+
+            請前往 GitHub Repository 的 Actions 頁面查看具體失敗步驟與 Log。
