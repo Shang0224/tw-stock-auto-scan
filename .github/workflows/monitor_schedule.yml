@@ -1,24 +1,31 @@
 name: 000錢塘潮監看策略測試
 
 on:
-  #schedule:
-    # 分 時 日 月 週 (UTC 時間 10:00 = 台北時間 18:00)
-    #- cron: '44 10 * * 1-5'
+  # schedule:
+  #   # 分 時 日 月 週 (UTC 時間 10:00 = 台北時間 18:00)
+  #   - cron: '44 10 * * 1-5'
   workflow_dispatch: # 允許手動測試（已移除所有繁瑣輸入欄位，一鍵直接開跑）
 
 jobs:
   daily-scan:
     runs-on: ubuntu-latest
-    permissions:      # 加入這部分
+    permissions:
       contents: write # 顯式要求寫入權限
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
+
+      # 🟢 連線診斷步驟：印出 Tailscale 狀態並 Ping NAS
+      - name: Diagnostic Tailscale Connection
+        run: |
+          tailscale status
+          echo "正在 Ping NAS 診斷連線..."
+          ping -c 3 ${{ secrets.NAS_VPN_IP }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -28,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pandas requests 
+          pip install pandas requests
 
       - name: Run Analysis Script
         env:
@@ -42,14 +49,13 @@ jobs:
           RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
           EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
           NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
-          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'         
-          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}     
+          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'
+          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
           NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
-        # 🟢 修正為手動觸發時執行 testMonitor.py
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 testMonitor.py..."
+            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_Monitor.py..."
             python test_Monitor.py
             #python main_monitor.py #強制手動執行正式環境
           else
@@ -66,5 +72,47 @@ jobs:
 
           # 在 push 之前，先拉取遠端變更並用 rebase 線性整合
           git pull --rebase origin main
-          
           git push
+
+      # 🔴 步驟：當前面任一步驟失敗時，發送 LINE 警報
+      - name: Send LINE alert on failure
+        if: failure()
+        env:
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+        run: |
+          python -c "
+          import os, requests
+          token = os.environ.get('LINE_ACCESS_TOKEN')
+          user_id = os.environ.get('LINE_USER_ID')
+          
+          msg = '⚠️ [GitHub Actions 警報] 錢塘潮監看策略測試工作流執行失敗！\n可能是 Tailscale 連線逾時或 NAS SFTP 服務異常，請至 GitHub 檢查 Log。'
+          
+          if token and user_id:
+              url = 'https://api.line.me/v2/bot/message/push'
+              headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+              payload = {'to': user_id, 'messages': [{'type': 'text', 'text': msg}]}
+              res = requests.post(url, headers=headers, json=payload)
+              print('LINE 警報發送結果：', res.status_code)
+          "
+
+      # 🔴 步驟：當前面任一步驟失敗時，寄出 Email 警報
+      - name: Send Email alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.SENDER_EMAIL }}
+          password: ${{ vars.EMAIL_APP_PASSWORD }}
+          subject: ⚠️ [GitHub Actions 警報] 錢塘潮監看策略測試執行失敗通知
+          to: ${{ vars.RECIPIENT_EMAIL }}
+          from: GitHub Actions Alert
+          body: |
+            您好，
+
+            您的 GitHub Actions 工作流「000錢塘潮監看策略測試」在執行時發生錯誤！
+            可能是 Tailscale VPN 連線失敗或 NAS SFTP 傳輸中斷。
+
+            請前往 GitHub Repository 的 Actions 頁面查看具體失敗步驟與 Log。
