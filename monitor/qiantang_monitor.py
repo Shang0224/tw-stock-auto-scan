@@ -338,7 +338,144 @@ def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
     
     return is_hit, info
 
-def mon_qiantang_ming_ri_huang_hua(df_single: pd.DataFrame, profile: dict = None):
+def mon_qiantang_ming_ri_huang_hua(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """明日黃花 (創高爆量滯漲) - 詳細資料輸出版
+
+    核心邏輯：
+    1. 2天前急衝大漲 ≧ 6.5% * surge_mult (依族群波動度動態微調暴衝門檻)
+    2. 1天前高檔震盪或續強 (c_1 >= c_2)
+    3. 今日收盤跌破2天前收盤 (c_0 < c_2)
+    4. 2天前成交量 ≧ 最低流動性門檻 (profile 指定 min_vol，單位為「股」)
+    5. 2天前成交量為近 21 天(含當日)的最大量 (頂部天量換手)
+    6. 融券餘額 > 0 (若有欄位)
+    """
+    profile = profile or {}
+
+    # 輔助函式：檢查是否為有效數值 (非 None 且非 NaN)
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    # 至少需要 24 筆歷史資料以支援 21 天天量視窗計算 (iloc[-23:-2] 包含當天共 21 天)
+    if len(df_single) < 24:
+        if verbose:
+            print(f"❌ [明日黃花] 資料筆數不足 24 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    day_1 = df_single.iloc[-2]
+    day_2 = df_single.iloc[-3]
+    day_3 = df_single.iloc[-4]
+
+    # --- 1. 提取價格與成交量數據 (單位：股) ---
+    c_0 = today.get('close', None)
+    c_1 = day_1.get('close', None)
+    c_2 = day_2.get('close', None)
+    c_3 = day_3.get('close', None)
+
+    v_2 = day_2.get('Trading_Volume', None)
+
+    # --- 2. 從 Profile 讀取族群基礎參數 (單位：股，預設 1,000 張 = 1,000,000 股) ---
+    base_min_vol = profile.get('min_vol', 1000 * 1000)
+    surge_mult = profile.get('surge_mult', 1.0)
+    profile_name = profile.get('name', '')
+
+    # 動態調整最低成交量門檻 (單位：股)
+    min_vol = base_min_vol
+    if is_valid(c_2):
+        if 'ic' in profile_name.lower() or 'IC設計' in profile_name or profile.get('category') == 'ic_design':
+            if c_2 >= 1000:
+                min_vol = min(base_min_vol, 300 * 1000)    # 千金股：防線下修至 300 張
+            elif c_2 >= 500:
+                min_vol = min(base_min_vol, 500 * 1000)    # 高價股：防線下修至 500 張
+
+    # 計算動態大漲門檻
+    target_surge_ratio = 1.0 + (0.065 * surge_mult)
+    actual_surge_ratio = (c_2 / c_3) if (is_valid(c_2) and is_valid(c_3) and c_3 > 0) else None
+
+    # --- 3. 條件邏輯判斷 ---
+    # 條件 1：2天前急衝大漲
+    cond1 = (actual_surge_ratio >= target_surge_ratio) if is_valid(actual_surge_ratio) else False
+
+    # 條件 2：1天前高檔震盪或續強
+    cond2 = (c_1 >= c_2) if (is_valid(c_1) and is_valid(c_2)) else False
+
+    # 條件 3：今日收盤跌破 2天前收盤
+    cond3 = (c_0 < c_2) if (is_valid(c_0) and is_valid(c_2)) else False
+
+    # 條件 4：最低成交量門檻
+    cond4_min_vol = (v_2 >= min_vol) if is_valid(v_2) else False
+
+    # 條件 5：近 21 天最大量 (含 2 天前當天，共 21 個交易日：iloc[-23:-2])
+    v_21_series = df_single['Trading_Volume'].iloc[-23:-2]
+    v_21_max = v_21_series.max() if not v_21_series.empty else None
+    cond5_max_vol = (v_2 >= v_21_max) if (is_valid(v_2) and is_valid(v_21_max)) else False
+
+    # 條件 6：融券餘額 > 0
+    if 'Margin_Short_Balance' in df_single.columns:
+        short_val = today.get('Margin_Short_Balance', None)
+        cond6_short_balance = is_valid(short_val) and (short_val > 0)
+        has_short_col = True
+    else:
+        short_val = None
+        cond6_short_balance = True
+        has_short_col = False
+
+    # 綜合評估
+    is_hit = cond1 and cond2 and cond3 and cond4_min_vol and cond5_max_vol and cond6_short_balance
+
+    # --- 4. 🔔 詳細數據輸出區塊 (顯示時轉換為張數) ---
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        print("\n" + "=" * 55)
+        print(f"🔔 [明日黃花 訊號檢測分析] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+
+        surge_pct_str = f"{(actual_surge_ratio - 1) * 100:.2f}%" if is_valid(actual_surge_ratio) else "N/A"
+        target_pct_str = f"{(target_surge_ratio - 1) * 100:.2f}%"
+        print(f" [{ '✓' if cond1 else '✕' }] 1. 2天前爆衝大漲 : {surge_pct_str} (>= 門檻 {target_pct_str})")
+
+        c1_str = f"{c_1:.2f}" if is_valid(c_1) else "N/A"
+        c2_str = f"{c_2:.2f}" if is_valid(c_2) else "N/A"
+        print(f" [{ '✓' if cond2 else '✕' }] 2. 1天前高檔撐住 : 1天前收盤 {c1_str} >= 2天前收盤 {c2_str}")
+
+        c0_str = f"{c_0:.2f}" if is_valid(c_0) else "N/A"
+        print(f" [{ '✓' if cond3 else '✕' }] 3. 今日跌破爆量日 : 今日收盤 {c0_str} < 2天前收盤 {c2_str}")
+
+        v2_lots_str = f"{v_2 / 1000.0:,.0f} 張" if is_valid(v_2) else "N/A"
+        min_vol_lots_str = f"{min_vol / 1000.0:,.0f} 張"
+        print(f" [{ '✓' if cond4_min_vol else '✕' }] 4. 流動性門檻   : 2天前成交量 {v2_lots_str} (>= {min_vol_lots_str})")
+
+        v21_max_lots_str = f"{v_21_max / 1000.0:,.0f} 張" if is_valid(v_21_max) else "N/A"
+        print(f" [{ '✓' if cond5_max_vol else '✕' }] 5. 創近21天天量 : 2天前量 {v2_lots_str} >= 近21天最大量 {v21_max_lots_str}")
+
+        if has_short_col:
+            short_str = f"{short_val:,.0f} 張" if is_valid(short_val) else "N/A"
+            print(f" [{ '✓' if cond6_short_balance else '✕' }] 6. 融券餘額條件 : 目前餘額 {short_str} (> 0)")
+        else:
+            print(f" [✓] 6. 融券餘額條件 : 欄位缺失 (預設通過)")
+
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發明日黃花]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    # --- 5. Info 輸出準備 (將股數除以 1000 轉換為張數呈現) ---
+    v2_print_lots = f"{v_2 // 1000:,.0f}" if is_valid(v_2) else "0"
+    min_vol_print_lots = f"{int(min_vol // 1000):,.0f}"
+    c2_print = f"{c_2:.0f}" if is_valid(c_2) else "N/A"
+
+    info = {
+        '轉空賣訊': '明日黃花',
+        '操作建議': f'2天前爆出近21天天量({v2_print_lots} 張，股價約 {c2_print} 元，套用門檻 {min_vol_print_lots} 張)並創高後滯漲，今日跌破爆量當天收盤，主力換手失敗且大量套牢賣壓形成，建議注意轉空風險離場。'
+    } if is_hit else {}
+
+    return is_hit, info
+
+def mon_qiantang_ming_ri_huang_hua_old(df_single: pd.DataFrame, profile: dict = None):
     """明日黃花 (創高爆量滯漲)
 
     核心邏輯：
