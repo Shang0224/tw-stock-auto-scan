@@ -54,8 +54,8 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
 
             # --- 1. 處理三大法人資料 ---
             if df_inst is not None and not df_inst.empty:
-                # 轉置計算各類別的淨買賣張數 ( (buy - sell) / 1000 )
-                df_inst['net_lots'] = (df_inst['buy'] - df_inst['sell']) / 1000
+                # 轉置計算各類別的淨買賣股數  (buy - sell) 
+                df_inst['net_lots'] = df_inst['buy'] - df_inst['sell']
                 df_pivot = df_inst.pivot(index='date', columns='name', values='net_lots').fillna(0)
 
                 # 精準抓取正統外資
