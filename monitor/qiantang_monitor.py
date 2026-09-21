@@ -7,6 +7,133 @@ from monitor.config import DEBUG_VERBOSE
 # 錢塘潮 11 大防禦賣訊
 # ==========================================
 
+import pandas as pd
+import numpy as np
+
+DEBUG_VERBOSE = True
+
+def mon_qiantang_ni_diu_wo_jian(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """你丟我撿 (主力持續派發 / 散戶接盤)
+
+    核心邏輯：
+    1. 技術面：輕鬆賣盤大於買盤 (B > A)，且 KD 處於高檔區 (K > 70) 或剛發生高檔死亡交叉。
+    2. 籌碼面：
+       - 有分點資料：(主力與外資雙大賣) OR (買賣家數差 >= 門檻，籌碼極度分散)
+       - 無分點資料 (Fallback)：主力大賣 + 外資大賣 + 投信無護盤(<=0)，達成雙法人同步派發驗證。
+    """
+    profile = profile or {}
+
+    # 至少需要 5 筆歷史資料
+    if len(df_single) < 5:
+        if verbose:
+            print(f"❌ [你丟我撿] 資料筆數不足 5 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    prev_day = df_single.iloc[-2]  # 用於判斷 KD 死亡交叉
+
+    # --- 1. 從 Profile 讀取門檻設定 ---
+    major_sell_limit = profile.get('major_sell', -500)     # 主力賣超門檻 (張)
+    foreign_sell_limit = profile.get('foreign_sell', -500) # 外資賣超門檻 (張)
+    broker_diff_limit = profile.get('broker_diff', 20)      # 家數差門檻 (正數：買家數 > 賣家數，散戶接盤)
+
+    # --- 2. 提取技術面與籌碼面數據 (安全取得 None / NaN) ---
+    easy_a = today.get('easy_buy', None)
+    easy_b = today.get('easy_sell', None)
+    
+    k_val = today.get('K', None)
+    d_val = today.get('D', None)
+    prev_k = prev_day.get('K', None)
+    prev_d = prev_day.get('D', None)
+
+    major_net = today.get('major_net', None)
+    foreign_net = today.get('foreign_net', None)
+    trust_net = today.get('trust_net', None)
+    broker_diff = today.get('broker_diff', None)
+
+    # 輔助函式：檢查是否為有效數值 (非 None 且非 NaN)
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    # --- 3. 條件邏輯判斷 ---
+
+    # A. 技術面判斷
+    cond_easy = (easy_b > easy_a) if (is_valid(easy_a) and is_valid(easy_b)) else True
+
+    cond_kd_overbought = (k_val > 70) if is_valid(k_val) else False
+    cond_kd_death_cross = (prev_k > prev_d and k_val < d_val) if all(map(is_valid, [k_val, d_val, prev_k, prev_d])) else False
+    cond_tech_kd = cond_kd_overbought or cond_kd_death_cross
+
+    cond_tech = cond_easy and cond_tech_kd
+
+    # B. 籌碼面判斷 (區分「有分點數據」與「無分點備援」)
+    cond_chip_main = (major_net <= major_sell_limit) and (foreign_net <= foreign_sell_limit) if (is_valid(major_net) and is_valid(foreign_net)) else False
+
+    # 檢查是否有有效的分點家數差資料
+    if is_valid(broker_diff):
+        # 情況 1：有分點資料，家數差 >= 門檻 (散戶接盤)
+        cond_chip_broker = broker_diff >= broker_diff_limit
+        chip_fallback_used = False
+    else:
+        # 情況 2：缺乏分點資料 (NaN/None)，啟動 Fallback 機制
+        # 備援條件：主力大賣 + 外資大賣 + 投信無護盤 (買賣超 <= 0)
+        is_trust_not_buying = (trust_net <= 0) if is_valid(trust_net) else True
+        cond_chip_broker = cond_chip_main and is_trust_not_buying
+        chip_fallback_used = True
+
+    # 籌碼面綜合判定
+    cond_chip = cond_chip_main or cond_chip_broker
+
+    # 最終綜合判斷
+    is_hit = cond_tech and cond_chip
+
+    # --- 4. 🔔 詳細數據輸出區塊 ---
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        print("\n" + "=" * 55)
+        print(f"🔔 [你丟我撿 訊號檢測分析] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        
+        easy_a_str = f"{easy_a:.1f}" if is_valid(easy_a) else "N/A"
+        easy_b_str = f"{easy_b:.1f}" if is_valid(easy_b) else "N/A"
+        print(f" [{ '✓' if cond_easy else '✕' }] 1. 輕鬆買賣指標 : B(賣) {easy_b_str} > A(買) {easy_a_str}")
+        
+        k_str = f"{k_val:.1f}" if is_valid(k_val) else "N/A"
+        d_str = f"{d_val:.1f}" if is_valid(d_val) else "N/A"
+        print(f" [{ '✓' if cond_tech_kd else '✕' }] 2. KD 高檔/死叉 : K值 {k_str} | D值 {d_str}")
+
+        maj_str = f"{major_net:.0f}" if is_valid(major_net) else "N/A"
+        for_str = f"{foreign_net:.0f}" if is_valid(foreign_net) else "N/A"
+        print(f" [{ '✓' if cond_chip_main else '✕' }] 3. 法人賣超門檻 : 主力 {maj_str} (<= {major_sell_limit}) & 外資 {for_str} (<= {foreign_sell_limit})")
+
+        if not chip_fallback_used:
+            bd_str = f"{broker_diff:.0f}" if is_valid(broker_diff) else "N/A"
+            print(f" [{ '✓' if cond_chip_broker else '✕' }] 4. 分點籌碼分散 : 買賣家數差 {bd_str} (>= {broker_diff_limit})")
+        else:
+            tru_str = f"{trust_net:.0f}" if is_valid(trust_net) else "N/A"
+            print(f" [{ '✓' if cond_chip_broker else '✕' }] 4. 分點缺失(啟動備援): 外資+主力大賣 且 投信無護盤 ({tru_str} 張)")
+
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發你丟我撿]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    # 安全地準備 Info 輸出
+    maj_print = f"{major_net:.0f}" if is_valid(major_net) else "0"
+    for_print = f"{foreign_net:.0f}" if is_valid(foreign_net) else "0"
+    bd_print = f"{broker_diff:.0f}" if is_valid(broker_diff) else "無資料"
+
+    info = {
+        '轉空賣訊': '你丟我撿',
+        '操作建議': f'股價處於高檔/壓利區且籌碼持續派發（主力 {maj_print} 張 / 外資 {for_print} 張，家數差 {bd_print}），呈現明顯散戶接盤格局，建議逢高減碼。'
+    } if is_hit else {}
+
+    return is_hit, info
+
 def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
     """一柱清香 (高檔爆量長上影)"""
     if len(df_single) < 20: return False, {}
@@ -358,78 +485,6 @@ def mon_qiantang_he_shi(df_single: pd.DataFrame):
 
 
 import pandas as pd
-
-def mon_qiantang_ni_diu_wo_jian(
-    df_single: pd.DataFrame, 
-    profile: dict = None, 
-    verbose: bool = DEBUG_VERBOSE
-) -> tuple[bool, dict]:
-    """你丟我撿 (主力持續派發 / 散戶接盤)
-
-    核心邏輯：
-    1. 技術面過濾：(輕鬆買盤 A < 輕鬆賣盤 B) 或 (KD指標 K > D，高檔鈍化/背離)
-    2. 籌碼面派發：(主力買賣超 <= 主力賣超門檻 AND 外資買賣超 <= 外資賣超門檻) OR (分點買賣家數差 <= 家數差門檻)
-    """
-    profile = profile or {}
-
-    # 至少需要 5 筆歷史資料
-    if len(df_single) < 5:
-        if verbose:
-            print(f"❌ [你丟我撿] 資料筆數不足 5 筆 (目前: {len(df_single)})")
-        return False, {}
-
-    today = df_single.iloc[-1]
-
-    # --- 1. 從 Profile 讀取籌碼門檻 (未指定則使用預設值) ---
-    major_sell_limit = profile.get('major_sell', -500)  # 主力賣超張數門檻 (負值)
-    foreign_sell_limit = profile.get('foreign_sell', -500)  # 外資賣超張數門檻 (負值)
-    broker_diff_limit = profile.get('broker_diff', -20)  # 家數差門檻 (負數代表籌碼分散/散戶接盤)
-
-    # --- 2. 提取技術面與籌碼面指標數據 ---
-    easy_a = today.get('easy_buy', 0)       # 輕鬆買盤 A
-    easy_b = today.get('easy_sell', 0)      # 輕鬆賣盤 B
-    k_val = today.get('K', 0)
-    d_val = today.get('D', 0)
-
-    major_net = today.get('major_net', 0)      # 主力買賣超 (張)
-    foreign_net = today.get('foreign_net', 0)  # 外資買賣超 (張)
-    broker_diff = today.get('broker_diff', 0)  # 分點買賣家數差 (買家數 - 賣家數)
-
-    # --- 3. 條件邏輯判斷 ---
-    # 技術面條件：輕鬆買盤 < 輕鬆賣盤 OR K > D
-    cond_tech_easy = easy_a < easy_b if ('easy_buy' in df_single.columns and 'easy_sell' in df_single.columns) else True
-    cond_tech_kd = k_val > d_val if ('K' in df_single.columns and 'D' in df_single.columns) else True
-    cond_tech = cond_tech_easy or cond_tech_kd
-
-    # 籌碼面條件：(主力 <= 門檻 AND 外資 <= 門檻) OR 家數差 <= 門檻
-    cond_chip_main = (major_net <= major_sell_limit) and (foreign_net <= foreign_sell_limit)
-    cond_chip_broker = (broker_diff <= broker_diff_limit) if 'broker_diff' in df_single.columns else False
-    cond_chip = cond_chip_main or cond_chip_broker
-
-    # 最終綜合判斷
-    is_hit = cond_tech and cond_chip
-
-    # --- 4. 🔔 詳細數據輸出區塊 (受 verbose 控制) ---
-    if verbose:
-        stock_id = today.get('stock_id', '未知個股')
-        date_str = str(today.get('date', '最新日'))
-        print("\n" + "=" * 55)
-        print(f"🔔 [你丟我撿 訊號檢測分析] 股票: {stock_id} | 日期: {date_str}")
-        print("-" * 55)
-        print(f" [{ '✓' if cond_tech_easy else '✕' }] 1. 輕鬆買賣指標 : A(買) {easy_a:.1f} < B(賣) {easy_b:.1f}")
-        print(f" [{ '✓' if cond_tech_kd else '✕' }] 2. KD 指標狀態   : K值 {k_val:.1f} > D值 {d_val:.1f}")
-        print(f" [{ '✓' if cond_chip_main else '✕' }] 3. 法人賣超門檻 : 主力 {major_net:.0f} (門檻 {major_sell_limit}) & 外資 {foreign_net:.0f} (門檻 {foreign_sell_limit})")
-        print(f" [{ '✓' if cond_chip_broker else '✕' }] 4. 家數差分散   : 買賣家數差 {broker_diff:.0f} <= 門檻 {broker_diff_limit}")
-        print("-" * 55)
-        print(f"🎯 最終觸發結果: {'🔥 [觸發你丟我撿]' if is_hit else '⚪ [未觸發]'}")
-        print("=" * 55 + "\n")
-
-    info = {
-        '轉空賣訊': '你丟我撿',
-        '操作建議': f'主力與外資籌碼持續派發流出(當日主力 {major_net:.0f} 張 / 外資 {foreign_net:.0f} 張)，散戶接盤呈現出貨格局，宜逢高減碼離場。'
-    } if is_hit else {}
-
-    return is_hit, info
 
 
 def mon_qiantang_jiang_long_fu_hu(df_single: pd.DataFrame):
