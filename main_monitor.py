@@ -1,3 +1,4 @@
+# main_monitor.py
 import argparse
 import os
 import pandas as pd
@@ -10,8 +11,12 @@ from utils import (
     get_stock_name_dict,
     fm_get_complete_stock_data
 )
-# 🌟 匯入新架構的監控執行引擎
-from monitor.engine import scan_sell_signals
+
+# 🌟 1. 額外匯入 preprocess_all_technical_indicators
+from monitor.engine import (
+    scan_sell_signals,
+    preprocess_all_technical_indicators
+)
 
 
 def monitor_portfolio(user_id: str = None):
@@ -54,8 +59,11 @@ def monitor_portfolio(user_id: str = None):
         print("⚠️ 無法取得股票歷史與籌碼資料")
         return
 
+    # 🌟 4.5 技術指標全域預處理 (全集中一次算出 KD、輕鬆線等)
+    print("⚡ 正在計算全持股技術指標 (KD, 輕鬆線)...")
+    all_df = preprocess_all_technical_indicators(all_df)
+
     # 🌟 5. 執行持股賣訊防禦監控引擎
-    # （指標計算如 KD、輕鬆線與多策略檢驗已在 monitor 引擎內部自動完成）
     warnings = scan_sell_signals(
         portfolio_df=portfolio_df,
         all_df=all_df
@@ -74,8 +82,8 @@ def monitor_portfolio(user_id: str = None):
             
             msg += f"📌 {w['stock_id']} {sname}\n"
             msg += f"  • 當前價: ${close_p} (成本: ${cost_p} | 報酬: {ret_str})\n"
-            msg += f"  • 觸發賣訊: {w['轉空賣訊']}\n"
-            msg += f"  • 操作建議: {w['操作建議']}\n"
+            msg += f"  • 觸發賣訊: {w.get('轉空賣訊', w.get('strategy_name', '警報'))}\n"
+            msg += f"  • 操作建議: {w.get('操作建議', '請注意籌碼風險')}\n"
             msg += "----------------------------------\n"
 
         print(f"\n📢 預覽發送內容：\n{msg}")
@@ -93,7 +101,7 @@ def monitor_portfolio(user_id: str = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--user_id", help="傳入 LINE User ID (若未傳入則預設讀取 data/watch_list.csv 並採用群發廣播)", nargs='?', default=None)
+    parser.add_argument("--user_id", help="傳入 LINE User ID", nargs='?', default=None)
     args = parser.parse_args()
 
     monitor_portfolio(args.user_id)
