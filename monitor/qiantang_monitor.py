@@ -14,48 +14,46 @@ def mon_qiantang_ni_diu_wo_jian(
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """你丟我撿 (主力持續派發 / 散戶接盤) - 領先轉折防滯後版
+    """你丟我撿 (主力持續派發 / 散戶接盤)
 
     核心邏輯：
-    1. 技術面：輕鬆賣盤 > 買盤 (B > A)，且 KD 處於高檔區 (K > 70) 或剛發生死亡交叉。
-    2. 籌碼面：
-        - 有分點資料：主力/外資同步大賣 AND 分點買賣家數差 >= 門檻 (極度分散/散戶接盤)。
-        - 無分點資料 (Fallback)：主力大賣 + 外資大賣 + 投信無護盤 (<= 0)。
-    3. 領先二次確認條件 (Early Confirmation Filter):
-        - 破前日低點：收盤價跌破前一日最低價 (close < prev_low)。
-        - 長黑吞噬：當日黑 K 實體吃掉前一日紅 K 實體。
-        - 實體長黑：當日收黑且實體跌幅幅度 >= 1.5%。
-        - 短線跌破：收盤價跌破 5 日線 (MA5)。
+    1. 技術面：輕鬆賣盤大於買盤 (B > A)，且 KD 處於高檔區 (K > 70) 或剛發生高檔死亡交叉。
+    2. 籌碼面：判斷籌碼是否極度分散（採用成交量動態比例判斷倒貨）
+        - 有分點資料：(主力賣超 >= 動態門檻 AND 外資賣超 >= 動態門檻) OR (分點買賣家數差 <= 家數差門檻)
+        - 無分點資料 (Fallback)：主力大賣 + 外資大賣 + 投信無護盤(<=0)，達成雙法人同步派發驗證。
     """
     profile = profile or {}
 
     # 至少需要 5 筆歷史資料
-    min_required_len = 5
-    if len(df_single) < min_required_len:
+    if len(df_single) < 5:
         if verbose:
-            print(f"❌ [你丟我撿] 資料筆數不足 {min_required_len} 筆 (目前: {len(df_single)})")
+            print(f"❌ [你丟我撿] 資料筆數不足 5 筆 (目前: {len(df_single)})")
         return False, {}
 
     today = df_single.iloc[-1]
-    prev_day = df_single.iloc[-2]  # 用於判斷 KD 死叉與前日高低價
-
-    # --- 1. 從 Profile 讀取門檻設定 ---
-    major_sell_limit = profile.get('major_sell', -500)      # 主力賣超門檻 (張)
-    foreign_sell_limit = profile.get('foreign_sell', -500)  # 外資賣超門檻 (張)
-    broker_diff_limit = profile.get('broker_diff', 20)       # 家數差門檻 (正數：買家數 > 賣家數)
-    bearish_body_limit = profile.get('bearish_body_limit', 1.5) # 實體長黑門檻 (%)
-    
-    # 📌 領先二次確認開關設定：
-    # 現階段固定保持預設開啟 (True)，以提升多頭/震盪盤發出賣訊時的勝率與過濾假洗盤。
-    # 💡 【未來開發/優化註解】：
-    # 1. 大盤空頭環境：當偵測到大盤跌破 MA60/MA120 時，可自動改為 False 以提升避險敏感度，防止漏抓急跌。
-    # 2. Fallback 機制連動：若無分點資料 (chip_fallback_used == True)，可強制鎖定 True 以技術面形態補足籌碼面缺口。
-    # 3. 策略 AB 測試：未來做大量歷史回測時，可透過傳入 profile['require_early_confirm'] = False 來進行對照組評估。
-    require_early_confirm = profile.get('require_early_confirm', True)
+    prev_day = df_single.iloc[-2]  # 用於判斷 KD 死亡交叉
 
     # 輔助函式：檢查是否為有效數值 (非 None 且非 NaN)
     def is_valid(val):
         return val is not None and pd.notna(val)
+
+    # --- 1. 動態計算籌碼賣超門檻 (直接採用成交量比例算式) ---
+    volume = today.get('volume', None)
+
+    # 從 Profile 讀取比例門檻與保底張數
+    major_ratio = profile.get('major_sell_ratio', 0.05)     # 預設主力賣超佔總成交量 >= 5%
+    foreign_ratio = profile.get('foreign_sell_ratio', 0.05) # 預設外資賣超佔總成交量 >= 5%
+    min_sell_shares = profile.get('min_sell_shares', 300)   # 保底張數，防止低量股過於敏感
+
+    # 賣超為負數，使用 -max(...) 算出動態上限張數
+    if is_valid(volume) and volume > 0:
+        major_sell_limit = -max(volume * major_ratio, min_sell_shares)
+        foreign_sell_limit = -max(volume * foreign_ratio, min_sell_shares)
+    else:
+        major_sell_limit = -min_sell_shares
+        foreign_sell_limit = -min_sell_shares
+
+    broker_diff_limit = profile.get('broker_diff', 20)      # 家數差門檻 (正數：買家數 > 賣家數，散戶接盤)
 
     # --- 2. 提取技術面與籌碼面數據 ---
     easy_a = today.get('easy_buy', None)
@@ -71,83 +69,45 @@ def mon_qiantang_ni_diu_wo_jian(
     trust_net = today.get('trust_net', None)
     broker_diff = today.get('broker_diff', None)
 
-    # 價格數據 (用於領先形態確認)
-    close_price = today.get('close', None)
-    open_price = today.get('open', None)
-    prev_low = prev_day.get('low', None)
-    prev_open = prev_day.get('open', None)
-    prev_close = prev_day.get('close', None)
-
-    # 計算 5 日均線 MA5
-    ma5 = today.get('MA5', df_single['close'].tail(5).mean() if 'close' in df_single else None)
-
     # --- 3. 條件邏輯判斷 ---
 
-    # A. 技術面判斷 (KD 高檔/死叉 + 輕鬆賣盤 > 買盤)
+    # A. 技術面判斷
     cond_easy = (easy_b > easy_a) if (is_valid(easy_a) and is_valid(easy_b)) else True
+
     cond_kd_overbought = (k_val > 70) if is_valid(k_val) else False
     cond_kd_death_cross = (prev_k > prev_d and k_val < d_val) if all(map(is_valid, [k_val, d_val, prev_k, prev_d])) else False
-    
     cond_tech_kd = cond_kd_overbought or cond_kd_death_cross
+
     cond_tech = cond_easy and cond_tech_kd
 
-    # B. 籌碼面判斷
+    # B. 籌碼面判斷 (區分「有分點數據」與「無分點備援」)
     cond_chip_main = (major_net <= major_sell_limit) and (foreign_net <= foreign_sell_limit) if (is_valid(major_net) and is_valid(foreign_net)) else False
 
+    # 檢查是否有有效的分點家數差資料
     if is_valid(broker_diff):
         # 情況 1：有分點資料，家數差 >= 門檻 (散戶接盤)
-        cond_chip_broker = (broker_diff >= broker_diff_limit) and (major_net <= 0 if is_valid(major_net) else True)
+        cond_chip_broker = broker_diff >= broker_diff_limit
         chip_fallback_used = False
     else:
-        # 情況 2：無分點資料 (Fallback 機制)，主力大賣 + 外資大賣 + 投信無護盤
+        # 情況 2：缺乏分點資料 (NaN/None)，啟動 Fallback 機制
+        # 備援條件：主力大賣 + 外資大賣 + 投信無護盤 (買賣超 <= 0)
         is_trust_not_buying = (trust_net <= 0) if is_valid(trust_net) else True
         cond_chip_broker = cond_chip_main and is_trust_not_buying
         chip_fallback_used = True
 
+    # 籌碼面綜合判定
     cond_chip = cond_chip_main or cond_chip_broker
 
-    # C. 💡 領先二次確認過濾器 (Early Confirmation Filter)
-    cond_filter = True
-    filter_reasons = []
-
-    if require_early_confirm and is_valid(close_price):
-        # 條件 C1: 跌破前一日最低價 (破前低，敏捷度最高)
-        if is_valid(prev_low) and close_price < prev_low:
-            filter_reasons.append("跌破前日低點")
-
-        # 條件 C2: 實體長黑 K (實體跌幅 >= 指定幅度 %)
-        if is_valid(open_price) and open_price > 0:
-            body_pct = (open_price - close_price) / open_price * 100
-            if close_price < open_price and body_pct >= bearish_body_limit:
-                filter_reasons.append(f"實體長黑({body_pct:.1f}%)")
-
-        # 條件 C3: 長黑吞噬 (當日黑 K 吞噬前一日紅 K 實體)
-        if all(map(is_valid, [open_price, prev_open, prev_close])):
-            is_prev_red = prev_close > prev_open
-            is_engulfing = (open_price >= prev_close) and (close_price <= prev_open)
-            if is_prev_red and is_engulfing:
-                filter_reasons.append("長黑吞噬")
-
-        # 條件 C4: 跌破 5 日短均線 (MA5)
-        if is_valid(ma5) and close_price < ma5:
-            filter_reasons.append("跌破 MA5")
-
-        # 只要滿足上述任一領先形態條件，過濾器即通過
-        cond_filter = len(filter_reasons) > 0
-        filter_str = " + ".join(filter_reasons) if cond_filter else "未滿足領先轉弱形態"
-    else:
-        filter_str = "免二次確認"
-
     # 最終綜合判斷
-    is_hit = cond_tech and cond_chip and cond_filter
+    is_hit = cond_tech and cond_chip
 
     # --- 4. 🔔 詳細數據輸出區塊 ---
     if verbose:
         stock_id = today.get('stock_id', '未知個股')
         date_str = str(today.get('date', '最新日'))
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 55)
         print(f"🔔 [你丟我撿 訊號檢測分析] 股票: {stock_id} | 日期: {date_str}")
-        print("-" * 60)
+        print("-" * 55)
         
         easy_a_str = f"{easy_a:.1f}" if is_valid(easy_a) else "N/A"
         easy_b_str = f"{easy_b:.1f}" if is_valid(easy_b) else "N/A"
@@ -159,7 +119,7 @@ def mon_qiantang_ni_diu_wo_jian(
 
         maj_str = f"{major_net:.0f}" if is_valid(major_net) else "N/A"
         for_str = f"{foreign_net:.0f}" if is_valid(foreign_net) else "N/A"
-        print(f" [{ '✓' if cond_chip_main else '✕' }] 3. 法人賣超門檻 : 主力 {maj_str} (<= {major_sell_limit}) & 外資 {for_str} (<= {foreign_sell_limit})")
+        print(f" [{ '✓' if cond_chip_main else '✕' }] 3. 法人賣超門檻 : 主力 {maj_str} (<= {major_sell_limit:.0f}) & 外資 {for_str} (<= {foreign_sell_limit:.0f})")
 
         if not chip_fallback_used:
             bd_str = f"{broker_diff:.0f}" if is_valid(broker_diff) else "N/A"
@@ -168,11 +128,9 @@ def mon_qiantang_ni_diu_wo_jian(
             tru_str = f"{trust_net:.0f}" if is_valid(trust_net) else "N/A"
             print(f" [{ '✓' if cond_chip_broker else '✕' }] 4. 分點缺失(啟動備援): 外資+主力大賣 且 投信無護盤 ({tru_str} 張)")
 
-        print(f" [{ '✓' if cond_filter else '✕' }] 5. 領先過濾確認 : {filter_str}")
-
-        print("-" * 60)
+        print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發你丟我撿]' if is_hit else '⚪ [未觸發]'}")
-        print("=" * 60 + "\n")
+        print("=" * 55 + "\n")
 
     # 安全地準備 Info 輸出
     maj_print = f"{major_net:.0f}" if is_valid(major_net) else "0"
@@ -181,7 +139,7 @@ def mon_qiantang_ni_diu_wo_jian(
 
     info = {
         '轉空賣訊': '你丟我撿',
-        '操作建議': f'高檔籌碼持續派發（主力 {maj_print} 張 / 外資 {for_print} 張，家數差 {bd_print}），且技術面已滿足領先轉弱過濾（{filter_str}），呈現散戶接盤與高檔轉折格局，建議逢高減碼離場。'
+        '操作建議': f'股價處於高檔/壓力區且籌碼持續派發（主力 {maj_print} 張 / 外資 {for_print} 張，家數差 {bd_print}），呈現明顯散戶接盤格局，建議逢高減碼。'
     } if is_hit else {}
 
     return is_hit, info
