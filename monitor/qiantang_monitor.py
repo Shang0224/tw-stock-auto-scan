@@ -9,20 +9,25 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+import pandas as pd
+import numpy as np
+
+DEBUG_VERBOSE = True
+
 def mon_qiantang_ni_diu_wo_jian(
     df_single: pd.DataFrame, 
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """你丟我撿 (主力持續派發 / 散戶接盤) - 優化版
+    """你丟我撿 (主力持續派發 / 散戶接盤) - 全股數運算 / 張數顯示優化版
 
     核心邏輯：
     1. 技術面（雙重確認）：
-       - 輕鬆賣盤大於買盤 (B > A)，且 KD 處於高檔區 (K > 70) 或剛發生高檔死亡交叉。
-       - 價格實質轉弱防護 (Price Weakness)：(當日收黑K 且 跌破前日低點) OR (收盤價跌破 5日線)。
+        - 輕鬆賣盤大於買盤 (B > A)，且 KD 處於高檔區 (K > 70) 或剛發生高檔死亡交叉。
+        - 價格實質轉弱防護 (Price Weakness)：(當日收黑K 且 跌破前日低點) OR (收盤價跌破 5日線)。
     2. 籌碼面（高門檻派發）：
-       - 有分點資料：(主力賣超 >= 動態門檻 AND 外資賣超 >= 動態門檻) OR (分點買賣家數差 >= 家數差門檻)
-       - 無分點資料 (Fallback)：主力大賣 + 外資大賣 + 投信無護盤(<=0)，達成雙法人同步派發驗證。
+        - 有分點資料：(主力賣超 >= 動態門檻 AND 外資賣超 >= 動態門檻) OR (分點買賣家數差 >= 家數差門檻)
+        - 無分點資料 (Fallback)：主力大賣 + 外資大賣 + 投信無護盤(<=0)，達成雙法人同步派發驗證。
     """
     profile = profile or {}
 
@@ -39,29 +44,29 @@ def mon_qiantang_ni_diu_wo_jian(
     def is_valid(val):
         return val is not None and pd.notna(val)
 
-    # --- 1. 動態計算籌碼賣超門檻 (提高比例至 8% 以過濾微量調節雜訊) ---
-    volume = today.get('Trading_Volume', None)
+    # --- 1. 動態計算籌碼賣超門檻 (單位：股) ---
+    volume = today.get('Trading_Volume', None)  # 總成交股數
 
-    # 從 Profile 讀取比例門檻與保底張數
+    # 從 Profile 讀取比例門檻與保底股數 (預設 30萬股 = 300張)
     major_ratio = profile.get('major_sell_ratio', 0.05)     # 預設主力賣超佔總成交量 >= 5%
     foreign_ratio = profile.get('foreign_sell_ratio', 0.05) # 預設外資賣超佔總成交量 >= 5%
-    min_sell_shares = profile.get('min_sell_shares', 300*1000)   # 保底股數，防止低量股過於敏感
+    min_sell_shares = profile.get('min_sell_shares', 300 * 1000)  # 保底股數 (300張 * 1000 = 300,000股)
 
-    # 賣超為負數，使用 -max(...) 算出動態上限張數
+    # 賣超為負數，使用 -max(...) 算出動態上限股數
     if is_valid(volume) and volume > 0:
         major_sell_limit = -max(volume * major_ratio, min_sell_shares)
         foreign_sell_limit = -max(volume * foreign_ratio, min_sell_shares)
     else:
-        major_sell_limit = -min_sell_shares
-        foreign_sell_limit = -min_sell_shares
+        major_sell_limit = -float(min_sell_shares)
+        foreign_sell_limit = -float(min_sell_shares)
 
-    broker_diff_limit = profile.get('broker_diff', 20)      # 家數差門檻 (正數：買家數 > 賣家數，散戶接盤)
+    broker_diff_limit = profile.get('broker_diff', 20)  # 家數差門檻 (正數：買家數 > 賣家數，散戶接盤)
 
     # --- 2. 提取技術面與籌碼面數據 ---
     close_val = today.get('close', None)
     open_val  = today.get('open', None)
     low_val   = today.get('low', None)
-    ma5_val   = today.get('ma5', today.get('MA5', None))    # 相容小寫與大寫欄位名稱
+    ma5_val   = today.get('ma5', today.get('MA5', None))  # 相容小寫與大寫欄位名稱
     prev_low  = prev_day.get('low', None)
 
     easy_a = today.get('easy_buy', None)
@@ -72,10 +77,10 @@ def mon_qiantang_ni_diu_wo_jian(
     prev_k = prev_day.get('K', None)
     prev_d = prev_day.get('D', None)
 
-    major_net = today.get('major_net', None)
-    foreign_net = today.get('foreign_net', None)
-    trust_net = today.get('trust_net', None)
-    broker_diff = today.get('broker_diff', None)
+    major_net = today.get('major_net', None)      # 主力買賣超 (股)
+    foreign_net = today.get('foreign_net', None)  # 外資買賣超 (股)
+    trust_net = today.get('trust_net', None)      # 投信買賣超 (股)
+    broker_diff = today.get('broker_diff', None)  # 家數差 (家)
 
     # --- 3. 條件邏輯判斷 ---
 
@@ -87,42 +92,30 @@ def mon_qiantang_ni_diu_wo_jian(
     cond_tech_kd = cond_kd_overbought or cond_kd_death_cross
 
     # B. 技術面判斷 2：價格實質轉弱防護（防範高檔強勢續噴）
-    # (1) 收黑K (收盤價 < 開盤價) 且 跌破前日低點 (當日低點 < 前日低點)
     cond_black_k = (close_val < open_val) if (is_valid(close_val) and is_valid(open_val)) else False
     cond_break_prev_low = (low_val < prev_low) if (is_valid(low_val) and is_valid(prev_low)) else False
     cond_pattern_weak = cond_black_k and cond_break_prev_low
 
-    # (2) 跌破 5日均線 (收盤價 < 5MA)
     cond_below_ma5 = (close_val < ma5_val) if (is_valid(close_val) and is_valid(ma5_val)) else False
 
-    # 綜合價格轉弱判斷 (型態破位 OR 5日線失守)
     cond_price_weak = cond_pattern_weak or cond_below_ma5
-
-    # 技術面綜合判定
     cond_tech = cond_easy and cond_tech_kd and cond_price_weak
 
-    # C. 籌碼面判斷 (區分「有分點數據」與「無分點備援」)
+    # C. 籌碼面判斷 (全股數條件比較)
     cond_chip_main = (major_net <= major_sell_limit) and (foreign_net <= foreign_sell_limit) if (is_valid(major_net) and is_valid(foreign_net)) else False
 
-    # 檢查是否有有效的分點家數差資料
     if is_valid(broker_diff):
-        # 情況 1：有分點資料，家數差 >= 門檻 (散戶接盤)
         cond_chip_broker = broker_diff >= broker_diff_limit
         chip_fallback_used = False
     else:
-        # 情況 2：缺乏分點資料 (NaN/None)，啟動 Fallback 機制
-        # 備援條件：主力大賣 + 外資大賣 + 投信無護盤 (買賣超 <= 0)
         is_trust_not_buying = (trust_net <= 0) if is_valid(trust_net) else True
         cond_chip_broker = cond_chip_main and is_trust_not_buying
         chip_fallback_used = True
 
-    # 籌碼面綜合判定
     cond_chip = cond_chip_main or cond_chip_broker
-
-    # 最終綜合判斷
     is_hit = cond_tech and cond_chip
 
-    # --- 4. 🔔 詳細數據輸出區塊 ---
+    # --- 4. 🔔 詳細數據輸出區塊 (顯示時轉換為張數) ---
     if verbose:
         stock_id = today.get('stock_id', '未知個股')
         date_str = str(today.get('date', '最新日'))
@@ -143,24 +136,28 @@ def mon_qiantang_ni_diu_wo_jian(
         prev_low_str = f"{prev_low:.2f}" if is_valid(prev_low) else "N/A"
         print(f" [{ '✓' if cond_price_weak else '✕' }] 3. 價格實質轉弱 : (黑K 且 破前低 {prev_low_str}) OR (收盤 {close_str} < 5MA {ma5_str})")
 
-        maj_str = f"{major_net:.0f}" if is_valid(major_net) else "N/A"
-        for_str = f"{foreign_net:.0f}" if is_valid(foreign_net) else "N/A"
-        print(f" [{ '✓' if cond_chip_main else '✕' }] 4. 法人賣超門檻 : 主力 {maj_str} (<= {major_sell_limit:.0f}) & 外資 {for_str} (<= {foreign_sell_limit:.0f}) [佔比 {major_ratio*100:.0f}%]")
+        # 顯示轉換：股數 / 1000 -> 張數
+        maj_lots_str = f"{major_net / 1000.0:,.0f} 張" if is_valid(major_net) else "N/A"
+        for_lots_str = f"{foreign_net / 1000.0:,.0f} 張" if is_valid(foreign_net) else "N/A"
+        maj_limit_lots = major_sell_limit / 1000.0
+        for_limit_lots = foreign_sell_limit / 1000.0
+
+        print(f" [{ '✓' if cond_chip_main else '✕' }] 4. 法人賣超門檻 : 主力 {maj_lots_str} (<= {maj_limit_lots:,.0f}張) & 外資 {for_lots_str} (<= {for_limit_lots:,.0f}張) [佔比 {major_ratio*100:.0f}%]")
 
         if not chip_fallback_used:
             bd_str = f"{broker_diff:.0f}" if is_valid(broker_diff) else "N/A"
             print(f" [{ '✓' if cond_chip_broker else '✕' }] 5. 分點籌碼分散 : 買賣家數差 {bd_str} (>= {broker_diff_limit})")
         else:
-            tru_str = f"{trust_net:.0f}" if is_valid(trust_net) else "N/A"
-            print(f" [{ '✓' if cond_chip_broker else '✕' }] 5. 分點缺失(啟動備援): 外資+主力大賣 且 投信無護盤 ({tru_str} 張)")
+            tru_lots_str = f"{trust_net / 1000.0:,.0f} 張" if is_valid(trust_net) else "N/A"
+            print(f" [{ '✓' if cond_chip_broker else '✕' }] 5. 分點缺失(啟動備援): 外資+主力大賣 且 投信無護盤 ({tru_lots_str})")
 
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發你丟我撿]' if is_hit else '⚪ [未觸發]'}")
         print("=" * 55 + "\n")
 
-    # 安全地準備 Info 輸出
-    maj_print = f"{major_net:.0f}" if is_valid(major_net) else "0"
-    for_print = f"{foreign_net:.0f}" if is_valid(foreign_print := foreign_net) else "0"
+    # 安全地準備 Info 輸出 (股數 / 1000 換算為張數)
+    maj_print = f"{major_net / 1000.0:,.0f}" if is_valid(major_net) else "0"
+    for_print = f"{foreign_net / 1000.0:,.0f}" if is_valid(foreign_net) else "0"
     bd_print  = f"{broker_diff:.0f}" if is_valid(broker_diff) else "無資料"
 
     info = {
