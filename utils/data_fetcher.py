@@ -75,16 +75,13 @@ def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> 
 
             # --- 2. 處理融資融券資料 ---
             if df_margin is not None and not df_margin.empty:
+                # 僅抽取日期、融資餘額、融券餘額 (保留原欄位名稱)
                 df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
-                df_margin_sub.rename(columns={
-                    'MarginPurchaseTodayBalance': 'margin_balance',
-                    'ShortSaleTodayBalance': 'short_balance'
-                }, inplace=True)
 
-                if df_chip.empty:
-                    df_chip = df_margin_sub
-                else:
-                    df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
+            if df_chip.empty:
+                df_chip = df_margin_sub
+            else:
+                df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
 
             # --- 3. 綁定股票代號並存入結果 ---
             if not df_chip.empty:
