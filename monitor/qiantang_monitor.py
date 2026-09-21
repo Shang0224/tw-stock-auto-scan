@@ -40,7 +40,7 @@ def mon_qiantang_ni_diu_wo_jian(
         return val is not None and pd.notna(val)
 
     # --- 1. 動態計算籌碼賣超門檻 (提高比例至 8% 以過濾微量調節雜訊) ---
-    volume = today.get('volume', None)
+    volume = today.get('Trading_Volume', None)
 
     # 從 Profile 讀取比例門檻與保底張數
     major_ratio = profile.get('major_sell_ratio', 0.05)     # 預設主力賣超佔總成交量 >= 5%
