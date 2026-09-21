@@ -245,7 +245,7 @@ def run_monitor_test(source, stock_source, stock_input, strategies, start_date_s
                 print(f"⚠️ [寫入策略註腳失敗] 錯誤: {e}")
 
         # 發送 Email 報告
-        send_email_report(csv_path)
+        #send_email_report(csv_path)
 
         # 上傳 NAS 遠端封存
         if os.path.exists(csv_path):
