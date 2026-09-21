@@ -14,7 +14,7 @@ def mon_qiantang_ni_diu_wo_jian(
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """你丟我撿 (主力持續派發 / 散戶接盤) - 全股數運算 / 張數顯示優化版
+    """你丟我撿 (主力持續派發 / 散戶接盤) - FinMind 欄位專用版
 
     核心邏輯：
     1. 技術面（雙重確認）：
@@ -57,14 +57,13 @@ def mon_qiantang_ni_diu_wo_jian(
 
     broker_diff_limit = profile.get('broker_diff', 20)  # 家數差門檻 (正數：買家數 > 賣家數，散戶接盤)
 
-    # --- 2. 提取技術面與籌碼面數據 ---
+    # --- 2. 提取技術面與籌碼面數據 (純 FinMind 欄位: 最低價使用 min) ---
     close_val = today.get('close', None)
     open_val  = today.get('open', None)
-    low_val   = today.get('low', None)
-    prev_low  = prev_day.get('low', None)
+    low_val   = today.get('min', None)       # 直接指定 FinMind min 欄位
+    prev_low  = prev_day.get('min', None)    # 直接指定 FinMind min 欄位
 
     # 計算 ma5, 抓取最後 5 筆 close 計算 5MA
-    # 乾淨且嚴謹的 5MA 備援計算
     if len(df_single) >= 5:
         last_5_close = df_single['close'].iloc[-5:]
         # 只有當這 5 天「完全沒有 NaN」時才計算 5MA
