@@ -66,8 +66,16 @@ def mon_qiantang_ni_diu_wo_jian(
     close_val = today.get('close', None)
     open_val  = today.get('open', None)
     low_val   = today.get('low', None)
-    ma5_val   = today.get('ma5', today.get('MA5', None))  # 相容小寫與大寫欄位名稱
     prev_low  = prev_day.get('low', None)
+
+    # 計算 ma5, 抓取最後 5 筆 close 計算 5MA
+    # 乾淨且嚴謹的 5MA 備援計算
+    if len(df_single) >= 5:
+        last_5_close = df_single['close'].iloc[-5:]
+        # 只有當這 5 天「完全沒有 NaN」時才計算 5MA
+        ma5_val = last_5_close.mean() if not last_5_close.isna().any() else None
+    else:
+        ma5_val = None
 
     easy_a = today.get('easy_buy', None)
     easy_b = today.get('easy_sell', None)
