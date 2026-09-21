@@ -14,126 +14,80 @@ def mon_qiantang_tian_nv_san_hua(
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """天女散花 (高檔長下影 / 創高爆量籌碼鬆動)
-    
-    核心邏輯：
-    1. 當日最高價 >= 近 10 天最高價 (創階段新高) 且
-    2. 當日成交量 >= 近 10 天最大成交量 (頂部天量換手) 且
-    3. 當日成交量 >= 最低流動性門檻 (profile['min_vol'] 單位為「股」) 且
-    4. 當日最高價 / 1天前收盤 > (1 + 0.065 * surge_mult) (衝高強勢拉抬) 且
-    5. 當日最高價 / 當日收盤 >= 1.01 (頂部滯漲或震盪留上影線) 且
-    6. 長下影線特徵：(min(open, close) - min) / (max - min) >= 0.60 且
-    7. 融券餘額 > 0 (套用 FinMind 最新欄位 ShortSaleTodayBalance)
-    """
+    """天女散花 - 完全對應原始公式 + 動態流動性函數"""
     profile = profile or {}
 
-    # 輔助函式：檢查是否為有效數值 (非 None 且非 NaN)
     def is_valid(val):
         return val is not None and pd.notna(val)
 
-    # 至少需要 15 筆歷史資料支援 10 天視窗運算
-    if len(df_single) < 15:
+    if len(df_single) < 10:
         if verbose:
-            print(f"❌ [天女散花] 資料筆數不足 15 筆 (目前: {len(df_single)})")
+            print(f"❌ [天女散花] 資料筆數不足 10 筆 (目前: {len(df_single)})")
         return False, {}
 
     today = df_single.iloc[-1]
     c_1 = df_single['close'].iloc[-2]  # 前一日收盤價
 
-    total_range = today['max'] - today['min']
-    if total_range == 0:
-        if verbose:
-            print("❌ [天女散花] 當日高低價差為 0 (平盤無震盪)")
-        return False, {}
-
-    # 1. 讀取 Profile 基礎設定 (profile['min_vol'] 單位本身即為「股」，預設 1,000 張 = 1,000,000 股)
-    base_min_vol = profile.get('min_vol', 1000 * 1000)
-    surge_mult = profile.get('surge_mult', 1.0)
-    profile_category = profile.get('category', '')
-
-    # 2. 流動性門檻調整 (高價 IC 設計股自動微調，單位：股)
-    min_vol = base_min_vol
-    if profile_category == 'ic_design':
-        if today['close'] >= 1000:
-            min_vol = min(base_min_vol, 300 * 1000)  # 防線下修至 300,000 股 (300 張)
-        elif today['close'] >= 500:
-            min_vol = min(base_min_vol, 500 * 1000)  # 防線下修至 500,000 股 (500 張)
-
-    # 3. 計算動態衝高門檻 (基準 6.5% 乘以族群波動係數)
-    target_surge_ratio = 1.0 + (0.065 * surge_mult)
-
-    # 4. 提取各指標數值
-    max_10d = df_single['max'].iloc[-10:].max()
-    vol_10d = df_single['Trading_Volume'].iloc[-10:].max()
-    surge_ratio = today['max'] / c_1 if (is_valid(c_1) and c_1 > 0) else 0
-    high_close_ratio = today['max'] / today['close'] if (is_valid(today['close']) and today['close'] > 0) else 0
-    lower_shadow = min(today['open'], today['close']) - today['min']
-    lower_shadow_ratio = lower_shadow / total_range
-
-    # 讀取 FinMind 融券欄位 (原始欄位名稱)
-    short_balance = today.get('ShortSaleTodayBalance', None)
-
-    # 5. 條件邏輯判斷 (全部採用「股」進行股數比對)
-    cond1_max_price = today['max'] >= max_10d
-    cond2_max_vol = today['Trading_Volume'] >= vol_10d
-    cond3_min_vol = today['Trading_Volume'] >= min_vol  # 股數 vs 股數
-    cond4_surge = surge_ratio > target_surge_ratio
-    cond5_high_close_ratio = high_close_ratio >= 1.01
-    cond6_long_lower = lower_shadow_ratio >= 0.60
-    
-    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
-        cond7_short_balance = short_balance > 0
-        has_short_col = True
-    else:
-        cond7_short_balance = True  # 無資料時預設通過
-        has_short_col = False
-
-    # 6. 綜合評估
-    is_hit = (
-        cond1_max_price and 
-        cond2_max_vol and 
-        cond3_min_vol and 
-        cond4_surge and 
-        cond5_high_close_ratio and 
-        cond6_long_lower and 
-        cond7_short_balance
+    # 📍 呼叫動態門檻函數 (錢塘潮防止買到成交量過低的股票原始基準門檻：3000 張)
+    min_vol_shares = get_qiantang_min_volume_shares(
+        price=today['close'],
+        profile=profile
     )
 
-    # 7. 🔔 詳細數據輸出區塊 (顯示時轉為張數：除以 1000)
+    # 提取指標數值
+    max_10d = df_single['max'].iloc[-10:].max()
+    vol_10d = df_single['Trading_Volume'].iloc[-10:].max()
+
+    v_0 = today['Trading_Volume']
+    surge_ratio = today['max'] / c_1 if (is_valid(c_1) and c_1 > 0) else 0
+    high_close_ratio = today['max'] / today['close'] if (is_valid(today['close']) and today['close'] > 0) else 0
+    short_balance = today.get('ShortSaleTodayBalance', None)
+
+    # 條件邏輯判斷
+    cond1_max_price = (today['max'] == max_10d)
+    cond2_max_vol = (v_0 == vol_10d)
+    cond3_min_vol = (v_0 >= min_vol_shares)  # 自動對齊高價股門檻 (單位：股)
+    cond4_surge = (surge_ratio > 1.065)
+    cond5_high_close_ratio = (high_close_ratio >= 1.01)
+    
+    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
+        cond6_short_balance = (short_balance > 0)
+        has_short_col = True
+    else:
+        cond6_short_balance = True
+        has_short_col = False
+
+    is_hit = (
+        cond1_max_price and cond2_max_vol and cond3_min_vol and 
+        cond4_surge and cond5_high_close_ratio and cond6_short_balance
+    )
+
     if verbose:
         stock_id = today.get('stock_id', '未知個股')
         date_str = str(today.get('date', '最新日'))
-        
-        # 轉換為張數以供日誌呈現
-        today_vol_lots = today['Trading_Volume'] / 1000.0
-        vol_10d_lots = vol_10d / 1000.0
-        min_vol_lots = min_vol / 1000.0
+        min_vol_lots = min_vol_shares / 1000.0
 
         print("\n" + "=" * 55)
-        print(f"🔔 [天女散花 訊號檢測分析] 股票: {stock_id} | 日期: {date_str}")
+        print(f"🔔 [天女散花] 股票: {stock_id} | 日期: {date_str} | 適用門檻: {min_vol_lots:,.0f} 張")
         print("-" * 55)
-        print(f" [{ '✓' if cond1_max_price else '✕' }] 1. 創 10 日新高 : 最高價 {today['max']:.2f} >= 近10日最高 {max_10d:.2f}")
-        print(f" [{ '✓' if cond2_max_vol else '✕' }] 2. 創 10 日天量 : 當日量 {today_vol_lots:,.0f} 張 >= 近10日最大量 {vol_10d_lots:,.0f} 張")
-        print(f" [{ '✓' if cond3_min_vol else '✕' }] 3. 達最低流動性 : 當日量 {today_vol_lots:,.0f} 張 >= 門檻 {min_vol_lots:,.0f} 張")
-        print(f" [{ '✓' if cond4_surge else '✕' }] 4. 強勢衝高幅度 : 高點/前收 {surge_ratio:.3f} > 門檻 {target_surge_ratio:.3f} (+{(target_surge_ratio-1)*100:.1f}%)")
-        print(f" [{ '✓' if cond5_high_close_ratio else '✕' }] 5. 頂部滯漲震盪 : 高點/收盤 {high_close_ratio:.3f} >= 1.010")
-        print(f" [{ '✓' if cond6_long_lower else '✕' }] 6. 長下影線比例 : 下影線佔比 {lower_shadow_ratio*100:.1f}% >= 60.0%")
+        print(f" [{ '✓' if cond1_max_price else '✕' }] 1. 最高等於10日最高 : 最高價 {today['max']:.2f} == 10日最高 {max_10d:.2f}")
+        print(f" [{ '✓' if cond2_max_vol else '✕' }] 2. 成交量等於10日天量 : 當日量 {v_0/1000:,.0f} 張 == 10日最大 {vol_10d/1000:,.0f} 張")
+        print(f" [{ '✓' if cond3_min_vol else '✕' }] 3. 達最低流動性門檻 : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {min_vol_lots:,.0f} 張")
+        print(f" [{ '✓' if cond4_surge else '✕' }] 4. 最高/1天前收盤 > 1.065 : 幅度 {surge_ratio:.3f} > 1.065 (+6.5%)")
+        print(f" [{ '✓' if cond5_high_close_ratio else '✕' }] 5. 最高/收盤 ≧ 1.01   : 比例 {high_close_ratio:.3f} >= 1.010")
         
         if has_short_col:
-            print(f" [{ '✓' if cond7_short_balance else '✕' }] 7. 融券餘額檢查 : 當日融券餘額 {short_balance:,.0f} 張 > 0")
+            print(f" [{ '✓' if cond6_short_balance else '✕' }] 6. 融券餘額 > 0       : 當日融券餘額 {short_balance:,.0f} 張 > 0")
         else:
-            print(f" [–] 7. 融券餘額檢查 : 無欄位資料 (預設通過)")
+            print(f" [–] 6. 融券餘額 > 0       : 無欄位資料 (預設通過)")
             
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發天女散花]' if is_hit else '⚪ [未觸發]'}")
         print("=" * 55 + "\n")
 
-    # 8. Info 輸出準備
-    min_vol_print_lots = f"{int(min_vol // 1000):,.0f}"
-    
     info = {
         '轉空賣訊': '天女散花',
-        '操作建議': f'高檔爆出近10天天量(當日套用門檻 {min_vol_print_lots} 張)且出現劇烈震盪長下影線，代表主力籌碼大幅鬆動控盤不穩，宜逢高分批停利離場。'
+        '操作建議': f'當日創10日新高且爆出10日天量({v_0 // 1000:,.0f} 張)，衝高後滯漲留上影線，代表高檔換手失敗且主力籌碼鬆動，建議停利離場。'
     } if is_hit else {}
 
     return is_hit, info
@@ -988,3 +942,39 @@ def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, 
     }
 
     return True, info
+
+
+
+import pandas as pd
+
+def get_qiantang_min_volume_shares(
+    price: float, 
+    base_lots: int = 3000, 
+    profile: dict = None
+) -> int:
+    """計算錢塘潮策略體系的「最低流動性門檻」(單位：股)
+    
+    參數:
+    - price (float): 當日收盤價 (或評估股價)
+    - base_lots (int): 策略原始設定的最低張數門檻 (預設 3000 張，部分策略為 2000 或 4000 張)
+    - profile (dict): 個股 Profile 設定檔 (可包含 category 等族群資訊)
+    
+    傳回:
+    - int: 換算後的最低成交量門檻 (單位：股)
+    """
+    profile = profile or {}
+    category = str(profile.get('category', '')).lower()
+    
+    # 1. 基礎張數門檻 (若 profile 有特別覆寫則優先採用)
+    target_lots = profile.get('min_vol_lots', base_lots)
+    
+    # 2. 針對高價股 / 千金股 / IC設計股進行動態防線下修
+    if price >= 1000:
+        target_lots = min(target_lots, 300)   # 千金股：防線下修至 300 張
+    elif price >= 500:
+        target_lots = min(target_lots, 500)   # 500元以上高價股：防線下修至 500 張
+    elif 'ic_design' in category or 'ic設計' in category:
+        target_lots = min(target_lots, 500)   # IC設計族群預設防線：500 張
+
+    # 3. 轉換為 FinMind API 使用的「股數」單位 (張數 * 1000)
+    return int(target_lots * 1000)
