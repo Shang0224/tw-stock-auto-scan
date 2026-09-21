@@ -11,7 +11,13 @@ DEBUG_VERBOSE = True
 
 
 def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
-    """一柱清香 (高檔爆量長上影)"""
+    """一柱清香 (高檔爆量長上影)
+    
+    公式邏輯
+    ((最高/收盤) ≧ 1.03 and 劵餘 > 0) and (2天最大值 = 9天最高最大值  且 2天最高成交量 = 9天成交量大值) 且 成交量 ≧ 4000
+    """
+
+    
     if len(df_single) < 20: return False, {}
     today = df_single.iloc[-1]
     
