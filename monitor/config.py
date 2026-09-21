@@ -18,8 +18,8 @@ PARAM_PROFILES = {
         'min_vol': 1500,
         'surge_mult': 1.0,
         # --- 動態比例門檻設定 ---
-        'major_sell_ratio': 0.05,       # 主力賣超佔當日成交量 >= 5.0%
-        'foreign_sell_ratio': 0.05,     # 外資賣超佔當日成交量 >= 5.0%
+        'major_sell_ratio': 0.08,       # 主力賣超佔當日成交量 >= 8.0%
+        'foreign_sell_ratio': 0.08,     # 外資賣超佔當日成交量 >= 8.0%
         'min_sell_shares': 500,         # 保底張數：至少 500 張 (例如神達成交 6 萬張時，自動鎖定門檻為 3,000 張)
         'broker_diff': 30,              # 家數差門檻 (買家數 - 賣家數 >= 30)
     },
