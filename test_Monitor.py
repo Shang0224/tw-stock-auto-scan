@@ -38,9 +38,10 @@ TEST_END_DATE   = '2025-09-30'
 # 模式 B：自訂 List[dict] 載入模式
 STOCK_MODE = 'noncsv'
 STOCK_INPUT = [
-    {'stock_id': '2330', 'name': '台積電', 'category': 'TW50'},
+    #{'stock_id': '2330', 'name': '台積電', 'category': 'TW50'},
     {'stock_id': '3706', 'name': '神達', 'category': 'MID100'},
-    {'stock_id': '2317', 'name': '鴻海', 'category': 'TW50'}
+    #{'stock_id': '2317', 'name': '鴻海', 'category': 'TW50'} 
+    #{'stock_id': '3227', 'name': '原相', 'category': 'ICDesign'}
 ]
 # ---------------------------------------------------------------------
 
