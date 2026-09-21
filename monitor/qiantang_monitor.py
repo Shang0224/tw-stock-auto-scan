@@ -9,6 +9,140 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+
+def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
+    """一柱清香 (高檔爆量長上影)"""
+    if len(df_single) < 20: return False, {}
+    today = df_single.iloc[-1]
+    
+    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
+        return False, {}
+        
+    high, low, close, open_p = today['max'], today['min'], today['close'], today['open']
+    total_range = high - low
+    if total_range == 0: return False, {}
+    
+    upper_shadow = high - max(open_p, close)
+    is_high_shadow = (upper_shadow / total_range) >= 0.50
+    vol_ma5 = df_single['Trading_Volume'].iloc[-6:-1].mean()
+    is_vol_burst = today['Trading_Volume'] > (vol_ma5 * 2.0)
+    
+    is_hit = is_high_shadow and is_vol_burst
+    info = {
+        '轉空賣訊': '一柱清香',
+        '操作建議': '創高爆量長上影，主力高檔拉高出貨，建議減碼或停利離場。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+
+def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
+    """當頭棒喝 (創高長黑K/吞噬)"""
+    if len(df_single) < 20: return False, {}
+    today, prev = df_single.iloc[-1], df_single.iloc[-2]
+    
+    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
+        return False, {}
+
+    is_black_k = today['close'] < today['open']
+    is_engulf = (today['open'] >= prev['close']) and (today['close'] < prev['min'])
+    is_high_vol = today['Trading_Volume'] > df_single['Trading_Volume'].iloc[-6:-1].mean() * 1.5
+    
+    is_hit = is_black_k and is_engulf and is_high_vol
+    info = {
+        '轉空賣訊': '當頭棒喝',
+        '操作建議': '高檔巨量長黑吞噬 K 線，多頭力竭，極易形成中期頭部，建議避險。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
+    """下山猛虎 (爆量跌破關鍵均線)"""
+    if len(df_single) < 20: return False, {}
+    today = df_single.iloc[-1]
+    
+    ma20 = df_single['close'].iloc[-20:].mean()
+    is_break_ma20 = (df_single['close'].iloc[-2] >= ma20) and (today['close'] < ma20)
+    is_heavy_vol = today.get('Trading_Volume', 0) > profile.get('min_vol', 1000)
+    
+    is_hit = is_break_ma20 and is_heavy_vol
+    info = {
+        '轉空賣訊': '下山猛虎',
+        '操作建議': '帶量長黑跌破月線(20MA)，趨勢正式轉空，建議順勢止損離場。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+def mon_qiantang_he_shi(df_single: pd.DataFrame):
+    """合十 (短天期均線死亡交叉)"""
+    if len(df_single) < 20: return False, {}
+    
+    ma5 = df_single['close'].rolling(5).mean()
+    ma20 = df_single['close'].rolling(20).mean()
+    
+    is_hit = (ma5.iloc[-2] >= ma20.iloc[-2]) and (ma5.iloc[-1] < ma20.iloc[-1])
+    info = {
+        '轉空賣訊': '合十',
+        '操作建議': '5日均線下穿20日均線形成死叉，短線波段轉弱，注意下行風險。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+
+import pandas as pd
+
+
+def mon_qiantang_jiang_long_fu_hu(df_single: pd.DataFrame):
+    """降龍伏虎 (跳空開低大黑K)"""
+    if len(df_single) < 5: return False, {}
+    today, prev = df_single.iloc[-1], df_single.iloc[-2]
+    
+    is_gap_down = today['open'] < (prev['close'] * 0.985)
+    is_black_k = (today['open'] - today['close']) / today['open'] > 0.02
+    
+    is_hit = is_gap_down and is_black_k
+    info = {
+        '轉空賣訊': '降龍伏虎',
+        '操作建議': '出現向下跳空長黑 K 線，多頭防線全面失守，空方力道強勁。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+
+def mon_qiantang_qing_song_xian_zhuan_kong(df_single: pd.DataFrame):
+    """輕鬆線轉空, 月下老人 (輕鬆線死亡交叉)"""
+    if 'easy_b' not in df_single.columns or 'easy_s' not in df_single.columns:
+        return False, {}
+        
+    easy_b, easy_s = df_single['easy_b'], df_single['easy_s']
+    is_hit = (easy_b.iloc[-2] >= easy_s.iloc[-2]) and (easy_b.iloc[-1] < easy_s.iloc[-1])
+    
+    info = {
+        '轉空賣訊': '輕鬆線轉空',
+        '操作建議': '輕鬆線指標由多轉空，長線趨勢走弱，防守位宜提高。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+
+def mon_qiantang_kd_dead_cross(df_single: pd.DataFrame):
+    """KD高檔死叉, 這是地底穿心嗎?  (過熱區死亡交叉)"""
+    if 'K' not in df_single.columns or 'D' not in df_single.columns:
+        return False, {}
+        
+    k, d = df_single['K'], df_single['D']
+    is_high = k.iloc[-2] > 75
+    is_dead_cross = (k.iloc[-2] >= d.iloc[-2]) and (k.iloc[-1] < d.iloc[-1])
+    
+    is_hit = is_high and is_dead_cross
+    info = {
+        '轉空賣訊': 'KD高檔死叉',
+        '操作建議': 'KD 指標高檔過熱區出現死亡交叉，短線修正壓力大。'
+    } if is_hit else {}
+    
+    return is_hit, info
+
+
 def mon_qiantang_da_zhong_xia_ke(df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE):
     """打鐘下課 (主力法人大賣/反彈逢下彎均線)
 
@@ -676,137 +810,6 @@ def mon_qiantang_ni_diu_wo_jian_old(
 
     return is_hit, info
 
-def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
-    """一柱清香 (高檔爆量長上影)"""
-    if len(df_single) < 20: return False, {}
-    today = df_single.iloc[-1]
-    
-    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
-        return False, {}
-        
-    high, low, close, open_p = today['max'], today['min'], today['close'], today['open']
-    total_range = high - low
-    if total_range == 0: return False, {}
-    
-    upper_shadow = high - max(open_p, close)
-    is_high_shadow = (upper_shadow / total_range) >= 0.50
-    vol_ma5 = df_single['Trading_Volume'].iloc[-6:-1].mean()
-    is_vol_burst = today['Trading_Volume'] > (vol_ma5 * 2.0)
-    
-    is_hit = is_high_shadow and is_vol_burst
-    info = {
-        '轉空賣訊': '一柱清香',
-        '操作建議': '創高爆量長上影，主力高檔拉高出貨，建議減碼或停利離場。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-
-def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
-    """當頭棒喝 (創高長黑K/吞噬)"""
-    if len(df_single) < 20: return False, {}
-    today, prev = df_single.iloc[-1], df_single.iloc[-2]
-    
-    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
-        return False, {}
-
-    is_black_k = today['close'] < today['open']
-    is_engulf = (today['open'] >= prev['close']) and (today['close'] < prev['min'])
-    is_high_vol = today['Trading_Volume'] > df_single['Trading_Volume'].iloc[-6:-1].mean() * 1.5
-    
-    is_hit = is_black_k and is_engulf and is_high_vol
-    info = {
-        '轉空賣訊': '當頭棒喝',
-        '操作建議': '高檔巨量長黑吞噬 K 線，多頭力竭，極易形成中期頭部，建議避險。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
-    """下山猛虎 (爆量跌破關鍵均線)"""
-    if len(df_single) < 20: return False, {}
-    today = df_single.iloc[-1]
-    
-    ma20 = df_single['close'].iloc[-20:].mean()
-    is_break_ma20 = (df_single['close'].iloc[-2] >= ma20) and (today['close'] < ma20)
-    is_heavy_vol = today.get('Trading_Volume', 0) > profile.get('min_vol', 1000)
-    
-    is_hit = is_break_ma20 and is_heavy_vol
-    info = {
-        '轉空賣訊': '下山猛虎',
-        '操作建議': '帶量長黑跌破月線(20MA)，趨勢正式轉空，建議順勢止損離場。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-def mon_qiantang_he_shi(df_single: pd.DataFrame):
-    """合十 (短天期均線死亡交叉)"""
-    if len(df_single) < 20: return False, {}
-    
-    ma5 = df_single['close'].rolling(5).mean()
-    ma20 = df_single['close'].rolling(20).mean()
-    
-    is_hit = (ma5.iloc[-2] >= ma20.iloc[-2]) and (ma5.iloc[-1] < ma20.iloc[-1])
-    info = {
-        '轉空賣訊': '合十',
-        '操作建議': '5日均線下穿20日均線形成死叉，短線波段轉弱，注意下行風險。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-
-import pandas as pd
-
-
-def mon_qiantang_jiang_long_fu_hu(df_single: pd.DataFrame):
-    """降龍伏虎 (跳空開低大黑K)"""
-    if len(df_single) < 5: return False, {}
-    today, prev = df_single.iloc[-1], df_single.iloc[-2]
-    
-    is_gap_down = today['open'] < (prev['close'] * 0.985)
-    is_black_k = (today['open'] - today['close']) / today['open'] > 0.02
-    
-    is_hit = is_gap_down and is_black_k
-    info = {
-        '轉空賣訊': '降龍伏虎',
-        '操作建議': '出現向下跳空長黑 K 線，多頭防線全面失守，空方力道強勁。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-
-def mon_qiantang_qing_song_xian_zhuan_kong(df_single: pd.DataFrame):
-    """輕鬆線轉空, 月下老人 (輕鬆線死亡交叉)"""
-    if 'easy_b' not in df_single.columns or 'easy_s' not in df_single.columns:
-        return False, {}
-        
-    easy_b, easy_s = df_single['easy_b'], df_single['easy_s']
-    is_hit = (easy_b.iloc[-2] >= easy_s.iloc[-2]) and (easy_b.iloc[-1] < easy_s.iloc[-1])
-    
-    info = {
-        '轉空賣訊': '輕鬆線轉空',
-        '操作建議': '輕鬆線指標由多轉空，長線趨勢走弱，防守位宜提高。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-
-def mon_qiantang_kd_dead_cross(df_single: pd.DataFrame):
-    """KD高檔死叉, 這是地底穿心嗎?  (過熱區死亡交叉)"""
-    if 'K' not in df_single.columns or 'D' not in df_single.columns:
-        return False, {}
-        
-    k, d = df_single['K'], df_single['D']
-    is_high = k.iloc[-2] > 75
-    is_dead_cross = (k.iloc[-2] >= d.iloc[-2]) and (k.iloc[-1] < d.iloc[-1])
-    
-    is_hit = is_high and is_dead_cross
-    info = {
-        '轉空賣訊': 'KD高檔死叉',
-        '操作建議': 'KD 指標高檔過熱區出現死亡交叉，短線修正壓力大。'
-    } if is_hit else {}
-    
-    return is_hit, info
 
 
 def mon_qiantang_sell_monitor(df_single: pd.DataFrame, cost_price: float = 0.0, market_above_ma240: bool = True) -> tuple[bool, dict]:
