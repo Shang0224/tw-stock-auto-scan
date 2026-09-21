@@ -20,7 +20,7 @@ jobs:
         with:
           authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
 
-      # 🟢 連線診斷步驟
+      # 🟢 步驟 1：連線診斷步驟
       - name: Diagnostic Tailscale Connection
         run: |
           tailscale status
@@ -37,6 +37,7 @@ jobs:
           pip install -r requirements.txt
           pip install pandas requests
 
+      # 🟢 步驟 2：執行策略掃描腳本
       - name: Run Analysis Script
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -62,6 +63,7 @@ jobs:
             python stock_scanner.py
           fi
 
+      # 🟢 步驟 3：成功時 Commit 並推回 GitHub
       - name: Commit and Push results
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -70,3 +72,46 @@ jobs:
           git commit -m "Daily 240MA scan results update" || echo "No changes to commit"
           git pull --rebase origin main
           git push
+
+      # 🔴 步驟 4：當前面任一步驟失敗時，發送 LINE 警報
+      - name: Send LINE alert on failure
+        if: failure()
+        env:
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+        run: |
+          python -c "
+          import os, requests
+          token = os.environ.get('LINE_ACCESS_TOKEN')
+          user_id = os.environ.get('LINE_USER_ID')
+          
+          msg = '⚠️ [GitHub Actions 警報] 股市掃描工作流執行失敗！\n可能是 Tailscale 連線逾時或 NAS SFTP 服務異常，請至 GitHub 檢查 Log。'
+          
+          if token and user_id:
+              url = 'https://api.line.me/v2/bot/message/push'
+              headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+              payload = {'to': user_id, 'messages': [{'type': 'text', 'text': msg}]}
+              res = requests.post(url, headers=headers, json=payload)
+              print('LINE 警報發送結果：', res.status_code)
+          "
+
+      # 🔴 步驟 5：當前面任一步驟失敗時，寄出 Email 警報
+      - name: Send Email alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.SENDER_EMAIL }}
+          password: ${{ vars.EMAIL_APP_PASSWORD }}
+          subject: ⚠️ [GitHub Actions 警報] 00掃描工作流執行失敗通知
+          to: ${{ vars.RECIPIENT_EMAIL }}
+          from: GitHub Actions Alert
+          body: |
+            您好，
+
+            您的 GitHub Actions 工作流「00掃描台灣50與中型100」在執行時發生錯誤！
+            可能是 Tailscale VPN 連線失敗或 NAS SFTP 傳輸中斷。
+
+            請前往 GitHub Repository 的 Actions 頁面查看具體失敗步驟與 Log。       
