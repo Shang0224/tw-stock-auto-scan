@@ -9,11 +9,6 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
-import pandas as pd
-import numpy as np
-
-DEBUG_VERBOSE = True
-
 def mon_qiantang_ni_diu_wo_jian(
     df_single: pd.DataFrame, 
     profile: dict = None, 
