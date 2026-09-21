@@ -14,7 +14,17 @@ def mon_qiantang_tian_nv_san_hua(
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """天女散花 - 完全對應原始公式 + 動態流動性函數"""
+    """天女散花
+
+    公式 logic:
+    1. 當日最高 == 近 10 天最高價 (含當日)
+    2. 當日成交量 == 近 10 天成交量最大值 (含當日)
+    3. 當日成交量 >= 最低流動性門檻 (預設 3000 張，高價股自動微調)
+    4. 當日最高 / 1天前收盤 > 1.065
+    5. 當日最高 / 當日收盤 >= 1.01
+    6. 當日融券餘額 > 0
+    """
+    
     profile = profile or {}
 
     def is_valid(val):
@@ -48,7 +58,7 @@ def mon_qiantang_tian_nv_san_hua(
     cond2_max_vol = (v_0 == vol_10d)
     cond3_min_vol = (v_0 >= min_vol_shares)  # 自動對齊高價股門檻 (單位：股)
     cond4_surge = (surge_ratio > 1.065)
-    cond5_high_close_ratio = (high_close_ratio >= 1.01)
+    cond5_high_close_ratio = (high_close_ratio >= 1.02)
     
     if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
         cond6_short_balance = (short_balance > 0)
@@ -74,7 +84,7 @@ def mon_qiantang_tian_nv_san_hua(
         print(f" [{ '✓' if cond2_max_vol else '✕' }] 2. 成交量等於10日天量 : 當日量 {v_0/1000:,.0f} 張 == 10日最大 {vol_10d/1000:,.0f} 張")
         print(f" [{ '✓' if cond3_min_vol else '✕' }] 3. 達最低流動性門檻 : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {min_vol_lots:,.0f} 張")
         print(f" [{ '✓' if cond4_surge else '✕' }] 4. 最高/1天前收盤 > 1.065 : 幅度 {surge_ratio:.3f} > 1.065 (+6.5%)")
-        print(f" [{ '✓' if cond5_high_close_ratio else '✕' }] 5. 最高/收盤 ≧ 1.01   : 比例 {high_close_ratio:.3f} >= 1.010")
+        print(f" [{ '✓' if cond5_high_close_ratio else '✕' }] 5. 最高/收盤 ≧ 1.02   : 比例 {high_close_ratio:.3f} >= 1.020")
         
         if has_short_col:
             print(f" [{ '✓' if cond6_short_balance else '✕' }] 6. 融券餘額 > 0       : 當日融券餘額 {short_balance:,.0f} 張 > 0")
