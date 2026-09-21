@@ -251,12 +251,12 @@ def run_monitor_test(source, stock_source, stock_input, strategies, start_date_s
         if os.path.exists(csv_path):
             current_time_str = now_time.strftime("%Y%m%d_%H%M")
             remote_filename = f"{output_name}_range_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
-            remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/monitor_reports/{remote_filename}"
+            remote_test_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_monitor_reports/{remote_filename}"
 
             try:
                 print(f"📦 啟動遠端封存與清理流程...")
                 archive_and_cleanup(local_file_path=csv_path, remote_path=remote_test_path)
-                print(f"🚀 [NAS 同步成功] 檔案已送達遠端：monitor_reports/{remote_filename}")
+                print(f"🚀 [NAS 同步成功] 檔案已送達遠端：qiantang_monitor_reports/{remote_filename}")
             except Exception as e:
                 print(f"⚠️ [自動封存/上傳失敗] 錯誤: {e}")
     else:
