@@ -52,8 +52,8 @@ def mon_qiantang_ni_diu_wo_jian(
         major_sell_limit = -max(volume * major_ratio, min_sell_shares)
         foreign_sell_limit = -max(volume * foreign_ratio, min_sell_shares)
     else:
-        major_sell_limit = -min_sell_shares
-        foreign_sell_limit = -min_sell_shares
+        major_sell_limit = -min_sell_shares*1000
+        foreign_sell_limit = -min_sell_shares*1000
 
     broker_diff_limit = profile.get('broker_diff', 20)      # 家數差門檻 (正數：買家數 > 賣家數，散戶接盤)
 
