@@ -7,9 +7,6 @@ from monitor.config import DEBUG_VERBOSE
 # 錢塘潮 11 大防禦賣訊
 # ==========================================
 
-import pandas as pd
-import numpy as np
-
 DEBUG_VERBOSE = True
 
 def mon_qiantang_ni_diu_wo_jian_old(
