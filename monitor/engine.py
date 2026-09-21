@@ -7,28 +7,32 @@ from monitor.registry import ACTIVE_MONITORS
 
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
-    """內部輔助函式：計算單一股票 Monitor 所需之技術指標（輕鬆線、KD等）"""
+    """內部輔助函式：針對 FinMind 資料格式計算技術指標（輕鬆線、KD等）"""
+    if df_single is None or df_single.empty:
+        return df_single
+
     df = df_single.copy()
     
-    # 輕鬆線指標計算
+    # 1. 輕鬆線指標計算
     df['easy_line'] = df['close'].rolling(20).mean()
-    df['easy_b'] = df['close'].ewm(span=5).mean()
-    df['easy_s'] = df['close'].ewm(span=20).mean()
+    df['easy_buy']  = df['close'].ewm(span=5, adjust=False).mean()
+    df['easy_sell'] = df['close'].ewm(span=20, adjust=False).mean()
 
-    # 9日 KD 指標計算
-    low_min = df['min'].rolling(9).min()
+    # 2. 9日 KD 指標計算 (FinMind 專用欄位：min / max)
+    low_min  = df['min'].rolling(9).min()
     high_max = df['max'].rolling(9).max()
     
     denom = high_max - low_min
     denom = denom.replace(0, np.nan)
-    rsv = (df['close'] - low_min) / denom * 100
-    rsv = rsv.fillna(50)
     
-    df['K'] = rsv.ewm(com=2).mean()
-    df['D'] = df['K'].ewm(com=2).mean()
+    rsv = (df['close'] - low_min) / denom * 100
+    rsv = rsv.fillna(50)  # 漲跌停無振幅時分母為0，以 50 替代
+    
+    # 3. 加上 adjust=False 以符合台股標準 KD 遞迴算式 (1/3 平滑)
+    df['K'] = rsv.ewm(com=2, adjust=False).mean()
+    df['D'] = df['K'].ewm(com=2, adjust=False).mean()
 
     return df
-
 
 def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame:
     """
