@@ -505,7 +505,7 @@ def mon_qiantang_jiang_long_fu_hu(df_single: pd.DataFrame):
 
 
 def mon_qiantang_qing_song_xian_zhuan_kong(df_single: pd.DataFrame):
-    """輕鬆線轉空 (輕鬆線死亡交叉)"""
+    """輕鬆線轉空, 月下老人 (輕鬆線死亡交叉)"""
     if 'easy_b' not in df_single.columns or 'easy_s' not in df_single.columns:
         return False, {}
         
@@ -521,7 +521,7 @@ def mon_qiantang_qing_song_xian_zhuan_kong(df_single: pd.DataFrame):
 
 
 def mon_qiantang_kd_dead_cross(df_single: pd.DataFrame):
-    """KD高檔死叉 (過熱區死亡交叉)"""
+    """KD高檔死叉, 這是地底穿心嗎?  (過熱區死亡交叉)"""
     if 'K' not in df_single.columns or 'D' not in df_single.columns:
         return False, {}
         
