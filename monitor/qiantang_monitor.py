@@ -39,11 +39,8 @@ def mon_qiantang_yuexia_laoren(
     easy_0 = today.get('easy_line', None)
     easy_1 = day_1.get('easy_line', None)
 
-    volume_0 = today.get('volume', None)
-    amount_0 = today.get('amount', None)
-
-    if not is_valid(amount_0) and is_valid(close_0) and is_valid(volume_0):
-        amount_0 = close_0 * volume_0 * 1000
+    volume_0 = today.get('Trading_Volume', None)
+    amount_0 = today.get('trading_amount', None)
 
     holder_diff = today.get('holder_diff', None)
 
