@@ -9,8 +9,101 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
-import numpy as np
-import pandas as pd
+def mon_qiantang_yi_zhu_qing_xiang(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """一柱清香 (高檔長上影線/射擊之星)
+
+    公式 logic:
+    1. 形態：長上影線 (上影線長度顯著大於實體，呈現一柱清香型態)
+    2. 創高：當日最高 == 近 20 天最高價 (含當日)
+    3. 量能：當日成交量 ≧ 20日均量 × 2.5倍
+    4. 金額：當日成交金額 > 2億元
+    5. 容錯：當日融資餘額 > 0 或 N/A (智慧容錯)
+    """
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    if len(df_single) < 20:
+        if verbose:
+            print(f"❌ [一柱清香] 資料筆數不足 20 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    close = today['close']
+    open_p = today['open']
+    high = today.get('max', 0)
+    low = today.get('min', 0)
+    v_0 = today.get('Trading_Volume', 0)
+
+    # 1. 一柱清香 (長上影線/射擊之星) 形態計算
+    total_range = high - low
+    if total_range == 0:
+        is_incense_stick = False
+    else:
+        body = abs(close - open_p)
+        upper_shadow = high - max(open_p, close)
+        lower_shadow = min(open_p, close) - low
+        
+        # 定義：上影線長度大於實體的 2 倍，且上影線至少佔總振幅的 40% 以上
+        is_incense_stick = (upper_shadow >= max(body * 2.0, 1.0)) and (upper_shadow >= total_range * 0.40)
+
+    # 2. 提取各項指標數值
+    max_20_high = df_single['max'].iloc[-20:].max()
+    volume_20_ma = today.get('volume_20_ma', 0)
+    required_vol_2_5x = volume_20_ma * 2.5
+    trading_amount = today.get('trading_amount', close * v_0)
+    margin_balance = today.get('MarginPurchaseTodayBalance', None)
+
+    # 條件邏輯判斷
+    cond1_shape = is_incense_stick
+    cond2_max_price = (high == max_20_high)
+    cond3_vol_2_5x = (v_0 >= required_vol_2_5x)
+    cond4_amount = (trading_amount > 200_000_000)
+
+    if is_valid(margin_balance) and 'MarginPurchaseTodayBalance' in df_single.columns:
+        cond5_margin = (margin_balance > 0)
+        has_margin_col = True
+    else:
+        cond5_margin = True
+        has_margin_col = False
+
+    is_hit = (
+        cond1_shape and cond2_max_price and cond3_vol_2_5x and 
+        cond4_amount and cond5_margin
+    )
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [一柱清香] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_shape else '✕' }] 1. 長上影線形態(清香) : 上影線符合高檔壓力標準")
+        print(f" [{ '✓' if cond2_max_price else '✕' }] 2. 最高等於20日最高   : 最高價 {high:.2f} == 20日最高 {max_20_high:.2f}")
+        print(f" [{ '✓' if cond3_vol_2_5x else '✕' }] 3. 量 ≧ 20日均量×2.5    : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {required_vol_2_5x/1000:,.0f} 張")
+        print(f" [{ '✓' if cond4_amount else '✕' }] 4. 成交金額 > 2億元     : 金額 ${trading_amount:,.0f} 元 > 2億")
+        
+        if has_margin_col:
+            print(f" [{ '✓' if cond5_margin else '✕' }] 5. 融資餘額 > 0 或 N/A  : 當日融資餘額 {margin_balance:,.0f} 張 > 0")
+        else:
+            print(f" [–] 5. 融資餘額 > 0 或 N/A  : 無欄位資料 (預設通過)")
+            
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發一柱清香]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉空賣訊': '一柱清香',
+        '操作建議': f'高檔爆量留長上影線（一柱清香），成交量達20日均量2.5倍以上且金額突破2億元，顯示上方賣壓沉重、追價意願不足，建議逢高調節。'
+    } if is_hit else {}
+
+    return is_hit, info
 
 def mon_qiantang_jiang_long_fu_hu(
     df_single: pd.DataFrame, 
@@ -207,38 +300,6 @@ def mon_qiantang_dang_tou_bang_he(
         '操作建議': f'高檔巨量長黑K，成交量創34天新高({v_0 // 1000:,.0f} 張)且達20日均量2.5倍以上，成交金額突破2億元，多頭力竭，極易形成中期頭部，建議避險。'
     } if is_hit else {}
 
-    return is_hit, info
-
-
-def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
-    """一柱清香 (高檔爆量長上影)
-    
-    公式邏輯
-    ((最高/收盤) ≧ 1.03 and 劵餘 > 0) and (2天最大值 = 9天最高最大值  且 2天最高成交量 = 9天成交量大值) 且 成交量 ≧ 4000
-    """
-
-    
-    if len(df_single) < 20: return False, {}
-    today = df_single.iloc[-1]
-    
-    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
-        return False, {}
-        
-    high, low, close, open_p = today['max'], today['min'], today['close'], today['open']
-    total_range = high - low
-    if total_range == 0: return False, {}
-    
-    upper_shadow = high - max(open_p, close)
-    is_high_shadow = (upper_shadow / total_range) >= 0.50
-    vol_ma5 = df_single['Trading_Volume'].iloc[-6:-1].mean()
-    is_vol_burst = today['Trading_Volume'] > (vol_ma5 * 2.0)
-    
-    is_hit = is_high_shadow and is_vol_burst
-    info = {
-        '轉空賣訊': '一柱清香',
-        '操作建議': '創高爆量長上影，主力高檔拉高出貨，建議減碼或停利離場。'
-    } if is_hit else {}
-    
     return is_hit, info
 
 def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
