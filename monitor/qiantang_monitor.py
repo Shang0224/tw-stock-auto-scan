@@ -113,8 +113,8 @@ def mon_qiantang_ni_diu_ta_jian(
     day_1 = df_single.iloc[-2] if len(df_single) >= 2 else pd.Series()
 
     close_0 = today.get('close', None)
-    volume_0 = today.get('volume', None)
-    amount_0 = today.get('amount', None)
+    volume_0 = today.get('Trading_Volume', None)
+    amount_0 = today.get('trading_amount', None)
 
     if not is_valid(amount_0) and is_valid(close_0) and is_valid(volume_0):
         amount_0 = close_0 * volume_0 * 1000
