@@ -63,8 +63,8 @@ STOCK_INPUT = [
 TEST_MONITOR = [
     #mon_qiantang_yi_zhu_qing_xiang,       # 一柱清香 (主力強勢鎖碼 / 籌碼高度集中)
     #mon_qiantang_dang_tou_bang_he,        # 當頭棒喝 (主力逢高派發 / 籌碼高檔鬆動)
-    #mon_qiantang_ming_ri_huang_hua,       # 明日黃花 (籌碼退潮派發 / 主力撤退)
-    mon_qiantang_tian_nv_san_hua,         # 天女散花 (籌碼高度分散 / 散戶狂接)
+    mon_qiantang_ming_ri_huang_hua,       # 明日黃花 (籌碼退潮派發 / 主力撤退)
+    #mon_qiantang_tian_nv_san_hua,         # 天女散花 (籌碼高度分散 / 散戶狂接)
     #mon_qiantang_xia_shan_meng_hu,         # 下山猛虎 (主力大幅派發 / 賣壓急湧)
     #mon_qiantang_da_zhong_xia_ke,         # 打鐘下課 (散戶買超增加 / 籌碼趨於分散)
     #mon_qiantang_he_shi,                  # 合十 (多頭籌碼強勢卡位)
