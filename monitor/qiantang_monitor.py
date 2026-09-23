@@ -9,6 +9,106 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+def mon_qiantang_didi_chuanxin(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """地底穿心 (極端深跌動態爆量破底 + 融資清籌碼)
+
+    公式 logic:
+    1. 收盤 < 輕鬆 B 值 且 收盤 < 輕鬆 S 值 (貫穿雙輕鬆線)
+    2. 1天前的輕鬆 B > 1天前的輕鬆 S (加速破底殺盤點)
+    3. 當日成交量 ≧ 20日均量 × 2.5倍 且 當日成交金額 ≧ 2億元 (動態相對爆量 + 過濾死水股防線)
+    4. 融資張數變動 < 0 或 融資餘額 > 0 (融資洗盤/有槓桿籌碼被逼離場)
+    """
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    if len(df_single) < 2:
+        if verbose:
+            print(f"❌ [地底穿心] 資料筆數不足 2 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]      # 當日 (0天前)
+    day_1 = df_single.iloc[-2]      # 1天前
+
+    # 1. 價格與技術指標
+    close_0 = today.get('close', None)
+    easy_b_0 = today.get('easy_b', None)
+    easy_s_0 = today.get('easy_s', None)
+    easy_b_1 = day_1.get('easy_b', None)
+    easy_s_1 = day_1.get('easy_s', None)
+
+    # 2. 量能與成交金額指標
+    volume_0 = today.get('volume', None)
+    v_ma20_0 = today.get('volume_ma20', None)  # 20日均量
+    amount_0 = today.get('amount', None)       # 當日成交金額 (單位: 元)
+
+    # 成交金額備援計算 (若資料集無 amount 欄位，由 收盤價 * 張數 * 1000 股估算)
+    if not is_valid(amount_0) and is_valid(close_0) and is_valid(volume_0):
+        amount_0 = close_0 * volume_0 * 1000
+
+    # 3. 融資相關指標
+    margin_today = today.get('MarginPurchaseTodayBalance', None)
+    margin_yday = day_1.get('MarginPurchaseTodayBalance', None)
+    margin_diff = (margin_today - margin_yday) if (is_valid(margin_today) and is_valid(margin_yday)) else None
+
+    # --- 條件判定 ---
+    # 條件 1: 收盤 < 輕鬆 B 且 收盤 < 輕鬆 S
+    cond1_below_bs = (close_0 < easy_b_0 and close_0 < easy_s_0) if (is_valid(close_0) and is_valid(easy_b_0) and is_valid(easy_s_0)) else False
+
+    # 條件 2: 1天前的輕鬆 B > 1天前的輕鬆 S
+    cond2_prev_b_gt_s = (easy_b_1 > easy_s_1) if (is_valid(easy_b_1) and is_valid(easy_s_1)) else False
+
+    # 條件 3: 當日成交量 ≧ 20日均量 × 2.5倍 且 當日成交金額 ≧ 2億元
+    cond3_vol_surge = (volume_0 >= v_ma20_0 * 2.5) if (is_valid(volume_0) and is_valid(v_ma20_0) and v_ma20_0 > 0) else False
+    cond3_amount = (amount_0 >= 200_000_000) if is_valid(amount_0) else False
+    cond3_liquidity = cond3_vol_surge and cond3_amount
+
+    # 條件 4: 融資張數變動 < 0 或 融資餘額 > 0
+    cond4_margin_clean = False
+    margin_msg = "N/A"
+    if is_valid(margin_diff) and margin_diff < 0:
+        cond4_margin_clean = True
+        margin_msg = f"融資大減 {margin_diff:+,.0f} 張 (散戶停損洗盤)"
+    elif is_valid(margin_today) and margin_today > 0:
+        cond4_margin_clean = True
+        margin_msg = f"融資餘額 {margin_today:,.0f} 張 (> 0)"
+
+    # 總體觸發判定
+    is_hit = cond1_below_bs and cond2_prev_b_gt_s and cond3_liquidity and cond4_margin_clean
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        
+        easy_b_0_str = f"${easy_b_0:.2f}" if is_valid(easy_b_0) else "N/A"
+        easy_s_0_str = f"${easy_s_0:.2f}" if is_valid(easy_s_0) else "N/A"
+        
+        v_ratio_str = f"{volume_0 / v_ma20_0:.2f} 倍" if (is_valid(volume_0) and is_valid(v_ma20_0) and v_ma20_0 > 0) else "N/A"
+        amount_ea_str = f"{amount_0 / 100_000_000:.2f} 億" if is_valid(amount_0) else "N/A"
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [地底穿心] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_below_bs else '✕' }] 1. 價格貫穿雙輕鬆線 : 收盤 ${close_0 if is_valid(close_0) else 0:.2f} < B值 {easy_b_0_str} 且 < S值 {easy_s_0_str}")
+        print(f" [{ '✓' if cond2_prev_b_gt_s else '✕' }] 2. 前一日輕鬆 B > S   : 1天前 B值 ${easy_b_1 if is_valid(easy_b_1) else 0:.2f} > S值 ${easy_s_1 if is_valid(easy_s_1) else 0:.2f}")
+        print(f" [{ '✓' if cond3_liquidity else '✕' }] 3. 動態爆量與流動性   : 量放大 {v_ratio_str} (≧ 2.5倍) | 金額 {amount_ea_str} (≧ 2億)")
+        print(f" [{ '✓' if cond4_margin_clean else '✕' }] 4. 融資洗盤籌碼防線   : {margin_msg}")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發地底穿心]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉多買訊': '地底穿心',
+        '操作建議': '股價急跌貫穿雙輕鬆線，並觸發 2.5 倍相對動態爆量（恐慌盤/斷頭潮釋放），同時符合 2 億元流動性低標過濾，適合左側輕倉佈局逆勢抄底反彈。'
+    } if is_hit else {}
+
+    return is_hit, info
+
 def mon_qiantang_da_zhong_xia_ke(
     df_single: pd.DataFrame, 
     profile: dict = None, 
