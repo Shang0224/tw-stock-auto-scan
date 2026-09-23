@@ -9,19 +9,23 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+import numpy as np
+import pandas as pd
+
 def mon_qiantang_yi_zhu_qing_xiang(
     df_single: pd.DataFrame, 
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """一柱清香 (高檔長上影線/射擊之星)
+    """一柱清香 (高檔長上影線與量價極值)
 
     公式 logic:
-    1. 形態：長上影線 (上影線長度顯著大於實體，呈現一柱清香型態)
-    2. 創高：當日最高 == 近 20 天最高價 (含當日)
-    3. 量能：當日成交量 ≧ 20日均量 × 2.5倍
-    4. 金額：當日成交金額 > 2億元
-    5. 容錯：當日融資餘額 > 0 或 N/A (智慧容錯)
+    1. (最高 / 收盤) ≧ 1.03
+    2. 近 2 天最高價最大值 == 近 9 天最高價最大值
+    3. 近 2 天成交量最大值 == 近 9 天成交量最大值
+    4. 當日成交量 ≧ 20日均量 × 2.5倍
+    5. 當日成交金額 > 2億元
+    6. 當日融券餘額 > 0 或 N/A (智慧容錯)
     """
     profile = profile or {}
 
@@ -35,46 +39,41 @@ def mon_qiantang_yi_zhu_qing_xiang(
 
     today = df_single.iloc[-1]
     close = today['close']
-    open_p = today['open']
     high = today.get('max', 0)
-    low = today.get('min', 0)
     v_0 = today.get('Trading_Volume', 0)
 
-    # 1. 一柱清香 (長上影線/射擊之星) 形態計算
-    total_range = high - low
-    if total_range == 0:
-        is_incense_stick = False
-    else:
-        body = abs(close - open_p)
-        upper_shadow = high - max(open_p, close)
-        lower_shadow = min(open_p, close) - low
-        
-        # 定義：上影線長度大於實體的 2 倍，且上影線至少佔總振幅的 40% 以上
-        is_incense_stick = (upper_shadow >= max(body * 2.0, 1.0)) and (upper_shadow >= total_range * 0.40)
-
-    # 2. 提取各項指標數值
-    max_20_high = df_single['max'].iloc[-20:].max()
+    # 1. 計算各項指標數值
+    high_close_ratio = high / close if (is_valid(close) and close > 0) else 0
+    
+    max_2d_high = df_single['max'].iloc[-2:].max()
+    max_9d_high = df_single['max'].iloc[-9:].max()
+    
+    max_2d_vol = df_single['Trading_Volume'].iloc[-2:].max()
+    max_9d_vol = df_single['Trading_Volume'].iloc[-9:].max()
+    
     volume_20_ma = today.get('volume_20_ma', 0)
     required_vol_2_5x = volume_20_ma * 2.5
     trading_amount = today.get('trading_amount', close * v_0)
-    margin_balance = today.get('MarginPurchaseTodayBalance', None)
+    
+    short_balance = today.get('ShortSaleTodayBalance', None)
 
     # 條件邏輯判斷
-    cond1_shape = is_incense_stick
-    cond2_max_price = (high == max_20_high)
-    cond3_vol_2_5x = (v_0 >= required_vol_2_5x)
-    cond4_amount = (trading_amount > 200_000_000)
+    cond1_ratio = (high_close_ratio >= 1.03)
+    cond2_max_price = (max_2d_high == max_9d_high)
+    cond3_max_vol = (max_2d_vol == max_9d_vol)
+    cond4_vol_2_5x = (v_0 >= required_vol_2_5x)
+    cond5_amount = (trading_amount > 200_000_000)
 
-    if is_valid(margin_balance) and 'MarginPurchaseTodayBalance' in df_single.columns:
-        cond5_margin = (margin_balance > 0)
-        has_margin_col = True
+    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
+        cond6_short = (short_balance > 0)
+        has_short_col = True
     else:
-        cond5_margin = True
-        has_margin_col = False
+        cond6_short = True
+        has_short_col = False
 
     is_hit = (
-        cond1_shape and cond2_max_price and cond3_vol_2_5x and 
-        cond4_amount and cond5_margin
+        cond1_ratio and cond2_max_price and cond3_max_vol and 
+        cond4_vol_2_5x and cond5_amount and cond6_short
     )
 
     if verbose:
@@ -84,15 +83,16 @@ def mon_qiantang_yi_zhu_qing_xiang(
         print("\n" + "=" * 55)
         print(f"🔔 [一柱清香] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
-        print(f" [{ '✓' if cond1_shape else '✕' }] 1. 長上影線形態(清香) : 上影線符合高檔壓力標準")
-        print(f" [{ '✓' if cond2_max_price else '✕' }] 2. 最高等於20日最高   : 最高價 {high:.2f} == 20日最高 {max_20_high:.2f}")
-        print(f" [{ '✓' if cond3_vol_2_5x else '✕' }] 3. 量 ≧ 20日均量×2.5    : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {required_vol_2_5x/1000:,.0f} 張")
-        print(f" [{ '✓' if cond4_amount else '✕' }] 4. 成交金額 > 2億元     : 金額 ${trading_amount:,.0f} 元 > 2億")
+        print(f" [{ '✓' if cond1_ratio else '✕' }] 1. 最高/收盤 ≧ 1.03       : 比例 {high_close_ratio:.3f} >= 1.03")
+        print(f" [{ '✓' if cond2_max_price else '✕' }] 2. 近2日高極==9日高極值   : 近2日高 {max_2d_high:.2f} == 9日高 {max_9d_high:.2f}")
+        print(f" [{ '✓' if cond3_max_vol else '✕' }] 3. 近2日量極==9日量極值   : 近2日量 {max_2d_vol/1000:,.0f} == 9日量 {max_9d_vol/1000:,.0f}")
+        print(f" [{ '✓' if cond4_vol_2_5x else '✕' }] 4. 量 ≧ 20日均量×2.5      : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {required_vol_2_5x/1000:,.0f} 張")
+        print(f" [{ '✓' if cond5_amount else '✕' }] 5. 成交金額 > 2億元       : 金額 ${trading_amount:,.0f} 元 > 2億")
         
-        if has_margin_col:
-            print(f" [{ '✓' if cond5_margin else '✕' }] 5. 融資餘額 > 0 或 N/A  : 當日融資餘額 {margin_balance:,.0f} 張 > 0")
+        if has_short_col:
+            print(f" [{ '✓' if cond6_short else '✕' }] 6. 融券餘額 > 0 或 N/A    : 當日融券餘額 {short_balance:,.0f} 張 > 0")
         else:
-            print(f" [–] 5. 融資餘額 > 0 或 N/A  : 無欄位資料 (預設通過)")
+            print(f" [–] 6. 融券餘額 > 0 或 N/A    : 無欄位資料 (預設通過)")
             
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發一柱清香]' if is_hit else '⚪ [未觸發]'}")
@@ -100,7 +100,7 @@ def mon_qiantang_yi_zhu_qing_xiang(
 
     info = {
         '轉空賣訊': '一柱清香',
-        '操作建議': f'高檔爆量留長上影線（一柱清香），成交量達20日均量2.5倍以上且金額突破2億元，顯示上方賣壓沉重、追價意願不足，建議逢高調節。'
+        '操作建議': f'高檔留有長上影線（最高/收盤比率 {high_close_ratio:.2f}），且近2日量價創9天新高，成交量達20日均量2.5倍以上，成交金額破2億元，主力有出貨嫌疑，建議留意。'
     } if is_hit else {}
 
     return is_hit, info
