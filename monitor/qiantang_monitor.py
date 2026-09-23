@@ -86,6 +86,13 @@ def mon_qiantang_yuexia_laoren(
     info = {'轉多買訊': '月下老人', '操作建議': '首日跌破輕鬆線且情緒達冰點，量能滿足雙軌過濾條件，關注恐慌沉澱後的轉折買點。'} if is_hit else {}
     return is_hit, info
 
+import numpy as np
+import pandas as pd
+
+# 預設 DEBUG 標記 (若系統已有可直接使用)
+DEBUG_VERBOSE = True
+
+
 def mon_qiantang_ni_diu_ta_jian(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -118,12 +125,13 @@ def mon_qiantang_ni_diu_ta_jian(
     if not is_valid(amount_0) and is_valid(close_0) and is_valid(volume_0):
         amount_0 = close_0 * volume_0 * 1000
 
-    # 修正欄位名稱
+    # 技術指標欄位
     indicator_a = today.get('easy_buy', None)   # A 為 easy_buy
     indicator_b = today.get('easy_sell', None)  # B 為 easy_sell
     k_val = today.get('K', None)                 # K 值為 K
     d_val = today.get('D', None)                 # D 值為 D
 
+    # 籌碼指標欄位
     main_net = today.get('main_net', None)
     foreign_net = today.get('foreign_net', None)
     holder_diff = today.get('holder_diff', None)
@@ -161,17 +169,22 @@ def mon_qiantang_ni_diu_ta_jian(
         date_str = str(today.get('date', '最新日'))
         amount_ea_str = f"{amount_0 / 100_000_000:.2f} 億" if is_valid(amount_0) else "N/A"
 
-        # 格式化技術指標數值用於 Log 輸出
+        # 格式化技術指標數值
         a_str = f"{indicator_a:.2f}" if is_valid(indicator_a) else "N/A"
         b_str = f"{indicator_b:.2f}" if is_valid(indicator_b) else "N/A"
         k_str = f"{k_val:.2f}" if is_valid(k_val) else "N/A"
         d_str = f"{d_val:.2f}" if is_valid(d_val) else "N/A"
 
+        # 格式化法人籌碼張數
+        main_str = f"{main_net:+,.0f} 張" if is_valid(main_net) else "N/A"
+        foreign_str = f"{foreign_net:+,.0f} 張" if is_valid(foreign_net) else "N/A"
+        inst_dump_msg = f"主力 {main_str} | 外資 {foreign_str} (成立: {cond2_inst_dump})"
+
         print("\n" + "=" * 55)
         print(f"🔔 [你丟他撿] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
         print(f" [{ '✓' if cond1_tech else '✕' }] 1. 技術面打底收斂     : easy_buy={a_str}, easy_sell={b_str} (A<B: {cond1_a_lt_b}) | K={k_str}, D={d_str} (K>D: {cond1_k_gt_d})")
-        print(f" [{ '✓' if cond2_chip else '✕' }] 2. 籌碼大舉釋出/倒貨   : 法人倒貨 ({cond2_inst_dump}) 或 恐慌拋售 ({panic_mode})")
+        print(f" [{ '✓' if cond2_chip else '✕' }] 2. 籌碼大舉釋出/倒貨   : 法人倒貨 [{inst_dump_msg}] 或 恐慌拋售 [{panic_mode}]")
         print(f" [{ '✓' if cond3_liquidity else '✕' }] 3. 雙軌流動性防線   : 成交量 {volume_0 if is_valid(volume_0) else 0:,.0f} 張 (≧2000) 或 金額 {amount_ea_str} (≧2億)")
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發你丟他撿]' if is_hit else '⚪ [未觸發]'}")
