@@ -100,9 +100,12 @@ def mon_qiantang_ni_diu_ta_jian(
 ) -> tuple[bool, dict]:
     """【你丟他撿】 (指標打底 + 主力倒貨/融資洗盤 + 雙軌流動性防線)
 
-    公式 logic:
+    公式 logic (完全對接 FinMind 籌碼欄位):
     1. 技術面: easy_buy < easy_sell 或 K > D (指標打底收斂)
-    2. 籌碼面: (主力 ≦ -500 且 外資 ≦ -500) 或 (家數差 ≦ -20，備援：融資變動 ≦ -200)
+    2. 籌碼面: (主力 ≦ -500張 且 外資 ≦ -500張) 或 (家數差 ≦ -20，備援：融資變動 ≦ -200張)
+       - 外資欄位: Foreign_Investor (FinMind)
+       - 主力欄位: 優先 broker_diff，備援 major_net (FinMind)
+       - 融資欄位: MarginPurchaseTodayBalance (FinMind)
     3. 成交量 ≧ 2000張 或 成交金額 ≧ 2億元 (雙軌流動性防線)
     """
     profile = profile or {}
@@ -119,46 +122,61 @@ def mon_qiantang_ni_diu_ta_jian(
     day_1 = df_single.iloc[-2] if len(df_single) >= 2 else pd.Series()
 
     close_0 = today.get('close', None)
-    volume_0 = today.get('Trading_Volume', None)
-    amount_0 = today.get('trading_amount', None)
+    volume_0 = today.get('Trading_Volume', None)  # 單位：股
+    amount_0 = today.get('trading_amount', None)  # 單位：元
 
+    # 若無成交金額資料，由 (收盤價 * 股數) 自動推估
     if not is_valid(amount_0) and is_valid(close_0) and is_valid(volume_0):
-        amount_0 = close_0 * volume_0 * 1000
+        amount_0 = close_0 * volume_0
 
-    # 技術指標欄位
+    # 1. 技術指標欄位
     indicator_a = today.get('easy_buy', None)   # A 為 easy_buy
     indicator_b = today.get('easy_sell', None)  # B 為 easy_sell
     k_val = today.get('K', None)                 # K 值為 K
     d_val = today.get('D', None)                 # D 值為 D
 
-    # 籌碼指標欄位
-    main_net = today.get('main_net', None)
-    foreign_net = today.get('foreign_net', None)
+    # 2. 籌碼指標欄位 (完全對接 FinMind 原始欄位名)
+    foreign_net = today.get('Foreign_Investor', None)             # 外資淨買賣 (股)
+    main_net = today.get('broker_diff', None)                      # 優先使用分點主力 (股)
+    major_net_fallback = today.get('major_net', None)              # FinMind 綜合主力備援 (股)
+    
     holder_diff = today.get('holder_diff', None)
 
+    # 融資欄位 (FinMind: MarginPurchaseTodayBalance)
     margin_today = today.get('MarginPurchaseTodayBalance', None)
     margin_yday = day_1.get('MarginPurchaseTodayBalance', None) if not day_1.empty else None
     margin_diff = (margin_today - margin_yday) if (is_valid(margin_today) and is_valid(margin_yday)) else None
 
-    # 條件 1: A (easy_buy) < B (easy_sell) 或 K > D
+    # --- 條件 1: 技術面打底 (easy_buy < easy_sell 或 K > D) ---
     cond1_a_lt_b = (indicator_a < indicator_b) if (is_valid(indicator_a) and is_valid(indicator_b)) else False
     cond1_k_gt_d = (k_val > d_val) if (is_valid(k_val) and is_valid(d_val)) else False
     cond1_tech = cond1_a_lt_b or cond1_k_gt_d
 
-    # 條件 2: 籌碼恐慌 / 法人倒貨
-    cond2_inst_dump = (main_net <= -500 and foreign_net <= -500) if (is_valid(main_net) and is_valid(foreign_net)) else False
+    # --- 條件 2: 籌碼恐慌 / 法人倒貨 (門檻: 主力 ≦ -500張 且 外資 ≦ -500張) ---
+    # 動態決定主力來源：優先用 broker_diff，無資料時採用 FinMind 的 major_net
+    if is_valid(main_net):
+        real_main_net = main_net
+        main_source_msg = "分點主力(broker_diff)"
+    elif is_valid(major_net_fallback):
+        real_main_net = major_net_fallback
+        main_source_msg = "FinMind主力(major_net)"
+    else:
+        real_main_net = None
+        main_source_msg = "無主力資料"
+
+    cond2_inst_dump = (real_main_net <= -500 * 1000 and foreign_net <= -500 * 1000) if (is_valid(real_main_net) and is_valid(foreign_net)) else False
 
     if is_valid(holder_diff):
         cond2_panic = (holder_diff <= -20)
         panic_mode = f"家數差 {holder_diff} (<= -20)"
     else:
-        cond2_panic = (margin_diff <= -200) if is_valid(margin_diff) else False
-        panic_mode = f"融資變動 {margin_diff:+,.0f} 張 (<= -200，備援)" if is_valid(margin_diff) else "無籌碼資料"
+        cond2_panic = (margin_diff <= -200 * 1000) if is_valid(margin_diff) else False
+        panic_mode = f"融資變動 {margin_diff / 1000.0:+,.0f} 張 (<= -200張，備援)" if is_valid(margin_diff) else "無融資資料"
 
     cond2_chip = cond2_inst_dump or cond2_panic
 
-    # 條件 3: 成交量 ≧ 2000 張 OR 成交金額 ≧ 2億元
-    cond3_vol = (volume_0 >= 2000) if is_valid(volume_0) else False
+    # --- 條件 3: 雙軌流動性防線 (成交量 ≧ 2000張 OR 成交金額 ≧ 2億元) ---
+    cond3_vol = (volume_0 >= 2000 * 1000) if is_valid(volume_0) else False
     cond3_amount = (amount_0 >= 200_000_000) if is_valid(amount_0) else False
     cond3_liquidity = cond3_vol or cond3_amount
 
@@ -169,23 +187,24 @@ def mon_qiantang_ni_diu_ta_jian(
         date_str = str(today.get('date', '最新日'))
         amount_ea_str = f"{amount_0 / 100_000_000:.2f} 億" if is_valid(amount_0) else "N/A"
 
-        # 格式化技術指標數值
+        # 技術指標格式化
         a_str = f"{indicator_a:.2f}" if is_valid(indicator_a) else "N/A"
         b_str = f"{indicator_b:.2f}" if is_valid(indicator_b) else "N/A"
         k_str = f"{k_val:.2f}" if is_valid(k_val) else "N/A"
         d_str = f"{d_val:.2f}" if is_valid(d_val) else "N/A"
 
-        # 格式化法人籌碼張數
-        main_str = f"{main_net:+,.0f} 張" if is_valid(main_net) else "N/A"
-        foreign_str = f"{foreign_net:+,.0f} 張" if is_valid(foreign_net) else "N/A"
-        inst_dump_msg = f"主力 {main_str} | 外資 {foreign_str} (成立: {cond2_inst_dump})"
+        # Log 輸出時統一轉為「張」呈現
+        vol_lots_str = f"{volume_0 / 1000.0:,.0f}" if is_valid(volume_0) else "0"
+        main_lots_str = f"{real_main_net / 1000.0:+,.0f} 張" if is_valid(real_main_net) else "N/A"
+        foreign_lots_str = f"{foreign_net / 1000.0:+,.0f} 張" if is_valid(foreign_net) else "N/A"
+        inst_dump_msg = f"{main_source_msg} {main_lots_str} | 外資(Foreign_Investor) {foreign_lots_str} (成立: {cond2_inst_dump})"
 
         print("\n" + "=" * 55)
         print(f"🔔 [你丟他撿] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
         print(f" [{ '✓' if cond1_tech else '✕' }] 1. 技術面打底收斂     : easy_buy={a_str}, easy_sell={b_str} (A<B: {cond1_a_lt_b}) | K={k_str}, D={d_str} (K>D: {cond1_k_gt_d})")
         print(f" [{ '✓' if cond2_chip else '✕' }] 2. 籌碼大舉釋出/倒貨   : 法人倒貨 [{inst_dump_msg}] 或 恐慌拋售 [{panic_mode}]")
-        print(f" [{ '✓' if cond3_liquidity else '✕' }] 3. 雙軌流動性防線   : 成交量 {volume_0 if is_valid(volume_0) else 0:,.0f} 張 (≧2000) 或 金額 {amount_ea_str} (≧2億)")
+        print(f" [{ '✓' if cond3_liquidity else '✕' }] 3. 雙軌流動性防線   : 成交量 {vol_lots_str} 張 (≧2000張) 或 金額 {amount_ea_str} (≧2億)")
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發你丟他撿]' if is_hit else '⚪ [未觸發]'}")
         print("=" * 55 + "\n")
@@ -381,10 +400,10 @@ def mon_qiantang_didi_chuanxin(
 
     # 1. 價格與技術指標
     close_0 = today.get('close', None)
-    easy_b_0 = today.get('easy_b', None)
-    easy_s_0 = today.get('easy_s', None)
-    easy_b_1 = day_1.get('easy_b', None)
-    easy_s_1 = day_1.get('easy_s', None)
+    easy_b_0 = today.get('easy_buy', None)
+    easy_s_0 = today.get('easy_sell', None)
+    easy_b_1 = day_1.get('easy_buy', None)
+    easy_s_1 = day_1.get('easy_sell', None)
 
     # 2. 量能與成交金額指標
     volume_0 = today.get('Trading_Volume', None)
