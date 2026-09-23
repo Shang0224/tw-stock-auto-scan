@@ -9,6 +9,91 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+import numpy as np
+import pandas as pd
+
+def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict = None, verbose: bool = False):
+    """當頭棒喝 (創高長黑K)
+
+    核心邏輯：
+    1. 收盤 < 開盤 (黑K)
+    2. 成交量 = 34天成交量最大值
+    3. 成交量 ≧ 20日均量 × 2.5倍
+    4. 成交金額 > 2億元
+    5. 融資餘額 > 0 或 N/A (智慧容錯)
+    6. 最高 = 10天最大值
+    """
+    profile = profile or {}
+
+    if len(df_single) < 34:
+        if verbose:
+            print("  ⚠️ [當頭棒喝] K線資料不足 34 筆，跳過檢測")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    close = today['close']
+    open_p = today['open']
+    volume = today.get('Trading_Volume', 0)
+    high = today.get('max', 0)
+
+    # --- 1. 核心技術與量價條件計算 ---
+    is_black_k = close < open_p
+    
+    # 成交量 34 天最大值
+    max_34_vol = df_single['Trading_Volume'].iloc[-34:].max()
+    is_34d_max_vol = volume == max_34_vol
+
+    # 20日均量 2.5 倍防線
+    volume_20_ma = today.get('volume_20_ma', 0)
+    required_vol_2_5x = volume_20_ma * 2.5
+    is_2_5x_vol = volume >= required_vol_2_5x
+
+    # 絕對成交金額 > 2億元 (200,000,000)
+    trading_amount = today.get('trading_amount', close * volume)
+    is_high_amount = trading_amount > 200_000_000
+
+    # 融資餘額智慧容錯 (MarginPurchaseTodayBalance > 0 或 NaN)
+    margin_val = today.get('MarginPurchaseTodayBalance', np.nan)
+    is_margin_valid = pd.isna(margin_val) or (margin_val > 0)
+
+    # 10 天最高價創高
+    max_10_high = df_single['max'].iloc[-10:].max()
+    is_10d_max_high = high == max_10_high
+
+    # 綜合判斷結果
+    is_hit = (
+        is_black_k and 
+        is_34d_max_vol and 
+        is_2_5x_vol and 
+        is_high_amount and 
+        is_margin_valid and 
+        is_10d_max_high
+    )
+
+    # --- 🔍 參數細節詳細列印 Debug 區塊 (受 verbose 控制) ---
+    if verbose:
+        print(f"\n  🔍 === [當頭棒喝 參數檢查儀表板] ===")
+        print(f"  • 今日股價狀況 : 收盤 ${close:.2f} | 開盤 ${open_p:.2f} | 最高 ${high:.2f}")
+        print(f"  • 成交量與均量 : 今日成交量 {volume:,.0f} 張 | 20日均量 {volume_20_ma:,.2f} 張 (2.5倍門檻: {required_vol_2_5x:,.2f})")
+        print(f"  • 34天最大量   : 34日量極值 {max_34_vol:,.0f} 張")
+        print(f"  • 成交金額     : ${trading_amount:,.0f} 元 (門檻: > 200,000,000 元)")
+        print(f"  • 融資餘額狀況 : {margin_val} ({'Valid/NA' if is_margin_valid else 'Invalid'})")
+        print(f"  • 10日最高價   : 10日高點極值 ${max_10_high:.2f}")
+        print(f"  • 條件 1 (收盤<開盤): {is_black_k} ({'PASS' if is_black_k else 'FAIL'})")
+        print(f"  • 條件 2 (34日量極): {is_34d_max_vol} ({'PASS' if is_34d_max_vol else 'FAIL'})")
+        print(f"  • 條件 3 (20日2.5倍): {is_2_5x_vol} ({'PASS' if is_2_5x_vol else 'FAIL'})")
+        print(f"  • 條件 4 (金額>2億): {is_high_amount} ({'PASS' if is_high_amount else 'FAIL'})")
+        print(f"  • 條件 5 (融資容錯): {is_margin_valid} ({'PASS' if is_margin_valid else 'FAIL'})")
+        print(f"  • 條件 6 (10日創高): {is_10d_max_high} ({'PASS' if is_10d_max_high else 'FAIL'})")
+        print(f"  👉 最終觸發結果  : {'🚨 觸發轉空賣訊' if is_hit else '✅ 安全過關'}\n")
+
+    info = {
+        '轉空賣訊': '當頭棒喝',
+        '操作建議': '高檔巨量長黑K，成交量創34天新高且達20日均量2.5倍以上，成交金額突破2億元，多頭力竭，極易形成中期頭部，建議避險。'
+    } if is_hit else {}
+
+    return is_hit, info
+
 
 def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
     """一柱清香 (高檔爆量長上影)
@@ -37,27 +122,6 @@ def mon_qiantang_yi_zhu_qing_xiang(df_single: pd.DataFrame, profile: dict):
     info = {
         '轉空賣訊': '一柱清香',
         '操作建議': '創高爆量長上影，主力高檔拉高出貨，建議減碼或停利離場。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-
-def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict):
-    """當頭棒喝 (創高長黑K/吞噬)"""
-    if len(df_single) < 20: return False, {}
-    today, prev = df_single.iloc[-1], df_single.iloc[-2]
-    
-    if today.get('Trading_Volume', 0) < profile.get('min_vol', 1000):
-        return False, {}
-
-    is_black_k = today['close'] < today['open']
-    is_engulf = (today['open'] >= prev['close']) and (today['close'] < prev['min'])
-    is_high_vol = today['Trading_Volume'] > df_single['Trading_Volume'].iloc[-6:-1].mean() * 1.5
-    
-    is_hit = is_black_k and is_engulf and is_high_vol
-    info = {
-        '轉空賣訊': '當頭棒喝',
-        '操作建議': '高檔巨量長黑吞噬 K 線，多頭力竭，極易形成中期頭部，建議避險。'
     } if is_hit else {}
     
     return is_hit, info
