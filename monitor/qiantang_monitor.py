@@ -407,7 +407,7 @@ def mon_qiantang_didi_chuanxin(
 
     # 2. 量能與成交金額指標
     volume_0 = today.get('Trading_Volume', None)
-    v_ma20_0 = today.get('volume_ma20', None)  # 20日均量
+    v_ma20_0 = today.get('volume_20_ma', None)  # 20日均量
     amount_0 = today.get('trading_amount', None)       # 當日成交金額 (單位: 元)
 
     # 成交金額備援計算 (若資料集無 amount 欄位，由 收盤價 * 張數 * 1000 股估算)
