@@ -86,7 +86,6 @@ def mon_qiantang_yuexia_laoren(
     info = {'轉多買訊': '月下老人', '操作建議': '首日跌破輕鬆線且情緒達冰點，量能滿足雙軌過濾條件，關注恐慌沉澱後的轉折買點。'} if is_hit else {}
     return is_hit, info
 
-
 def mon_qiantang_ni_diu_ta_jian(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -95,7 +94,7 @@ def mon_qiantang_ni_diu_ta_jian(
     """【你丟他撿】 (指標打底 + 主力倒貨/融資洗盤 + 雙軌流動性防線)
 
     公式 logic:
-    1. 技術面: A < B 或 K > D (指標打底收斂)
+    1. 技術面: easy_buy < easy_sell 或 K > D (指標打底收斂)
     2. 籌碼面: (主力 ≦ -500 且 外資 ≦ -500) 或 (家數差 ≦ -20，備援：融資變動 ≦ -200)
     3. 成交量 ≧ 2000張 或 成交金額 ≧ 2億元 (雙軌流動性防線)
     """
@@ -119,10 +118,11 @@ def mon_qiantang_ni_diu_ta_jian(
     if not is_valid(amount_0) and is_valid(close_0) and is_valid(volume_0):
         amount_0 = close_0 * volume_0 * 1000
 
-    indicator_a = today.get('indicator_a', None)
-    indicator_b = today.get('indicator_b', None)
-    k_val = today.get('k_line', None)
-    d_val = today.get('d_line', None)
+    # 修正欄位名稱
+    indicator_a = today.get('easy_buy', None)   # A 為 easy_buy
+    indicator_b = today.get('easy_sell', None)  # B 為 easy_sell
+    k_val = today.get('K', None)                 # K 值為 K
+    d_val = today.get('D', None)                 # D 值為 D
 
     main_net = today.get('main_net', None)
     foreign_net = today.get('foreign_net', None)
@@ -132,7 +132,7 @@ def mon_qiantang_ni_diu_ta_jian(
     margin_yday = day_1.get('MarginPurchaseTodayBalance', None) if not day_1.empty else None
     margin_diff = (margin_today - margin_yday) if (is_valid(margin_today) and is_valid(margin_yday)) else None
 
-    # 條件 1: A < B 或 K > D
+    # 條件 1: A (easy_buy) < B (easy_sell) 或 K > D
     cond1_a_lt_b = (indicator_a < indicator_b) if (is_valid(indicator_a) and is_valid(indicator_b)) else False
     cond1_k_gt_d = (k_val > d_val) if (is_valid(k_val) and is_valid(d_val)) else False
     cond1_tech = cond1_a_lt_b or cond1_k_gt_d
@@ -161,10 +161,16 @@ def mon_qiantang_ni_diu_ta_jian(
         date_str = str(today.get('date', '最新日'))
         amount_ea_str = f"{amount_0 / 100_000_000:.2f} 億" if is_valid(amount_0) else "N/A"
 
+        # 格式化技術指標數值用於 Log 輸出
+        a_str = f"{indicator_a:.2f}" if is_valid(indicator_a) else "N/A"
+        b_str = f"{indicator_b:.2f}" if is_valid(indicator_b) else "N/A"
+        k_str = f"{k_val:.2f}" if is_valid(k_val) else "N/A"
+        d_str = f"{d_val:.2f}" if is_valid(d_val) else "N/A"
+
         print("\n" + "=" * 55)
         print(f"🔔 [你丟他撿] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
-        print(f" [{ '✓' if cond1_tech else '✕' }] 1. 技術面打底收斂     : (A < B: {cond1_a_lt_b} | K > D: {cond1_k_gt_d})")
+        print(f" [{ '✓' if cond1_tech else '✕' }] 1. 技術面打底收斂     : easy_buy={a_str}, easy_sell={b_str} (A<B: {cond1_a_lt_b}) | K={k_str}, D={d_str} (K>D: {cond1_k_gt_d})")
         print(f" [{ '✓' if cond2_chip else '✕' }] 2. 籌碼大舉釋出/倒貨   : 法人倒貨 ({cond2_inst_dump}) 或 恐慌拋售 ({panic_mode})")
         print(f" [{ '✓' if cond3_liquidity else '✕' }] 3. 雙軌流動性防線   : 成交量 {volume_0 if is_valid(volume_0) else 0:,.0f} 張 (≧2000) 或 金額 {amount_ea_str} (≧2億)")
         print("-" * 55)
