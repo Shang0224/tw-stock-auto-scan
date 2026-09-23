@@ -9,85 +9,90 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
-def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE):
+def mon_qiantang_dang_tou_bang_he(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
     """當頭棒喝 (創高長黑K)
 
-    核心邏輯：
+    公式 logic:
     1. 收盤 < 開盤 (黑K)
-    2. 成交量 = 34天成交量最大值
-    3. 成交量 ≧ 20日均量 × 2.5倍
-    4. 成交金額 > 2億元
-    5. 融資餘額 > 0 或 N/A (智慧容錯)
-    6. 最高 = 10天最大值
+    2. 當日成交量 == 近 34 天成交量最大值 (含當日)
+    3. 當日成交量 ≧ 20日均量 × 2.5倍
+    4. 當日成交金額 > 2億元
+    5. 當日融資餘額 > 0 或 N/A (智慧容錯)
+    6. 當日最高 == 近 10 天最高價 (含當日)
     """
     profile = profile or {}
 
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
     if len(df_single) < 34:
         if verbose:
-            print("  ⚠️ [當頭棒喝] K線資料不足 34 筆，跳過檢測")
+            print(f"❌ [當頭棒喝] 資料筆數不足 34 筆 (目前: {len(df_single)})")
         return False, {}
 
     today = df_single.iloc[-1]
     close = today['close']
     open_p = today['open']
-    volume = today.get('Trading_Volume', 0)
+    v_0 = today.get('Trading_Volume', 0)
     high = today.get('max', 0)
 
-    # --- 1. 核心技術與量價條件計算 ---
-    is_black_k = close < open_p
-    
-    # 成交量 34 天最大值
+    # 提取指標數值
     max_34_vol = df_single['Trading_Volume'].iloc[-34:].max()
-    is_34d_max_vol = volume == max_34_vol
-
-    # 20日均量 2.5 倍防線
     volume_20_ma = today.get('volume_20_ma', 0)
     required_vol_2_5x = volume_20_ma * 2.5
-    is_2_5x_vol = volume >= required_vol_2_5x
-
-    # 絕對成交金額 > 2億元 (200,000,000)
-    trading_amount = today.get('trading_amount', close * volume)
-    is_high_amount = trading_amount > 200_000_000
-
-    # 融資餘額智慧容錯 (MarginPurchaseTodayBalance > 0 或 NaN)
-    margin_val = today.get('MarginPurchaseTodayBalance', np.nan)
-    is_margin_valid = pd.isna(margin_val) or (margin_val > 0)
-
-    # 10 天最高價創高
+    trading_amount = today.get('trading_amount', close * v_0)
+    margin_balance = today.get('MarginPurchaseTodayBalance', None)
     max_10_high = df_single['max'].iloc[-10:].max()
-    is_10d_max_high = high == max_10_high
 
-    # 綜合判斷結果
+    # 條件邏輯判斷
+    cond1_black_k = (close < open_p)
+    cond2_34d_max_vol = (v_0 == max_34_vol)
+    cond3_vol_2_5x = (v_0 >= required_vol_2_5x)
+    cond4_amount = (trading_amount > 200_000_000)
+
+    if is_valid(margin_balance) and 'MarginPurchaseTodayBalance' in df_single.columns:
+        cond5_margin = (margin_balance > 0)
+        has_margin_col = True
+    else:
+        cond5_margin = True
+        has_margin_col = False
+
+    cond6_10d_max_high = (high == max_10_high)
+
     is_hit = (
-        is_black_k and 
-        is_34d_max_vol and 
-        is_2_5x_vol and 
-        is_high_amount and 
-        is_margin_valid and 
-        is_10d_max_high
+        cond1_black_k and cond2_34d_max_vol and cond3_vol_2_5x and 
+        cond4_amount and cond5_margin and cond6_10d_max_high
     )
 
-    # --- 🔍 檢核表風格的 Debug 儀表板 ---
     if verbose:
-        print(f"\n  🔍 --------------------------------------------------")
-        print(f"  🔍 【當頭棒喝】參數檢查儀表板")
-        print(f"  🔍 --------------------------------------------------")
-        print(f"  • 股價資訊 : 收盤 ${close:.2f} | 開盤 ${open_p:.2f} | 最高 ${high:.2f}")
-        print(f"  • 量能資訊 : 當日成交量 {volume:,.0f} | 20日均量 {volume_20_ma:,.2f} | 34日最大量 {max_34_vol:,.0f}")
-        print(f"  • 金額/融資 : 成交金額 ${trading_amount:,.0f} | 融資餘額 {margin_val}")
-        print(f"  --------------------------------------------------")
-        print(f"  [1] 收盤 < 開盤 (黑K)       : {str(is_black_k):<5} (實際: 收 ${close:.2f} < 開 ${open_p:.2f})")
-        print(f"  [2] 量 = 34日最大量        : {str(is_34d_max_vol):<5} (實際: {volume:,.0f} == {max_34_vol:,.0f})")
-        print(f"  [3] 量 ≧ 20日均量×2.5      : {str(is_2_5x_vol):<5} (實際: {volume:,.0f} >= {required_vol_2_5x:,.2f})")
-        print(f"  [4] 成交金額 > 2億元        : {str(is_high_amount):<5} (實際: ${trading_amount:,.0f})")
-        print(f"  [5] 融資餘額 >0 或 N/A     : {str(is_margin_valid):<5} (實際: {margin_val})")
-        print(f"  [6] 最高 = 10日最大高      : {str(is_10d_max_high):<5} (實際: ${high:.2f} == ${max_10_high:.2f})")
-        print(f"  --------------------------------------------------")
-        print(f"  👉 最終觸發結果            : {'🚨 觸發轉空賣訊 (HIT)' if is_hit else '✅ 安全過關 (PASS)'}\n")
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [當頭棒喝] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_black_k else '✕' }] 1. 收盤 < 開盤 (黑K)       : 收 ${close:.2f} < 開 ${open_p:.2f}")
+        print(f" [{ '✓' if cond2_34d_max_vol else '✕' }] 2. 量 = 34日最大量        : 當日量 {v_0/1000:,.0f} 張 == 34日大 {max_34_vol/1000:,.0f} 張")
+        print(f" [{ '✓' if cond3_vol_2_5x else '✕' }] 3. 量 ≧ 20日均量×2.5      : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {required_vol_2_5x/1000:,.0f} 張")
+        print(f" [{ '✓' if cond4_amount else '✕' }] 4. 成交金額 > 2億元        : 金額 ${trading_amount:,.0f} 元 > 2億")
+        
+        if has_margin_col:
+            print(f" [{ '✓' if cond5_margin else '✕' }] 5. 融資餘額 > 0 或 N/A     : 當日融資餘額 {margin_balance:,.0f} 張 > 0")
+        else:
+            print(f" [–] 5. 融資餘額 > 0 或 N/A     : 無欄位資料 (預設通過)")
+            
+        print(f" [{ '✓' if cond6_10d_max_high else '✕' }] 6. 最高 = 10日最大高      : 最高價 {high:.2f} == 10日最高 {max_10_high:.2f}")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發當頭棒喝]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
 
     info = {
         '轉空賣訊': '當頭棒喝',
-        '操作建議': '高檔巨量長黑K，成交量創34天新高且達20日均量2.5倍以上，成交金額突破2億元，多頭力竭，極易形成中期頭部，建議避險。'
+        '操作建議': f'高檔巨量長黑K，成交量創34天新高({v_0 // 1000:,.0f} 張)且達20日均量2.5倍以上，成交金額突破2億元，多頭力竭，極易形成中期頭部，建議避險。'
     } if is_hit else {}
 
     return is_hit, info
