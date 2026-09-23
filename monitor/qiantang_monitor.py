@@ -12,7 +12,7 @@ DEBUG_VERBOSE = True
 import numpy as np
 import pandas as pd
 
-def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict = None, verbose: bool = False):
+def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE):
     """當頭棒喝 (創高長黑K)
 
     核心邏輯：
