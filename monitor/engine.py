@@ -5,20 +5,32 @@ import numpy as np
 from monitor.config import PARAM_PROFILES
 from monitor.registry import ACTIVE_MONITORS
 
-
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
-    """內部輔助函式：針對 FinMind 資料格式計算技術指標（輕鬆線、KD等）"""
+    """內部輔助函式：針對 FinMind 格式計算技術指標（正宗錢塘潮輕鬆線）、20日均量與成交金額"""
     if df_single is None or df_single.empty:
         return df_single
 
     df = df_single.copy()
     
-    # 1. 輕鬆線指標計算
-    df['easy_line'] = df['close'].rolling(20).mean()
-    df['easy_buy']  = df['close'].ewm(span=5, adjust=False).mean()
-    df['easy_sell'] = df['close'].ewm(span=20, adjust=False).mean()
+    # =========================================================================
+    # 1. 輕鬆線指標計算（更新為錢塘潮正宗演算法）
+    # =========================================================================
+    # 計算加權價格 Typical Price (FinMind 的最高價為 'max'，最低價為 'min')
+    price_weighted = (df['max'] + df['min'] + df['close'] * 2) / 4
 
-    # 2. 9日 KD 指標計算 (FinMind 專用欄位：min / max)
+    # (1) 輕鬆 B (easy_buy): 短線攻擊快線 - 加權價格 6 EMA
+    df['easy_buy'] = price_weighted.ewm(span=6, adjust=False).mean()
+
+    # (2) 輕鬆 S (easy_sell): 長線確認慢線 - 加權價格 24 EMA
+    df['easy_sell'] = price_weighted.ewm(span=24, adjust=False).mean()
+
+    # (3) 輕鬆線 (easy_line): 主趨勢濾網線 - 收盤價 12/6 二次平滑 (Double EMA)
+    ema_12 = df['close'].ewm(span=12, adjust=False).mean()
+    df['easy_line'] = ema_12.ewm(span=6, adjust=False).mean()
+
+    # =========================================================================
+    # 2. 9日 KD 指標計算 (使用 FinMind 專用欄位：min / max)
+    # =========================================================================
     low_min  = df['min'].rolling(9).min()
     high_max = df['max'].rolling(9).max()
     
@@ -26,22 +38,31 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
     denom = denom.replace(0, np.nan)
     
     rsv = (df['close'] - low_min) / denom * 100
-    rsv = rsv.fillna(50)  # 漲跌停無振幅時分母為0，以 50 替代
+    rsv = rsv.fillna(50)  # 漲跌停無振幅時分母為 0，以 50 替代
     
-    # 3. 加上 adjust=False 以符合台股標準 KD 遞迴算式 (1/3 平滑)
+    # 3. 符合台股標準 KD 遞迴算式 (1/3 平滑, adjust=False)
     df['K'] = rsv.ewm(com=2, adjust=False).mean()
     df['D'] = df['K'].ewm(com=2, adjust=False).mean()
+
+    # =========================================================================
+    # 4. 第二類策略專用：20日均量與成交金額防線 (使用 FinMind 的 Trading_Volume)
+    # =========================================================================
+    df['volume_20_ma'] = df['Trading_Volume'].rolling(20).mean()
+    
+    # 計算成交金額（若 FinMind 每日股價沒有直接給 amount，用 close * Trading_Volume 計算）
+    df['trading_amount'] = df['close'] * df['Trading_Volume']
 
     return df
 
 def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame:
     """
-    【全域預處理入口】資料抓取完成後呼叫，一次性預先算好所有股票的技術指標 (KD, 輕鬆線)
+    【全域預處理入口】資料抓取完成後呼叫，一次性預先算好所有股票的技術指標 (KD, 輕鬆線, 20日均量, 成交金額)
     """
     if global_df.empty:
         return global_df
 
     processed_dfs = []
+    # 確保以 FinMind 的 stock_id 進行群組與排序
     for sid, group_df in global_df.groupby('stock_id'):
         sorted_group = group_df.sort_values('date').copy()
         processed_group = _preprocess_technical_indicators(sorted_group)
