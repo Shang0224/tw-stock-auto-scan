@@ -9,6 +9,93 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+def mon_qiantang_da_zhong_xia_ke(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """打鐘下課 (純籌碼指標壓軸 - 輕鬆線下彎與法人/籌碼大撤退)
+
+    公式 logic:
+    1. 收盤 > 輕鬆線
+    2. 輕鬆線 < 1天前的輕鬆線 (輕鬆線下彎)
+    3. 買賣家數差 ≦ -30 (若無則以融資餘額增加/散戶進場作為智慧備援替代)
+    4. 外資 ≦ -1000 且 投信 ≦ -1000 (法人同步大撤退，中型股固定門檻)
+    """
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    # 需要至少 2 筆歷史資料以比對輕鬆線變化
+    if len(df_single) < 2:
+        if verbose:
+            print(f"❌ [打鐘下課] 資料筆數不足 2 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]      # 當日 (0天前)
+    day_1 = df_single.iloc[-2]      # 1天前
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    easy_1 = day_1.get('easy_line', None)
+    
+    holder_diff = today.get('holder_diff', None)  # 買賣家數差
+    
+    # 融資變動計算 (作為無家數差時的智慧備援)
+    margin_today = today.get('MarginPurchaseTodayBalance', None)
+    margin_yday = day_1.get('MarginPurchaseTodayBalance', None)
+    margin_diff = (margin_today - margin_yday) if (is_valid(margin_today) and is_valid(margin_yday)) else 0
+    
+    foreign_net = today.get('foreign_net', None)  # 外資買賣超
+    sitc_net = today.get('sitc_net', None)        # 投信買賣超 (替代主力)
+
+    # 條件 1 & 2: 價格與輕鬆線
+    cond1_above_easy = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
+    cond2_easy_down = (easy_0 < easy_1) if (is_valid(easy_0) and is_valid(easy_1)) else False
+    
+    # 條件 3: 家數差 ≦ -30 (若無則使用融資增加作為智慧備援)
+    if is_valid(holder_diff):
+        cond3_holder = (holder_diff <= -30)
+        holder_mode = f"買賣家數差 {holder_diff} (<= -30)"
+    else:
+        # 智慧備援：無家數差時，以融資增加（散戶接盤）作為替代判定
+        cond3_holder = (margin_diff > 0)
+        holder_mode = f"融資變動 {margin_diff:+,.0f} 張 (無家數差之替代備援)"
+
+    # 條件 4: 外資與投信同步撤退 (固定中型股門檻)
+    cond4_foreign = (foreign_net <= -1000) if is_valid(foreign_net) else True
+    cond4_sitc = (sitc_net <= -1000) if is_valid(sitc_net) else True
+    cond4_institutional = cond4_foreign and cond4_sitc
+
+    is_hit = cond1_above_easy and cond2_easy_down and cond3_holder and cond4_institutional
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        
+        easy_0_str = f"${easy_0:.2f}" if is_valid(easy_0) else "N/A"
+        easy_1_str = f"${easy_1:.2f}" if is_valid(easy_1) else "N/A"
+        foreign_str = f"{foreign_net:,}" if is_valid(foreign_net) else "N/A"
+        sitc_str = f"{sitc_net:,}" if is_valid(sitc_net) else "N/A"
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [打鐘下課] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線     : ${close_0 if is_valid(close_0) else 0:.2f} > {easy_0_str}")
+        print(f" [{ '✓' if cond2_easy_down else '✕' }] 2. 輕鬆線下彎       : 當日 {easy_0_str} < 前日 {easy_1_str}")
+        print(f" [{ '✓' if cond3_holder else '✕' }] 3. 籌碼發散防線     : {holder_mode}")
+        print(f" [{ '✓' if cond4_institutional else '✕' }] 4. 外資與投信雙撤退 : 外資 {foreign_str} | 投信 {sitc_str}")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發打鐘下課]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉空賣訊': '打鐘下課',
+        '操作建議': '股價雖在輕鬆線之上但指標已向下彎曲，搭配籌碼發散（家數差/融資變動）與外資、投信法人同步大舉撤退，中型飆股籌碼全線翻空，強烈建議立即「打鐘下課」離場鎖利。'
+    } if is_hit else {}
+
+    return is_hit, info
 def mon_qiantang_xia_shan_meng_hu(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -877,90 +964,6 @@ def mon_qiantang_kd_dead_cross(df_single: pd.DataFrame):
     } if is_hit else {}
     
     return is_hit, info
-
-
-def mon_qiantang_da_zhong_xia_ke(df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE):
-    """打鐘下課 (主力法人大賣/反彈逢下彎均線)
-
-    核心邏輯：
-    1. 收盤價 > 輕鬆線 (easy_line)
-    2. 今日輕鬆線 < 1天前輕鬆線 (輕鬆線下彎)
-    3. 家數差 <= -30 (籌碼鬆動/散戶買進賣方集中)
-    4. 外資買賣超 <= major_sell 門檻 且 主力買賣超 <= major_sell 門檻
-    """
-    profile = profile or {}
-
-    if len(df_single) < 5:
-        print("  ⚠️ [打鐘下課] K線資料不足 5 筆，跳過檢測")
-        return False, {}
-
-    today = df_single.iloc[-1]
-    yesterday = df_single.iloc[-2]
-    close = today['close']
-
-    # --- 1. 技術面參數讀取 ---
-    easy_line_today = today.get('easy_line', None)
-    easy_line_yesterday = yesterday.get('easy_line', None)
-
-    if easy_line_today is None or easy_line_yesterday is None:
-        print("  ⚠️ [打鐘下課] 缺少 easy_line 技術指標欄位，無法計算")
-        return False, {}
-
-    cond1_above_easy = close > easy_line_today
-    cond2_easy_down = easy_line_today < easy_line_yesterday
-
-    # --- 2. 籌碼面 Profile 門檻與動態微調計算 ---
-    base_major_sell = profile.get('major_sell', -800)
-    profile_category = profile.get('category', 'default')
-
-    # 高價 IC 設計股動態調降張數門檻
-    major_sell_limit = base_major_sell
-    if profile_category == 'ic_design':
-        if close >= 1000:
-            major_sell_limit = max(base_major_sell, -150)
-        elif close >= 500:
-            major_sell_limit = max(base_major_sell, -300)
-
-    # --- 3. 籌碼面數據讀取 ---
-    broker_diff = today.get('broker_diff', 0) if 'broker_diff' in df_single.columns else 0
-    foreign_net = today.get('foreign_net', 0) if 'foreign_net' in df_single.columns else 0
-    major_net = today.get('major_net', 0) if 'major_net' in df_single.columns else 0
-
-    cond3_broker_diff = broker_diff <= -30 if 'broker_diff' in df_single.columns else True
-    cond4_foreign_sell = foreign_net <= major_sell_limit
-    cond5_major_sell = major_net <= major_sell_limit
-
-    # 綜合判斷結果
-    is_hit = (
-        cond1_above_easy and 
-        cond2_easy_down and 
-        cond3_broker_diff and 
-        cond4_foreign_sell and 
-        cond5_major_sell
-    )
-
-    # --- 🔍 參數細節詳細列印 Debug 區塊 ---
-    # 7. 🔔 詳細數據輸出區塊 (受到 verbose 開關控制)
-    if verbose:
-        print(f"\n  🔍 === [打鐘下課 參數檢查儀表板] ===")
-        print(f"  • 套用族群 Profile  : {profile_category} (原始 major_sell: {base_major_sell})")
-        print(f"  • 動態賣超張數門檻 : <= {major_sell_limit} 張")
-        print(f"  • 今日收盤 / 輕鬆線 : 收盤 ${close:.2f} | 今日輕鬆線 ${easy_line_today:.2f} | 昨日輕鬆線 ${easy_line_yesterday:.2f}")
-        print(f"  • 籌碼數據現況     : 外資買賣超 {foreign_net} 張 | 主力買賣超 {major_net} 張 | 家數差 {broker_diff}")
-        print(f"  • 條件 1 (站上輕鬆線): {cond1_above_easy} ({'PASS' if cond1_above_easy else 'FAIL'})")
-        print(f"  • 條件 2 (輕鬆線下彎): {cond2_easy_down} ({'PASS' if cond2_easy_down else 'FAIL'})")
-        print(f"  • 條件 3 (家數差<=-30): {cond3_broker_diff} ({'PASS' if cond3_broker_diff else 'FAIL'})")
-        print(f"  • 條件 4 (外資大賣)  : {cond4_foreign_sell} ({'PASS' if cond4_foreign_sell else 'FAIL'} -> {foreign_net} <= {major_sell_limit})")
-        print(f"  • 條件 5 (主力大賣)  : {cond5_major_sell} ({'PASS' if cond5_major_sell else 'FAIL'} -> {major_net} <= {major_sell_limit})")
-        print(f"  👉 最終觸發結果     : {'🚨 觸發賣訊' if is_hit else '✅ 安全過關'}\n")
-
-    info = {
-        '轉空賣訊': '打鐘下課',
-        '操作建議': f'股價反彈至下彎輕鬆線上方，但主力與外資單日出現巨量拋售(賣超門檻 {abs(major_sell_limit)} 張)且籌碼趨向分散，逢反彈宜儘速退場避險。'
-    } if is_hit else {}
-
-    return is_hit, info
-
 
 
 
