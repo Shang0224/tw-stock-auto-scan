@@ -9,6 +9,100 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+def mon_qiantang_xia_shan_meng_hu(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """下山猛虎 (1天前強漲後今日直接跌破)
+
+    公式 logic:
+    1. 1天前的收盤 / 2天前的收盤 ≧ 1.065
+    2. 當日收盤 < 1天前的收盤
+    3. 當日成交量 ≧ 20日均量 × 2.5倍 且 當日成交金額 > 2億元 (合併流動性防線)
+    4. 當日融券餘額 > 0 或 N/A (智慧容錯)
+    """
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    # 需要至少 22 筆歷史資料以確保均量與前日數據穩定
+    if len(df_single) < 22:
+        if verbose:
+            print(f"❌ [下山猛虎] 資料筆數不足 22 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]      # 當日 (0天前)
+    d1 = df_single.iloc[-2]         # 1天前
+    d2 = df_single.iloc[-3]         # 2天前
+
+    close_0 = today.get('close', None)
+    close_1 = d1.get('close', None)
+    close_2 = d2.get('close', None)
+    
+    v_0 = today.get('Trading_Volume', None)
+
+    # 1. 數值與比率計算
+    surge_ratio_1 = close_1 / close_2 if (is_valid(close_1) and is_valid(close_2) and close_2 > 0) else 0
+    
+    # 流動性防線數值 (當日 20日均量與成交金額)
+    vol_20_ma = today.get('volume_20_ma', 0)
+    required_vol_2_5x = vol_20_ma * 2.5
+    trading_amount = today.get('trading_amount', close_0 * v_0 if is_valid(close_0) and is_valid(v_0) else 0)
+    
+    short_balance = today.get('ShortSaleTodayBalance', None)
+
+    # 2. 條件邏輯判斷
+    cond1_surge = (surge_ratio_1 >= 1.065)
+    cond2_break = (close_0 < close_1) if (is_valid(close_0) and is_valid(close_1)) else False
+    
+    # 條件 3 & 4 合併為單一防線
+    cond3_vol_2_5x = (v_0 >= required_vol_2_5x) if is_valid(v_0) else False
+    cond4_amount = (trading_amount > 200_000_000)
+    cond3_4_liquidity = cond3_vol_2_5x and cond4_amount
+
+    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
+        cond5_short = (short_balance > 0)
+        has_short_col = True
+    else:
+        cond5_short = True
+        has_short_col = False
+
+    is_hit = (
+        cond1_surge and cond2_break and cond3_4_liquidity and cond5_short
+    )
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        v_0_lots = v_0 / 1000.0 if is_valid(v_0) else 0
+        req_lots = required_vol_2_5x / 1000.0
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [下山猛虎] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_surge else '✕' }] 1. 1天前強漲 ≧ 6.5%    : 幅度 {surge_ratio_1:.3f} >= 1.065")
+        print(f" [{ '✓' if cond2_break else '✕' }] 2. 當日收盤 < 1天前收    : ${close_0 if is_valid(close_0) else 0:.2f} < ${close_1 if is_valid(close_1) else 0:.2f}")
+        print(f" [{ '✓' if cond3_4_liquidity else '✕' }] 3. 當日量≧2.5x且額>2億  : 量 {v_0_lots:,.0f}張(門檻 {req_lots:,.0f}) | 金額 ${trading_amount:,.0f}")
+        
+        if has_short_col:
+            print(f" [{ '✓' if cond5_short else '✕' }] 4. 融券餘額 > 0 或 N/A   : 當日融券餘額 {short_balance:,.0f} 張 > 0")
+        else:
+            print(f" [–] 4. 融券餘額 > 0 或 N/A   : 無欄位資料 (預設通過)")
+            
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發下山猛虎]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉空賣訊': '下山猛虎',
+        '操作建議': f'1天前強勢大漲超過6.5%，今日帶量(成交量達 {v_0 // 1000:,.0f} 張)直接跌破1天前收盤價，顯示短線追高意願潰散、主力出貨翻轉，建議順勢停利或調節。'
+    } if is_hit else {}
+
+    return is_hit, info
+
+
 def mon_qiantang_ming_ri_huang_hua(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -749,23 +843,6 @@ def mon_qiantang_dang_tou_bang_he(
         '操作建議': f'高檔巨量長黑K，成交量創34天新高({v_0 // 1000:,.0f} 張)且達20日均量2.5倍以上，成交金額突破2億元，多頭力竭，極易形成中期頭部，建議避險。'
     } if is_hit else {}
 
-    return is_hit, info
-
-def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
-    """下山猛虎 (爆量跌破關鍵均線)"""
-    if len(df_single) < 20: return False, {}
-    today = df_single.iloc[-1]
-    
-    ma20 = df_single['close'].iloc[-20:].mean()
-    is_break_ma20 = (df_single['close'].iloc[-2] >= ma20) and (today['close'] < ma20)
-    is_heavy_vol = today.get('Trading_Volume', 0) > profile.get('min_vol', 1000)
-    
-    is_hit = is_break_ma20 and is_heavy_vol
-    info = {
-        '轉空賣訊': '下山猛虎',
-        '操作建議': '帶量長黑跌破月線(20MA)，趨勢正式轉空，建議順勢止損離場。'
-    } if is_hit else {}
-    
     return is_hit, info
 
 def mon_qiantang_qing_song_xian_zhuan_kong(df_single: pd.DataFrame):
