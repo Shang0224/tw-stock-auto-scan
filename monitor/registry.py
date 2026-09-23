@@ -11,6 +11,7 @@ from monitor.qiantang_monitor import (
     mon_qiantang_jiang_long_fu_hu,        # 降龍伏虎 (主力大舉洗盤 / 籌碼沉澱)
     mon_qiantang_qing_song_xian_zhuan_kong,# 輕鬆轉空, 月下老人 (技術面/籌碼面轉空訊號)
     mon_qiantang_kd_dead_cross,           # KD 死亡交叉, 可能是地底穿心 (高檔技術面反轉)
+    mon_qiantang_didi_chuanxin            # 地底穿心
 )
 
 # 2. 匯入自訂賣訊
