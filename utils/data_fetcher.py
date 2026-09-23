@@ -38,7 +38,115 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
         
     return pd.concat(all_data, ignore_index=True)
 
-def fetch_finmind_chips(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+def fetch_finmind_chips(
+    dl, stock_ids: list, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """抓取 FinMind 三大法人與融資融券籌碼資料
+    欄位名稱完全沿用 FinMind 原始名稱與格式
+    """
+    chip_records = []
+    print("📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
+
+    for sid in stock_ids:
+        try:
+            df_inst = dl.taiwan_stock_institutional_investors(
+                stock_id=sid, start_date=start_date, end_date=end_date
+            )
+            df_margin = dl.taiwan_stock_margin_purchase_short_sale(
+                stock_id=sid, start_date=start_date, end_date=end_date
+            )
+
+            df_chip = pd.DataFrame()
+            df_margin_sub = pd.DataFrame()
+
+            # --- 1. 處理三大法人資料（保留 FinMind 原始名稱） ---
+            if df_inst is not None and not df_inst.empty:
+                # 計算買賣差額 (buy - sell)
+                df_inst["net_lots"] = df_inst["buy"] - df_inst["sell"]
+
+                # 以 FinMind 的 name 欄位作為 Pivot Columns
+                df_pivot = df_inst.pivot(
+                    index="date", columns="name", values="net_lots"
+                ).fillna(0)
+
+                # 提取 FinMind 原生法人欄位
+                foreign_net = df_pivot.get(
+                    "Foreign_Investor", pd.Series(0, index=df_pivot.index)
+                )
+                trust_net = df_pivot.get(
+                    "Investment_Trust", pd.Series(0, index=df_pivot.index)
+                )
+                dealer_self = df_pivot.get(
+                    "Dealer_self", pd.Series(0, index=df_pivot.index)
+                )
+
+                # 計算主力淨買賣（外資 + 投信 + 自營商自行買賣）
+                df_pivot["major_net"] = foreign_net + trust_net + dealer_self
+
+                df_chip = df_pivot.reset_index()
+
+            # --- 2. 處理融資融券資料（完全保留 FinMind 原始欄位名） ---
+            if df_margin is not None and not df_margin.empty:
+                # 僅擷取日期與 FinMind 原始信用交易欄位
+                df_margin_sub = df_margin[[
+                    "date",
+                    "MarginPurchaseTodayBalance",
+                    "ShortSaleTodayBalance",
+                ]].copy()
+
+            # --- 2.5 安全合併法人與信用交易資料 ---
+            if not df_chip.empty and not df_margin_sub.empty:
+                df_merged = pd.merge(
+                    df_chip, df_margin_sub, on="date", how="outer"
+                )
+            elif not df_chip.empty:
+                df_merged = df_chip
+            elif not df_margin_sub.empty:
+                df_merged = df_margin_sub
+            else:
+                df_merged = pd.DataFrame()
+
+            # --- 3. 綁定股票代號並存入結果 ---
+            if not df_merged.empty:
+                df_merged["stock_id"] = sid
+                chip_records.append(df_merged)
+
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
+            continue
+
+    # --- 4. 彙整 DataFrame 與補齊必要欄位（沿用 FinMind 欄位名） ---
+    # 這裡包含 FinMind 原生法人名稱與信用交易名稱
+    required_cols = [
+        "date",
+        "stock_id",
+        "Foreign_Investor",
+        "Investment_Trust",
+        "Dealer_self",
+        "major_net",
+        "MarginPurchaseTodayBalance",
+        "ShortSaleTodayBalance",
+        "broker_diff",  # 分點預留欄位
+    ]
+
+    if chip_records:
+        result_df = pd.concat(chip_records, ignore_ignore=True) if hasattr(pd, 'concat') else pd.concat(chip_records, ignore_index=True)
+
+        # 若某些欄位在某些日期/股票完全沒出現，補 np.nan
+        for col in required_cols:
+            if col not in result_df.columns:
+                result_df[col] = np.nan
+
+        return result_df
+
+    # 若完全無資料，回傳帶有 FinMind 原生欄位結構的空 DataFrame
+    return pd.DataFrame(columns=required_cols)
+
+
+
+def fetch_finmind_chips_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人與融資融券籌碼資料，並標準化錢塘潮相關指標
     未來若有分點資料, 則修改此處
     """
