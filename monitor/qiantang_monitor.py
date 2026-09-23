@@ -9,6 +9,118 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+import numpy as np
+import pandas as pd
+
+def mon_qiantang_jiang_long_fu_hu(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """降龍伏虎 (高檔紡錘線變盤)
+
+    公式 logic:
+    1. 形態：陽紡錘 或 陰紡錘 (實體小、上下影線明顯)
+    2. 當日最高 == 近 21 天最高價 (含當日)
+    3. 當日成交量 ≧ 20日均量 × 2.5倍
+    4. 當日成交金額 > 2億元
+    5. 近 2 天成交量最大值 == 近 21 天成交量最大值
+    6. 當日融資餘額 > 0 或 N/A (智慧容錯)
+    """
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    if len(df_single) < 21:
+        if verbose:
+            print(f"❌ [降龍伏虎] 資料筆數不足 21 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    close = today['close']
+    open_p = today['open']
+    high = today.get('max', 0)
+    low = today.get('min', 0)
+    v_0 = today.get('Trading_Volume', 0)
+
+    # 1. 紡錘線 (Spinning Top) 形態計算
+    total_range = high - low
+    if total_range == 0:
+        is_spinning_top = False
+        is_yang_spinning = False
+        is_yin_spinning = False
+    else:
+        body = abs(close - open_p)
+        upper_shadow = high - max(open_p, close)
+        lower_shadow = min(open_p, close) - low
+        
+        # 紡錘線標準：實體較小 (小於總振幅的 35%)，且上下影線皆大於實體
+        is_spinning_top = (body <= total_range * 0.35) and (upper_shadow > body) and (lower_shadow > body)
+        is_yang_spinning = (close > open_p) and is_spinning_top
+        is_yin_spinning = (close < open_p) and is_spinning_top
+
+    # 提取各項指標數值
+    max_21_high = df_single['max'].iloc[-21:].max()
+    volume_20_ma = today.get('volume_20_ma', 0)
+    required_vol_2_5x = volume_20_ma * 2.5
+    trading_amount = today.get('trading_amount', close * v_0)
+    
+    max_2d_vol = df_single['Trading_Volume'].iloc[-2:].max()
+    max_21_vol = df_single['Trading_Volume'].iloc[-21:].max()
+    
+    margin_balance = today.get('MarginPurchaseTodayBalance', None)
+
+    # 條件邏輯判斷
+    cond1_spinning = is_spinning_top
+    cond2_max_price = (high == max_21_high)
+    cond3_vol_2_5x = (v_0 >= required_vol_2_5x)
+    cond4_amount = (trading_amount > 200_000_000)
+    cond5_vol_peak = (max_2d_vol == max_21_vol)
+
+    if is_valid(margin_balance) and 'MarginPurchaseTodayBalance' in df_single.columns:
+        cond6_margin = (margin_balance > 0)
+        has_margin_col = True
+    else:
+        cond6_margin = True
+        has_margin_col = False
+
+    is_hit = (
+        cond1_spinning and cond2_max_price and cond3_vol_2_5x and 
+        cond4_amount and cond5_vol_peak and cond6_margin
+    )
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        shape_name = "陽紡錘" if is_yang_spinning else ("陰紡錘" if is_yin_spinning else "非標準紡錘")
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [降龍伏虎] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_spinning else '✕' }] 1. 紡錘線形態 ({shape_name}) : 實體小與上下影線符合")
+        print(f" [{ '✓' if cond2_max_price else '✕' }] 2. 最高等於21日最高   : 最高價 {high:.2f} == 21日最高 {max_21_high:.2f}")
+        print(f" [{ '✓' if cond3_vol_2_5x else '✕' }] 3. 量 ≧ 20日均量×2.5    : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {required_vol_2_5x/1000:,.0f} 張")
+        print(f" [{ '✓' if cond4_amount else '✕' }] 4. 成交金額 > 2億元     : 金額 ${trading_amount:,.0f} 元 > 2億")
+        print(f" [{ '✓' if cond5_vol_peak else '✕' }] 5. 近2日量極==21日極值: 近2日大 {max_2d_vol/1000:,.0f} == 21日大 {max_21_vol/1000:,.0f}")
+        
+        if has_margin_col:
+            print(f" [{ '✓' if cond6_margin else '✕' }] 6. 融資餘額 > 0 或 N/A  : 當日融資餘額 {margin_balance:,.0f} 張 > 0")
+        else:
+            print(f" [–] 6. 融資餘額 > 0 或 N/A  : 無欄位資料 (預設通過)")
+            
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發降龍伏虎]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉空賣訊': '降龍伏虎',
+        '操作建議': f'高檔出現紡錘線變盤訊號，且成交量創21天新高達20日均量2.5倍以上，成交金額突破2億元，多空交戰激烈、主力有散心出貨疑慮，建議提高警覺。'
+    } if is_hit else {}
+
+    return is_hit, info
+
+
 def mon_qiantang_dang_tou_bang_he(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -157,26 +269,6 @@ def mon_qiantang_he_shi(df_single: pd.DataFrame):
     info = {
         '轉空賣訊': '合十',
         '操作建議': '5日均線下穿20日均線形成死叉，短線波段轉弱，注意下行風險。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
-
-import pandas as pd
-
-
-def mon_qiantang_jiang_long_fu_hu(df_single: pd.DataFrame):
-    """降龍伏虎 (跳空開低大黑K)"""
-    if len(df_single) < 5: return False, {}
-    today, prev = df_single.iloc[-1], df_single.iloc[-2]
-    
-    is_gap_down = today['open'] < (prev['close'] * 0.985)
-    is_black_k = (today['open'] - today['close']) / today['open'] > 0.02
-    
-    is_hit = is_gap_down and is_black_k
-    info = {
-        '轉空賣訊': '降龍伏虎',
-        '操作建議': '出現向下跳空長黑 K 線，多頭防線全面失守，空方力道強勁。'
     } if is_hit else {}
     
     return is_hit, info
