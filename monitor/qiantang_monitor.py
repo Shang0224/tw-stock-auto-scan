@@ -8,8 +8,6 @@ from monitor.config import DEBUG_VERBOSE
 # ==========================================
 
 DEBUG_VERBOSE = True
-import numpy as np
-import pandas as pd
 
 def mon_qiantang_he_shi(
     df_single: pd.DataFrame, 
