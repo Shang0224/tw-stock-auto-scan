@@ -9,23 +9,19 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
-import numpy as np
-import pandas as pd
-
 def mon_qiantang_yi_zhu_qing_xiang(
     df_single: pd.DataFrame, 
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
-    """一柱清香 (高檔長上影線與量價極值)
+    """一柱清香 (原始邏輯 + 升級量能防線)
 
     公式 logic:
     1. (最高 / 收盤) ≧ 1.03
-    2. 近 2 天最高價最大值 == 近 9 天最高價最大值
-    3. 近 2 天成交量最大值 == 近 9 天成交量最大值
-    4. 當日成交量 ≧ 20日均量 × 2.5倍
-    5. 當日成交金額 > 2億元
-    6. 當日融券餘額 > 0 或 N/A (智慧容錯)
+    2. 融券餘額 > 0 或 N/A (智慧容錯)
+    3. 近 2 天最高價最大值 == 近 9 天最高價最大值
+    4. 近 2 天成交量最大值 == 近 9 天成交量最大值
+    5. 當日成交量 ≧ 20日均量 × 2.5倍 且 當日成交金額 > 2億元 (升級流動性防線)
     """
     profile = profile or {}
 
@@ -42,7 +38,7 @@ def mon_qiantang_yi_zhu_qing_xiang(
     high = today.get('max', 0)
     v_0 = today.get('Trading_Volume', 0)
 
-    # 1. 計算各項指標數值
+    # 1. 條件數值計算
     high_close_ratio = high / close if (is_valid(close) and close > 0) else 0
     
     max_2d_high = df_single['max'].iloc[-2:].max()
@@ -59,48 +55,54 @@ def mon_qiantang_yi_zhu_qing_xiang(
 
     # 條件邏輯判斷
     cond1_ratio = (high_close_ratio >= 1.03)
-    cond2_max_price = (max_2d_high == max_9d_high)
-    cond3_max_vol = (max_2d_vol == max_9d_vol)
-    cond4_vol_2_5x = (v_0 >= required_vol_2_5x)
-    cond5_amount = (trading_amount > 200_000_000)
-
+    
     if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
-        cond6_short = (short_balance > 0)
+        cond2_short = (short_balance > 0)
         has_short_col = True
     else:
-        cond6_short = True
+        cond2_short = True
         has_short_col = False
 
+    cond3_max_price = (max_2d_high == max_9d_high)
+    cond4_max_vol = (max_2d_vol == max_9d_vol)
+    cond5_vol_2_5x = (v_0 >= required_vol_2_5x)
+    cond6_amount = (trading_amount > 200_000_000)
+    
+    # 合併 5 與 6 的綜合流動性防線判定
+    cond5_6_liquidity = cond5_vol_2_5x and cond6_amount
+
     is_hit = (
-        cond1_ratio and cond2_max_price and cond3_max_vol and 
-        cond4_vol_2_5x and cond5_amount and cond6_short
+        cond1_ratio and cond2_short and 
+        cond3_max_price and cond4_max_vol and 
+        cond5_6_liquidity
     )
 
     if verbose:
         stock_id = today.get('stock_id', '未知個股')
         date_str = str(today.get('date', '最新日'))
+        v_0_lots = v_0 / 1000.0
+        req_lots = required_vol_2_5x / 1000.0
 
         print("\n" + "=" * 55)
         print(f"🔔 [一柱清香] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
         print(f" [{ '✓' if cond1_ratio else '✕' }] 1. 最高/收盤 ≧ 1.03       : 比例 {high_close_ratio:.3f} >= 1.03")
-        print(f" [{ '✓' if cond2_max_price else '✕' }] 2. 近2日高極==9日高極值   : 近2日高 {max_2d_high:.2f} == 9日高 {max_9d_high:.2f}")
-        print(f" [{ '✓' if cond3_max_vol else '✕' }] 3. 近2日量極==9日量極值   : 近2日量 {max_2d_vol/1000:,.0f} == 9日量 {max_9d_vol/1000:,.0f}")
-        print(f" [{ '✓' if cond4_vol_2_5x else '✕' }] 4. 量 ≧ 20日均量×2.5      : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {required_vol_2_5x/1000:,.0f} 張")
-        print(f" [{ '✓' if cond5_amount else '✕' }] 5. 成交金額 > 2億元       : 金額 ${trading_amount:,.0f} 元 > 2億")
         
         if has_short_col:
-            print(f" [{ '✓' if cond6_short else '✕' }] 6. 融券餘額 > 0 或 N/A    : 當日融券餘額 {short_balance:,.0f} 張 > 0")
+            print(f" [{ '✓' if cond2_short else '✕' }] 2. 融券餘額 > 0 或 N/A    : 當日融券餘額 {short_balance:,.0f} 張 > 0")
         else:
-            print(f" [–] 6. 融券餘額 > 0 或 N/A    : 無欄位資料 (預設通過)")
+            print(f" [–] 2. 融券餘額 > 0 或 N/A    : 無欄位資料 (預設通過)")
             
+        print(f" [{ '✓' if cond3_max_price else '✕' }] 3. 近2日高極==9日高極值   : 近2日高 {max_2d_high:.2f} == 9日高 {max_9d_high:.2f}")
+        print(f" [{ '✓' if cond4_max_vol else '✕' }] 4. 近2日量極==9日量極值   : 近2日量 {max_2d_vol/1000:,.0f} == 9日量 {max_9d_vol/1000:,.0f}")
+        print(f" [{ '✓' if cond5_6_liquidity else '✕' }] 5. 量≧2.5x且金額>2億      : 量 {v_0_lots:,.0f}張(門檻 {req_lots:,.0f}) | 金額 ${trading_amount:,.0f}")
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發一柱清香]' if is_hit else '⚪ [未觸發]'}")
         print("=" * 55 + "\n")
 
     info = {
         '轉空賣訊': '一柱清香',
-        '操作建議': f'高檔留有長上影線（最高/收盤比率 {high_close_ratio:.2f}），且近2日量價創9天新高，成交量達20日均量2.5倍以上，成交金額破2億元，主力有出貨嫌疑，建議留意。'
+        '操作建議': f'高檔留有長上影線（最高/收盤比率 {high_close_ratio:.2f}），近2日量價創9天新高且量能與金額達標，主力有出貨嫌疑，建議逢高調節。'
     } if is_hit else {}
 
     return is_hit, info
