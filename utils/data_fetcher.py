@@ -80,7 +80,7 @@ def fetch_finmind_chips(
                     "Dealer_self", pd.Series(0, index=df_pivot.index)
                 )
 
-                # 計算主力淨買賣（外資 + 投信 + 自營商自行買賣）
+                # 計算主力淨買賣（投信 + 自營商自行買賣）這個地方未來要再仔細討論
                 df_pivot["major_net"] = foreign_net + trust_net + dealer_self
 
                 df_chip = df_pivot.reset_index()
