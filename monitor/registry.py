@@ -9,7 +9,7 @@ from monitor.qiantang_monitor import (
     mon_qiantang_he_shi,                  # 合十 (多頭籌碼強勢卡位)
     mon_qiantang_ni_diu_wo_jian,          # 你丟我撿 (主力持續派發 / 散戶接盤)
     mon_qiantang_jiang_long_fu_hu,        # 降龍伏虎 (主力大舉洗盤 / 籌碼沉澱)
-    mon_qiantang_qing_song_xian_zhuan_kong,# 輕鬆轉空, 月下老人 (技術面/籌碼面轉空訊號)
+    mon_qiantang_yuexia_laoren,           # 輕鬆轉空, 月下老人 (技術面/籌碼面轉空訊號)
     mon_qiantang_kd_dead_cross,           # KD 死亡交叉, 可能是地底穿心 (高檔技術面反轉)
     mon_qiantang_didi_chuanxin            # 地底穿心
 )
@@ -33,7 +33,7 @@ MONITOR_MAP = {
     mon_qiantang_he_shi: True,
     mon_qiantang_ni_diu_wo_jian: True,
     mon_qiantang_jiang_long_fu_hu: True,
-    mon_qiantang_qing_song_xian_zhuan_kong: True,
+    mon_qiantang_yuexia_laoren: True,
     mon_qiantang_kd_dead_cross: True,
 
     # --- 未來自訂賣訊 ---
