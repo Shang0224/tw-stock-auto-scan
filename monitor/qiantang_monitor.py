@@ -9,6 +9,101 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
+def mon_qiantang_tian_nv_san_hua_old(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """天女散花
+
+    公式 logic:
+    1. 當日最高 == 近 10 天最高價 (含當日)
+    2. 當日成交量 == 近 10 天成交量最大值 (含當日)
+    3. 當日成交量 >= 最低流動性門檻 (預設 3000 張，高價股自動微調)
+    4. 當日最高 / 1天前收盤 > 1.065
+    5. 當日最高 / 當日收盤 >= 1.01
+    6. 當日融券餘額 > 0
+    """
+    
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    if len(df_single) < 10:
+        if verbose:
+            print(f"❌ [天女散花] 資料筆數不足 10 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    c_1 = df_single['close'].iloc[-2]  # 前一日收盤價
+
+    # 📍 呼叫動態門檻函數 (錢塘潮防止買到成交量過低的股票原始基準門檻：3000 張)
+    min_vol_shares = get_qiantang_min_volume_shares(
+        price=today['close'],
+        profile=profile
+    )
+
+    # 提取指標數值
+    max_10d = df_single['max'].iloc[-10:].max()
+    vol_10d = df_single['Trading_Volume'].iloc[-10:].max()
+
+    v_0 = today['Trading_Volume']
+    surge_ratio = today['max'] / c_1 if (is_valid(c_1) and c_1 > 0) else 0
+    high_close_ratio = today['max'] / today['close'] if (is_valid(today['close']) and today['close'] > 0) else 0
+    short_balance = today.get('ShortSaleTodayBalance', None)
+
+    # 條件邏輯判斷
+    cond1_max_price = (today['max'] == max_10d)
+    cond2_max_vol = (v_0 == vol_10d)
+    cond3_min_vol = (v_0 >= min_vol_shares)  # 自動對齊高價股門檻 (單位：股)
+    cond4_surge = (surge_ratio > 1.065)
+    cond5_high_close_ratio = (high_close_ratio >= 1.02)
+    
+    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
+        cond6_short_balance = (short_balance > 0)
+        has_short_col = True
+    else:
+        cond6_short_balance = True
+        has_short_col = False
+
+    is_hit = (
+        cond1_max_price and cond2_max_vol and cond3_min_vol and 
+        cond4_surge and cond5_high_close_ratio and cond6_short_balance
+    )
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        min_vol_lots = min_vol_shares / 1000.0
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [天女散花] 股票: {stock_id} | 日期: {date_str} | 適用門檻: {min_vol_lots:,.0f} 張")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_max_price else '✕' }] 1. 最高等於10日最高 : 最高價 {today['max']:.2f} == 10日最高 {max_10d:.2f}")
+        print(f" [{ '✓' if cond2_max_vol else '✕' }] 2. 成交量等於10日天量 : 當日量 {v_0/1000:,.0f} 張 == 10日最大 {vol_10d/1000:,.0f} 張")
+        print(f" [{ '✓' if cond3_min_vol else '✕' }] 3. 達最低流動性門檻 : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {min_vol_lots:,.0f} 張")
+        print(f" [{ '✓' if cond4_surge else '✕' }] 4. 最高/1天前收盤 > 1.065 : 幅度 {surge_ratio:.3f} > 1.065 (+6.5%)")
+        print(f" [{ '✓' if cond5_high_close_ratio else '✕' }] 5. 最高/收盤 ≧ 1.02   : 比例 {high_close_ratio:.3f} >= 1.020")
+        
+        if has_short_col:
+            print(f" [{ '✓' if cond6_short_balance else '✕' }] 6. 融券餘額 > 0       : 當日融券餘額 {short_balance:,.0f} 張 > 0")
+        else:
+            print(f" [–] 6. 融券餘額 > 0       : 無欄位資料 (預設通過)")
+            
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發天女散花]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉空賣訊': '天女散花',
+        '操作建議': f'當日創10日新高且爆出10日天量({v_0 // 1000:,.0f} 張)，衝高後滯漲留上影線，代表高檔換手失敗且主力籌碼鬆動，建議停利離場。'
+    } if is_hit else {}
+
+    return is_hit, info
+
+
+
 def mon_qiantang_he_shi(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -537,99 +632,6 @@ def mon_qiantang_da_zhong_xia_ke(df_single: pd.DataFrame, profile: dict = None, 
     info = {
         '轉空賣訊': '打鐘下課',
         '操作建議': f'股價反彈至下彎輕鬆線上方，但主力與外資單日出現巨量拋售(賣超門檻 {abs(major_sell_limit)} 張)且籌碼趨向分散，逢反彈宜儘速退場避險。'
-    } if is_hit else {}
-
-    return is_hit, info
-
-def mon_qiantang_tian_nv_san_hua(
-    df_single: pd.DataFrame, 
-    profile: dict = None, 
-    verbose: bool = DEBUG_VERBOSE
-) -> tuple[bool, dict]:
-    """天女散花
-
-    公式 logic:
-    1. 當日最高 == 近 10 天最高價 (含當日)
-    2. 當日成交量 == 近 10 天成交量最大值 (含當日)
-    3. 當日成交量 >= 最低流動性門檻 (預設 3000 張，高價股自動微調)
-    4. 當日最高 / 1天前收盤 > 1.065
-    5. 當日最高 / 當日收盤 >= 1.01
-    6. 當日融券餘額 > 0
-    """
-    
-    profile = profile or {}
-
-    def is_valid(val):
-        return val is not None and pd.notna(val)
-
-    if len(df_single) < 10:
-        if verbose:
-            print(f"❌ [天女散花] 資料筆數不足 10 筆 (目前: {len(df_single)})")
-        return False, {}
-
-    today = df_single.iloc[-1]
-    c_1 = df_single['close'].iloc[-2]  # 前一日收盤價
-
-    # 📍 呼叫動態門檻函數 (錢塘潮防止買到成交量過低的股票原始基準門檻：3000 張)
-    min_vol_shares = get_qiantang_min_volume_shares(
-        price=today['close'],
-        profile=profile
-    )
-
-    # 提取指標數值
-    max_10d = df_single['max'].iloc[-10:].max()
-    vol_10d = df_single['Trading_Volume'].iloc[-10:].max()
-
-    v_0 = today['Trading_Volume']
-    surge_ratio = today['max'] / c_1 if (is_valid(c_1) and c_1 > 0) else 0
-    high_close_ratio = today['max'] / today['close'] if (is_valid(today['close']) and today['close'] > 0) else 0
-    short_balance = today.get('ShortSaleTodayBalance', None)
-
-    # 條件邏輯判斷
-    cond1_max_price = (today['max'] == max_10d)
-    cond2_max_vol = (v_0 == vol_10d)
-    cond3_min_vol = (v_0 >= min_vol_shares)  # 自動對齊高價股門檻 (單位：股)
-    cond4_surge = (surge_ratio > 1.065)
-    cond5_high_close_ratio = (high_close_ratio >= 1.02)
-    
-    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
-        cond6_short_balance = (short_balance > 0)
-        has_short_col = True
-    else:
-        cond6_short_balance = True
-        has_short_col = False
-
-    is_hit = (
-        cond1_max_price and cond2_max_vol and cond3_min_vol and 
-        cond4_surge and cond5_high_close_ratio and cond6_short_balance
-    )
-
-    if verbose:
-        stock_id = today.get('stock_id', '未知個股')
-        date_str = str(today.get('date', '最新日'))
-        min_vol_lots = min_vol_shares / 1000.0
-
-        print("\n" + "=" * 55)
-        print(f"🔔 [天女散花] 股票: {stock_id} | 日期: {date_str} | 適用門檻: {min_vol_lots:,.0f} 張")
-        print("-" * 55)
-        print(f" [{ '✓' if cond1_max_price else '✕' }] 1. 最高等於10日最高 : 最高價 {today['max']:.2f} == 10日最高 {max_10d:.2f}")
-        print(f" [{ '✓' if cond2_max_vol else '✕' }] 2. 成交量等於10日天量 : 當日量 {v_0/1000:,.0f} 張 == 10日最大 {vol_10d/1000:,.0f} 張")
-        print(f" [{ '✓' if cond3_min_vol else '✕' }] 3. 達最低流動性門檻 : 當日量 {v_0/1000:,.0f} 張 >= 門檻 {min_vol_lots:,.0f} 張")
-        print(f" [{ '✓' if cond4_surge else '✕' }] 4. 最高/1天前收盤 > 1.065 : 幅度 {surge_ratio:.3f} > 1.065 (+6.5%)")
-        print(f" [{ '✓' if cond5_high_close_ratio else '✕' }] 5. 最高/收盤 ≧ 1.02   : 比例 {high_close_ratio:.3f} >= 1.020")
-        
-        if has_short_col:
-            print(f" [{ '✓' if cond6_short_balance else '✕' }] 6. 融券餘額 > 0       : 當日融券餘額 {short_balance:,.0f} 張 > 0")
-        else:
-            print(f" [–] 6. 融券餘額 > 0       : 無欄位資料 (預設通過)")
-            
-        print("-" * 55)
-        print(f"🎯 最終觸發結果: {'🔥 [觸發天女散花]' if is_hit else '⚪ [未觸發]'}")
-        print("=" * 55 + "\n")
-
-    info = {
-        '轉空賣訊': '天女散花',
-        '操作建議': f'當日創10日新高且爆出10日天量({v_0 // 1000:,.0f} 張)，衝高後滯漲留上影線，代表高檔換手失敗且主力籌碼鬆動，建議停利離場。'
     } if is_hit else {}
 
     return is_hit, info
