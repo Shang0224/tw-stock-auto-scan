@@ -8,6 +8,112 @@ from monitor.config import DEBUG_VERBOSE
 # ==========================================
 
 DEBUG_VERBOSE = True
+import numpy as np
+import pandas as pd
+
+def mon_qiantang_he_shi(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """合十 (高檔十字變盤線)
+
+    公式 logic:
+    1. 收盤 == 開盤 (十字線，允許微小 tick 誤差)
+    2. 最高 != 最低 (排除極端無波動值)
+    3. 當日最高 == 近 10 天最高價 (含當日)
+    4. 收盤 != 最高 (帶有上影線)
+    5. 近 2 天成交量最大值 == 近 21 天成交量最大值
+    6. 當日融券餘額 > 0 或 N/A (智慧容錯)
+    7. 當日成交量 ≧ 20日均量 × 2.5倍 且 當日成交金額 > 2億元 (升級流動性防線)
+    """
+    profile = profile or {}
+
+    def is_valid(val):
+        return val is not None and pd.notna(val)
+
+    if len(df_single) < 21:
+        if verbose:
+            print(f"❌ [合十] 資料筆數不足 21 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    close = today['close']
+    open_p = today['open']
+    high = today.get('max', 0)
+    low = today.get('min', 0)
+    v_0 = today.get('Trading_Volume', 0)
+
+    # 1. 條件數值計算
+    max_10_high = df_single['max'].iloc[-10:].max()
+    
+    max_2d_vol = df_single['Trading_Volume'].iloc[-2:].max()
+    max_21_vol = df_single['Trading_Volume'].iloc[-21:].max()
+    
+    volume_20_ma = today.get('volume_20_ma', 0)
+    required_vol_2_5x = volume_20_ma * 2.5
+    trading_amount = today.get('trading_amount', close * v_0)
+    
+    short_balance = today.get('ShortSaleTodayBalance', None)
+
+    # 條件邏輯判斷
+    cond1_doji = (close == open_p) or (abs(close - open_p) <= 0.01)
+    cond2_range = (high != low)
+    cond3_max_price = (high == max_10_high)
+    cond4_close_not_high = (close != high)
+    cond5_vol_peak = (max_2d_vol == max_21_vol)
+    
+    if is_valid(short_balance) and 'ShortSaleTodayBalance' in df_single.columns:
+        cond6_short = (short_balance > 0)
+        has_short_col = True
+    else:
+        cond6_short = True
+        has_short_col = False
+
+    cond7_vol_2_5x = (v_0 >= required_vol_2_5x)
+    cond8_amount = (trading_amount > 200_000_000)
+    
+    # 合併 7 與 8 的綜合流動性防線判定
+    cond7_8_liquidity = cond7_vol_2_5x and cond8_amount
+
+    is_hit = (
+        cond1_doji and cond2_range and cond3_max_price and 
+        cond4_close_not_high and cond5_vol_peak and 
+        cond6_short and cond7_8_liquidity
+    )
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        v_0_lots = v_0 / 1000.0
+        req_lots = required_vol_2_5x / 1000.0
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [合十] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f" [{ '✓' if cond1_doji else '✕' }] 1. 收盤 == 開盤 (十字線)  : 收 ${close:.2f} == 開 ${open_p:.2f}")
+        print(f" [{ '✓' if cond2_range else '✕' }] 2. 最高 != 最低         : 最高 ${high:.2f} != 最低 ${low:.2f}")
+        print(f" [{ '✓' if cond3_max_price else '✕' }] 3. 最高等於10日最高     : 最高價 {high:.2f} == 10日最高 {max_10_high:.2f}")
+        print(f" [{ '✓' if cond4_close_not_high else '✕' }] 4. 收盤 != 最高         : 收盤 ${close:.2f} != 最高 ${high:.2f}")
+        print(f" [{ '✓' if cond5_vol_peak else '✕' }] 5. 近2日量極==21日極值: 近2日大 {max_2d_vol/1000:,.0f} == 21日大 {max_21_vol/1000:,.0f}")
+        
+        if has_short_col:
+            print(f" [{ '✓' if cond6_short else '✕' }] 6. 融券餘額 > 0 或 N/A  : 當日融券餘額 {short_balance:,.0f} 張 > 0")
+        else:
+            print(f" [–] 6. 融券餘額 > 0 或 N/A  : 無欄位資料 (預設通過)")
+            
+        print(f" [{ '✓' if cond7_8_liquidity else '✕' }] 7. 量≧2.5x且金額>2億      : 量 {v_0_lots:,.0f}張(門檻 {req_lots:,.0f}) | 金額 ${trading_amount:,.0f}")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發合十]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '轉空賣訊': '合十',
+        '操作建議': f'高檔出現十字變盤線（合十），最高創10天新高且近2日量能創21天新高，流動性與融券條件皆符合，多空力道均衡面臨轉折，建議提高警覺。'
+    } if is_hit else {}
+
+    return is_hit, info
+
 
 def mon_qiantang_yi_zhu_qing_xiang(
     df_single: pd.DataFrame, 
@@ -320,22 +426,6 @@ def mon_qiantang_xia_shan_meng_hu(df_single: pd.DataFrame, profile: dict):
     } if is_hit else {}
     
     return is_hit, info
-
-def mon_qiantang_he_shi(df_single: pd.DataFrame):
-    """合十 (短天期均線死亡交叉)"""
-    if len(df_single) < 20: return False, {}
-    
-    ma5 = df_single['close'].rolling(5).mean()
-    ma20 = df_single['close'].rolling(20).mean()
-    
-    is_hit = (ma5.iloc[-2] >= ma20.iloc[-2]) and (ma5.iloc[-1] < ma20.iloc[-1])
-    info = {
-        '轉空賣訊': '合十',
-        '操作建議': '5日均線下穿20日均線形成死叉，短線波段轉弱，注意下行風險。'
-    } if is_hit else {}
-    
-    return is_hit, info
-
 
 def mon_qiantang_qing_song_xian_zhuan_kong(df_single: pd.DataFrame):
     """輕鬆線轉空, 月下老人 (輕鬆線死亡交叉)"""
