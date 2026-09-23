@@ -9,9 +9,6 @@ from monitor.config import DEBUG_VERBOSE
 
 DEBUG_VERBOSE = True
 
-import numpy as np
-import pandas as pd
-
 def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE):
     """當頭棒喝 (創高長黑K)
 
@@ -70,22 +67,23 @@ def mon_qiantang_dang_tou_bang_he(df_single: pd.DataFrame, profile: dict = None,
         is_10d_max_high
     )
 
-    # --- 🔍 參數細節詳細列印 Debug 區塊 (受 verbose 控制) ---
+    # --- 🔍 檢核表風格的 Debug 儀表板 ---
     if verbose:
-        print(f"\n  🔍 === [當頭棒喝 參數檢查儀表板] ===")
-        print(f"  • 今日股價狀況 : 收盤 ${close:.2f} | 開盤 ${open_p:.2f} | 最高 ${high:.2f}")
-        print(f"  • 成交量與均量 : 今日成交量 {volume:,.0f} 張 | 20日均量 {volume_20_ma:,.2f} 張 (2.5倍門檻: {required_vol_2_5x:,.2f})")
-        print(f"  • 34天最大量   : 34日量極值 {max_34_vol:,.0f} 張")
-        print(f"  • 成交金額     : ${trading_amount:,.0f} 元 (門檻: > 200,000,000 元)")
-        print(f"  • 融資餘額狀況 : {margin_val} ({'Valid/NA' if is_margin_valid else 'Invalid'})")
-        print(f"  • 10日最高價   : 10日高點極值 ${max_10_high:.2f}")
-        print(f"  • 條件 1 (收盤<開盤): {is_black_k} ({'PASS' if is_black_k else 'FAIL'})")
-        print(f"  • 條件 2 (34日量極): {is_34d_max_vol} ({'PASS' if is_34d_max_vol else 'FAIL'})")
-        print(f"  • 條件 3 (20日2.5倍): {is_2_5x_vol} ({'PASS' if is_2_5x_vol else 'FAIL'})")
-        print(f"  • 條件 4 (金額>2億): {is_high_amount} ({'PASS' if is_high_amount else 'FAIL'})")
-        print(f"  • 條件 5 (融資容錯): {is_margin_valid} ({'PASS' if is_margin_valid else 'FAIL'})")
-        print(f"  • 條件 6 (10日創高): {is_10d_max_high} ({'PASS' if is_10d_max_high else 'FAIL'})")
-        print(f"  👉 最終觸發結果  : {'🚨 觸發轉空賣訊' if is_hit else '✅ 安全過關'}\n")
+        print(f"\n  🔍 --------------------------------------------------")
+        print(f"  🔍 【當頭棒喝】參數檢查儀表板")
+        print(f"  🔍 --------------------------------------------------")
+        print(f"  • 股價資訊 : 收盤 ${close:.2f} | 開盤 ${open_p:.2f} | 最高 ${high:.2f}")
+        print(f"  • 量能資訊 : 當日成交量 {volume:,.0f} | 20日均量 {volume_20_ma:,.2f} | 34日最大量 {max_34_vol:,.0f}")
+        print(f"  • 金額/融資 : 成交金額 ${trading_amount:,.0f} | 融資餘額 {margin_val}")
+        print(f"  --------------------------------------------------")
+        print(f"  [1] 收盤 < 開盤 (黑K)       : {str(is_black_k):<5} (實際: 收 ${close:.2f} < 開 ${open_p:.2f})")
+        print(f"  [2] 量 = 34日最大量        : {str(is_34d_max_vol):<5} (實際: {volume:,.0f} == {max_34_vol:,.0f})")
+        print(f"  [3] 量 ≧ 20日均量×2.5      : {str(is_2_5x_vol):<5} (實際: {volume:,.0f} >= {required_vol_2_5x:,.2f})")
+        print(f"  [4] 成交金額 > 2億元        : {str(is_high_amount):<5} (實際: ${trading_amount:,.0f})")
+        print(f"  [5] 融資餘額 >0 或 N/A     : {str(is_margin_valid):<5} (實際: {margin_val})")
+        print(f"  [6] 最高 = 10日最大高      : {str(is_10d_max_high):<5} (實際: ${high:.2f} == ${max_10_high:.2f})")
+        print(f"  --------------------------------------------------")
+        print(f"  👉 最終觸發結果            : {'🚨 觸發轉空賣訊 (HIT)' if is_hit else '✅ 安全過關 (PASS)'}\n")
 
     info = {
         '轉空賣訊': '當頭棒喝',
