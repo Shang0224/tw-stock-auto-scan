@@ -132,7 +132,7 @@ def fetch_finmind_chips(
     ]
 
     if chip_records:
-        result_df = pd.concat(chip_records, ignore_ignore=True) if hasattr(pd, 'concat') else pd.concat(chip_records, ignore_index=True)
+        result_df = pd.concat(chip_records, ignore_index=True) if hasattr(pd, 'concat') else pd.concat(chip_records, ignore_index=True)
 
         # 若某些欄位在某些日期/股票完全沒出現，補 np.nan
         for col in required_cols:
