@@ -75,7 +75,7 @@ STOCK_INPUT = [
 def scan_qiantang_strategy_day(
     day_str: str,
     all_df_slice: pd.DataFrame,
-    monitor_stocks: list,
+    stock_ids: list,
     strategies: list,
     profiles_map: dict = PARAM_PROFILES,
 ) -> list:
@@ -228,7 +228,7 @@ def run_qiantang_strategy_range_scan(
         day_hits = scan_qiantang_strategy_day(
             day_str=day_str,
             all_df_slice=all_df_slice,
-            monitor_stocks=monitor_stocks,
+            stock_ids=stock_ids,
             strategies=strategies,
             profiles_map=PARAM_PROFILES,
         )
