@@ -29,7 +29,7 @@ from strategy.qiantang_strategies import (
 
 # 測試策略清單：加/減 # 註解即可自由切換想測試的策略
 TEST_QIANTANG_STRATEGY = [
-    st_qiantang_f1_spt_growth,       # 筆張現形
+    #st_qiantang_f1_spt_growth,       # 筆張現形
     st_qiantang_f2_volume_breakout,  # 出量上輕
     st_qiantang_f3_after_shakeout,   # 洗盤後
     st_qiantang_f4_strong_rise,      # 強力上
