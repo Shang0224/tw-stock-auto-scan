@@ -9,7 +9,7 @@ from monitor.engine import (
     PARAM_PROFILES
 )
 
-# 🌟 2. 匯入監控策略清單 (也可視需求自 monitor.registry 匯入 ACTIVE_MONITORS)
+# 🌟 2. 匯入監控策略清單
 from monitor.qiantang_monitor import (
     mon_qiantang_yi_zhu_qing_xiang,       # 一柱清香 (主力強勢鎖碼 / 籌碼高度集中)
     mon_qiantang_dang_tou_bang_he,        # 當頭棒喝 (主力逢高派發 / 籌碼高檔鬆動)
