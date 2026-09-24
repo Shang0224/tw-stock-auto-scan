@@ -1,9 +1,9 @@
-name: 錢塘潮持股監控 - 全體廣播版
+name: 00 暫停 錢塘潮持股監控 - 全體廣播版
 
 on:
   # 每日台灣時間 18:00 (UTC 10:00) 自動執行
-  schedule:
-    - cron: '0 10 * * 1-5'
+  #schedule:
+  #  - cron: '0 10 * * 1-5'
   # 支援 GitHub 網頁手動觸發
   workflow_dispatch:
 
