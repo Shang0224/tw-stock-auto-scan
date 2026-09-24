@@ -270,7 +270,8 @@ def run_qiantang_strategy_excel_scan(
                     columns=["股票代號", "名稱", "今日收盤", "今日成交量(張)", "選股公式", "操作建議"]
                 )
 
-            sheet_label = data_list["選股公式"] if data_list else func_name
+            #sheet_label = data_list["選股公式"] if data_list else func_name
+            sheet_label = data_list[0].get("選股公式", func_name) if data_list else func_name
             sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
 
     print(f"\n🎉 掃描完成！終極選股報告已成功匯出至：【{file_path}】")
