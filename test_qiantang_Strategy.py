@@ -9,6 +9,17 @@ import os
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
+# 測試策略清單：加/減 # 註解即可自由切換想測試的策略
+TEST_QIANTANG_STRATEGY = [
+    st_qiantang_f1_spt_growth,       # 筆張現形
+    st_qiantang_f2_volume_breakout,  # 出量上輕
+    st_qiantang_f3_after_shakeout,   # 洗盤後
+    st_qiantang_f4_strong_rise,      # 強力上
+    st_qiantang_f5_major_buy_easy,   # 主外上輕
+    st_qiantang_f6_flower,           # 一朵花
+    st_qiantang_f7_super_stock,      # 飆股
+]
+
 # 1. 匯入核心執行引擎與預處理
 from monitor.engine import (
     PARAM_PROFILES,
@@ -56,17 +67,17 @@ STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 # ]
 # ---------------------------------------------------------------------
 
-# 測試策略清單：加/減 # 註解即可自由切換想測試的策略
-TEST_QIANTANG_STRATEGY = [
-    st_qiantang_f1_spt_growth,       # 筆張現形
-    st_qiantang_f2_volume_breakout,  # 出量上輕
-    st_qiantang_f3_after_shakeout,   # 洗盤後
-    st_qiantang_f4_strong_rise,      # 強力上
-    st_qiantang_f5_major_buy_easy,   # 主外上輕
-    st_qiantang_f6_flower,           # 一朵花
-    st_qiantang_f7_super_stock,      # 飆股
-]
 
+# 🌟 從 utils 載入預處理指標與相關工具函式
+from utils import (
+    align_and_normalize_results,
+    archive_and_cleanup,
+    fm_get_complete_stock_data,
+    get_stock_name_dict,
+    parse_stock_ids,
+    preprocess_all_technical_indicators,  # 來自 utils/indicators.py
+    send_qiantang_7in1_line_summary,
+)
 
 def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies, profiles_map=PARAM_PROFILES):
     """單日選股掃描核心"""
@@ -121,7 +132,7 @@ def run_qiantang_strategy_excel_scan(
     start_str = (tw_time.date() - timedelta(days=120)).strftime("%Y-%m-%d")
 
     # 2. 解析股票清單與抓取名稱字典
-    monitor_stocks = parse_monitor_stocks(stock_source, stock_input)
+    monitor_stocks = parse_stock_ids(stock_source, stock_input)
     if not monitor_stocks:
         print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
         return
