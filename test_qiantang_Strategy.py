@@ -160,7 +160,7 @@ def run_qiantang_strategy_excel_scan(
     )
     stock_name_dict, dl = get_stock_name_dict()
 
-     print(f"unique_stock_ids : {unique_stock_ids}\n")
+    print(f"unique_stock_ids : {unique_stock_ids}\n")
 
     print("🚀 【錢塘潮選股系統】啟動掃描...")
     print(f"📡 讀取來源：{stock_input} | 批量抓取 {len(unique_stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
