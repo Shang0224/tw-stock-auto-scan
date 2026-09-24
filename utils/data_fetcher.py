@@ -62,22 +62,37 @@ def fetch_finmind_chips(
             # --- 1. 處理三大法人資料（保留 FinMind 原始名稱） ---
             if df_inst is not None and not df_inst.empty:
                 # 計算買賣差額 (buy - sell)
-                df_inst["net_lots"] = df_inst["buy"] - df_inst["sell"]
+                df_inst["net_buy"] = df_inst["buy"] - df_inst["sell"]
 
                 # 以 FinMind 的 name 欄位作為 Pivot Columns
                 df_pivot = df_inst.pivot(
-                    index="date", columns="name", values="net_lots"
+                    index="date", columns="name", values="net_buy"
                 ).fillna(0)
 
                 # 提取 FinMind 原生法人欄位
+                #外資
                 foreign_net = df_pivot.get(
                     "Foreign_Investor", pd.Series(0, index=df_pivot.index)
                 )
+                
+                #外資自營商
+                foreign_dealer_self = df_pivot.get(
+                    "Foreign_Dealer_Self", pd.Series(0, index=df_pivot.index)
+                )
+
+                #投信
                 trust_net = df_pivot.get(
                     "Investment_Trust", pd.Series(0, index=df_pivot.index)
                 )
+
+                #自營商
                 dealer_self = df_pivot.get(
                     "Dealer_self", pd.Series(0, index=df_pivot.index)
+                )
+
+                #自營商避險
+                dealer_hedging = df_pivot.get(
+                    "Dealer_Hedging", pd.Series(0, index=df_pivot.index)
                 )
 
                 # 計算主力淨買賣（投信 + 自營商自行買賣）這個地方未來要再仔細討論
