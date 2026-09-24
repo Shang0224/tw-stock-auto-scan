@@ -149,8 +149,8 @@ def run_qiantang_strategy_excel_scan(
         set(
             [
                 str(s["stock_id"] if isinstance(s, dict) else s)
-                .replace(".TW", "")
                 .replace(".TWO", "")
+                .replace(".TW", "")
                 .replace("^", "")
                 for s in stock_ids
             ]
