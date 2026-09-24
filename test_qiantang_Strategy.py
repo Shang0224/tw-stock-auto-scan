@@ -81,7 +81,7 @@ def scan_qiantang_strategy_day(
 ) -> list:
     """單日個股選股掃描核心 (模仿 test_Monitor.py 的 scan_monitor_day)"""
     day_hits = []
-    stock_meta_map = {str(s["stock_id"]): s for s in monitor_stocks}
+    stock_meta_map = {str(s["stock_id"]): s for s in stock_ids}
     grouped = all_df_slice.groupby("stock_id")
 
     for stock_id, group_df in grouped:
