@@ -132,7 +132,12 @@ def run_qiantang_strategy_excel_scan(
     start_str = (tw_time.date() - timedelta(days=120)).strftime("%Y-%m-%d")
 
     # 2. 解析股票清單與抓取名稱字典
-    monitor_stocks = parse_monitor_stocks(stock_source, stock_input)
+    if stock_source == 'csv':
+        monitor_stocks = parse_stock_ids(stock_data)
+        source_label = os.path.basename(stock_data)
+    else:
+        monitor_stocks = parse_stock_ids(stock_data) = stock_data if stock_data else ['2377', '2357']
+        source_label = f"CustomList({len(stock_ids)}檔)"
     
     if not monitor_stocks:
         print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
