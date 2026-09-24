@@ -178,7 +178,7 @@ def run_qiantang_strategy_excel_scan(
     stock_dashboard = {}
 
     print("⚡ 開始進行多方策略邏輯檢測...\n")
-    stock_meta_map = {str(s["stock_id"]): s for s in monitor_stocks}
+    stock_meta_map = {str(s["stock_id"]): s for s in stock_ids}
     grouped = global_df.groupby("stock_id")
 
     for stock_id, group_df in grouped:
