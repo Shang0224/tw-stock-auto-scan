@@ -45,7 +45,7 @@ TEST_END_DATE = "2025-09-30"
 # ---------------------------------------------------------------------
 # 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
 STOCK_MODE = "csv"
-STOCK_INPUT = "watch_list.csv"
+STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 
 # 模式 B：自訂 List[dict] 載入模式
 # STOCK_MODE = "noncsv"
