@@ -92,7 +92,7 @@ jobs:
               url = 'https://api.line.me/v2/bot/message/push'
               headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
               payload = {'to': user_id, 'messages': [{'type': 'text', 'text': msg}]}
-               res = requests.post(url, headers=headers, json=payload)
+              res = requests.post(url, headers=headers, json=payload)
               print('LINE 警報發送結果：', res.status_code)      
           "
 
