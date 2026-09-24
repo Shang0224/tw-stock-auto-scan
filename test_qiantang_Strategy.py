@@ -159,8 +159,6 @@ def run_qiantang_strategy_excel_scan(
     
     stock_name_dict, dl = get_stock_name_dict()
 
-    print(f"unique_stock_ids : {unique_stock_ids}\n")
-
     print("🚀 【錢塘潮選股系統】啟動掃描...")
     print(f"📡 讀取來源：{stock_input} | 批量抓取 {len(unique_stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
 
@@ -184,7 +182,6 @@ def run_qiantang_strategy_excel_scan(
     grouped = global_df.groupby("stock_id")
 
     for stock_id, group_df in grouped:
-        print(f"stock_id:{stock_id} \n")
         sid = str(stock_id)
         if sid not in stock_meta_map:
             continue
@@ -196,8 +193,7 @@ def run_qiantang_strategy_excel_scan(
         sorted_df = group_df.sort_values("date").copy()
         if sorted_df.empty or len(sorted_df) < 5:
             continue
-
-        print(f"呼叫核心檢測引擎 stock_name:{stock_name}  stock_cat:{stock_cat}\n")
+        
         # 呼叫核心檢測引擎
         hits = scan_single_stock_monitors(
             df_single=sorted_df,
@@ -205,7 +201,7 @@ def run_qiantang_strategy_excel_scan(
             monitor_list=strategies,
             param_profiles=PARAM_PROFILES,
         )
-        print(f"hits:{hits} \n")
+        
         if hits:
             latest_row = sorted_df.iloc[-1]
             close_price = round(float(latest_row["close"]), 2)
@@ -214,9 +210,7 @@ def run_qiantang_strategy_excel_scan(
 
             hit_formula_names = []
 
-            for hit in hits:
-                
-                strat_func_name = hit.get("strategy_name", "")
+            for hit in hits:          
                 formula_label = hit.get("選股公式", strat_func_name)
                 hit_formula_names.append(formula_label)
 
