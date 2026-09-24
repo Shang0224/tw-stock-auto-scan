@@ -1,21 +1,22 @@
 # test_qiantang_Strategy.py
 """
-錢塘潮選股系統 - 多方選股策略測試進入點 (test_qiantang_Strategy.py)
-說明：對齊 test_Monitor.py 架構，支援傳參控制與單點測試錢塘潮 7 大多方選股公式。
+錢塘潮選股系統 - 多方選股策略測試進入點與 Excel 儀表板匯出
+說明：對齊 test_Monitor.py 架構，讀取 watch_list.csv 執行錢塘潮 7 大多方選股公式，
+並產出 openpyxl 多工作表 (Multi-Sheet) Excel 報告。
 """
 
 import os
-import pandas as pd
 from datetime import datetime, timedelta, timezone
+import pandas as pd
 
-# 1. 匯入核心執行引擎
+# 1. 匯入核心執行引擎與預處理
 from monitor.engine import (
+    PARAM_PROFILES,
     preprocess_all_technical_indicators,
     scan_single_stock_monitors,
-    PARAM_PROFILES,
 )
 
-# 2. 匯入錢塘潮多方選股策略 (來自 strategy 套件)
+# 2. 匯入 7 大多方選股策略 (來自 strategy 套件)
 from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth,       # 筆張現形
     st_qiantang_f2_volume_breakout,  # 出量上輕
@@ -26,33 +27,36 @@ from strategy.qiantang_strategies import (
     st_qiantang_f7_super_stock,      # 飆股
 )
 
-# 3. 匯入工具庫
+# 3. 匯入資料抓取與工具庫
 from utils import (
+    archive_and_cleanup,
+    fm_get_complete_stock_data,
     get_stock_name_dict,
     parse_monitor_stocks,
-    fm_get_complete_stock_data,
-    save_multi_day_report,
-    archive_and_cleanup,
-    align_and_normalize_results,
-    calculate_forward_horizon_returns,
-    get_fm_trading_days,
 )
 
 # =====================================================================
-# 🎛️ 多方策略測試控制面板 (加/減 # 註解即可自由切換想測試的策略)
+# 🎛️ 多方策略測試控制面板
 # =====================================================================
 CHOSEN_SOURCE = "fm"
 TEST_START_DATE = "2024-01-01"
 TEST_END_DATE = "2025-09-30"
 
-STOCK_MODE = "noncsv"
-STOCK_INPUT = [
-    {"stock_id": "3706", "name": "神達", "category": "MID100"},
-    {"stock_id": "2330", "name": "台積電", "category": "TW50"},
-    {"stock_id": "2317", "name": "鴻海", "category": "TW50"},
-]
+# ---------------------------------------------------------------------
+# 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
+STOCK_MODE = "csv"
+STOCK_INPUT = "watch_list.csv"
 
-# 測試策略清單：直接註解/取消註解即可切換開關
+# 模式 B：自訂 List[dict] 載入模式
+# STOCK_MODE = "noncsv"
+# STOCK_INPUT = [
+#     {"stock_id": "3706", "name": "神達", "category": "MID100"},
+#     {"stock_id": "2330", "name": "台積電", "category": "TW50"},
+#     {"stock_id": "2317", "name": "鴻海", "category": "TW50"},
+# ]
+# ---------------------------------------------------------------------
+
+# 測試策略清單：加/減 # 註解即可自由切換想測試的策略
 TEST_QIANTANG_STRATEGY = [
     st_qiantang_f1_spt_growth,       # 筆張現形
     st_qiantang_f2_volume_breakout,  # 出量上輕
@@ -62,8 +66,6 @@ TEST_QIANTANG_STRATEGY = [
     st_qiantang_f6_flower,           # 一朵花
     st_qiantang_f7_super_stock,      # 飆股
 ]
-
-DAYS_BEFORE = 365
 
 
 def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies, profiles_map=PARAM_PROFILES):
@@ -76,6 +78,7 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies
         sid = str(stock_id)
         if sid not in stock_meta_map:
             continue
+
         meta = stock_meta_map[sid]
         stock_name = meta.get("name", sid)
         stock_cat = meta.get("category", "MID100")
@@ -102,88 +105,153 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies
     return day_hits
 
 
-def run_qiantang_strategy_test(source, stock_source, stock_input, strategies, start_date_str, end_date_str):
-    """錢塘潮多方選股測試主流程"""
+def run_qiantang_strategy_excel_scan(
+    stock_source=STOCK_MODE,
+    stock_input=STOCK_INPUT,
+    strategies=TEST_QIANTANG_STRATEGY,
+):
+    """執行錢塘潮多方選股掃描並產出 Excel 儀表板"""
     if not strategies:
         raise ValueError("❌ [錯誤] 未指定 TEST_QIANTANG_STRATEGY 策略清單，請至少取消註解一個選股公式！")
 
+    # 1. 時間設定 (UTC+8 台灣時間)
     tz_tw = timezone(timedelta(hours=8))
-    start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
-    end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
+    tw_time = datetime.now(tz_tw)
+    today_str = tw_time.strftime("%Y-%m-%d")
+    start_str = (tw_time.date() - timedelta(days=120)).strftime("%Y-%m-%d")
 
+    # 2. 解析股票清單與抓取名稱字典
     monitor_stocks = parse_monitor_stocks(stock_source, stock_input)
-    unique_stock_ids = list(set([str(s["stock_id"]) for s in monitor_stocks]))
-
-    print(f"🧪 [錢塘潮選股測試啟動] 區間：{start_date_str} ~ {end_date_str}")
-    print(f"📡 監控個股數量：{len(unique_stock_ids)} 檔 | 執行策略數：{len(strategies)} 個")
-
-    fetch_start_str = (start_date - timedelta(days=DAYS_BEFORE)).strftime("%Y-%m-%d")
-    fetch_end_str = (end_date + timedelta(days=60)).strftime("%Y-%m-%d")
-
-    stock_name_dict, dl = get_stock_name_dict()
-    global_df = fm_get_complete_stock_data(dl, unique_stock_ids, fetch_start_str, fetch_end_str)
-
-    if global_df.empty:
-        print("❌ 資料抓取失敗，全域 DataFrame 為空！")
+    if not monitor_stocks:
+        print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
         return
 
+    unique_stock_ids = list(set([str(s["stock_id"]) for s in monitor_stocks]))
+    stock_name_dict, dl = get_stock_name_dict()
+
+    print("🚀 【錢塘潮選股系統】啟動掃描...")
+    print(f"📡 讀取來源：{stock_input} | 批量抓取 {len(unique_stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
+
+    # 3. 批量抓取日 K 線與籌碼資料
+    global_df = fm_get_complete_stock_data(dl, unique_stock_ids, start_str, today_str)
+    if global_df.empty:
+        print("❌ [錯誤] FinMind 數據抓取為空，結束執行。")
+        return
+
+    # 4. 全域指標預處理 (KD、輕鬆線、SPT、VTR、MSR 等)
     print("⚡ 正在執行全域技術面與籌碼替代指標預處理...")
     global_df = preprocess_all_technical_indicators(global_df)
-    print("✅ 指標預處理完全成功！")
+    print("✅ 全域指標預處理完成！")
 
-    trading_days_set = get_fm_trading_days(fetch_start_str, fetch_end_str)
+    # 5. 初始化 Excel 分頁資料收集結構
+    results_by_formula = {strat.__name__: [] for strat in strategies}
+    stock_dashboard = {}
 
-    collected_range_results = {}
-    current_day = start_date
+    print("⚡ 開始進行多方策略邏輯檢測...\n")
+    stock_meta_map = {str(s["stock_id"]): s for s in monitor_stocks}
+    grouped = global_df.groupby("stock_id")
 
-    while current_day <= end_date:
-        day_str = current_day.strftime("%Y-%m-%d")
-
-        if trading_days_set and day_str not in trading_days_set:
-            current_day += timedelta(days=1)
+    for stock_id, group_df in grouped:
+        sid = str(stock_id)
+        if sid not in stock_meta_map:
             continue
 
-        day_data_cutoff = current_day.replace(hour=23, minute=59, second=59)
-        all_df_slice = global_df[global_df["date"] <= day_data_cutoff.strftime("%Y-%m-%d")].copy()
+        meta = stock_meta_map[sid]
+        stock_name = meta.get("name", stock_name_dict.get(sid, sid))
+        stock_cat = meta.get("category", "MID100")
 
-        if all_df_slice.empty:
-            current_day += timedelta(days=1)
+        sorted_df = group_df.sort_values("date").copy()
+        if sorted_df.empty or len(sorted_df) < 5:
             continue
 
-        day_hits = scan_qiantang_strategy_day(
-            day_str=day_str,
-            all_df_slice=all_df_slice,
-            monitor_stocks=monitor_stocks,
-            strategies=strategies,
+        # 呼叫核心檢測引擎
+        hits = scan_single_stock_monitors(
+            df_single=sorted_df,
+            category=stock_cat,
+            monitor_list=strategies,
+            param_profiles=PARAM_PROFILES,
         )
 
-        if day_hits:
-            print(f"⚡ [{day_str}] 觸發 {len(day_hits)} 筆選股訊號。")
-            for hit in day_hits:
-                horizon_perf = calculate_forward_horizon_returns(
-                    hit["stock_id"], day_str, global_df, horizons=[3, 5, 10, 20]
+        if hits:
+            latest_row = sorted_df.iloc[-1]
+            close_price = round(float(latest_row["close"]), 2)
+            vol_today = float(latest_row.get("Trading_Volume", 0))
+            vol_lots = int(vol_today / 1000)
+
+            hit_formula_names = []
+
+            for hit in hits:
+                strat_func_name = hit.get("strategy_name", "")
+                formula_label = hit.get("選股公式", strat_func_name)
+                hit_formula_names.append(formula_label)
+
+                # 寫入單一策略 Sheet 結果
+                detail_record = {
+                    "股票代號": sid,
+                    "名稱": stock_name,
+                    "今日收盤": close_price,
+                    "今日成交量(張)": vol_lots,
+                    "選股公式": formula_label,
+                    "操作建議": hit.get("操作建議", hit.get("detail", "")),
+                }
+                if strat_func_name in results_by_formula:
+                    results_by_formula[strat_func_name].append(detail_record)
+
+            # 寫入儀表板 (Dashboard) 數據
+            stock_dashboard[sid] = {
+                "股票代號": sid,
+                "名稱": stock_name,
+                "收盤": close_price,
+                "成交量(張)": vol_lots,
+                "符合公式總數": len(hit_formula_names),
+                "符合公式明細": "、".join(hit_formula_names),
+            }
+
+            print(f"🎯 {stock_name}({sid}) 觸發訊號！符合：{', '.join(hit_formula_names)}")
+
+    # =====================================================================
+    # 📊 產出 Excel 多工作表 (Multi-Sheet) 報告
+    # =====================================================================
+    file_name = f"錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
+    file_path = os.path.abspath(file_name)
+
+    with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+        # Sheet 1: 綜合強勢股儀表板
+        if stock_dashboard:
+            dashboard_df = pd.DataFrame(stock_dashboard.values()).sort_values(
+                by="符合公式總數", ascending=False
+            )
+        else:
+            dashboard_df = pd.DataFrame(
+                columns=["股票代號", "名稱", "收盤", "成交量(張)", "符合公式總數", "符合公式明細"]
+            )
+        dashboard_df.to_excel(writer, sheet_name="🎯 綜合強勢股儀表板", index=False)
+
+        # Sheet 2~N: 個別策略詳細結果
+        for strat in strategies:
+            func_name = strat.__name__
+            data_list = results_by_formula.get(func_name, [])
+            sheet_df = pd.DataFrame(data_list)
+
+            if sheet_df.empty:
+                sheet_df = pd.DataFrame(
+                    columns=["股票代號", "名稱", "今日收盤", "今日成交量(張)", "選股公式", "操作建議"]
                 )
-                hit.update(horizon_perf)
-            collected_range_results[day_str] = day_hits
 
-        current_day += timedelta(days=1)
+            sheet_label = data_list["選股公式"] if data_list else func_name
+            sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
 
-    if collected_range_results:
-        priority_keys = ["date", "stock_id", "name", "category", "strategy_name"]
-        collected_range_results = align_and_normalize_results(collected_range_results, priority_keys=priority_keys)
+    print(f"\n🎉 掃描完成！終極選股報告已成功匯出至：【{file_path}】")
 
-        output_name = "qiantang_strategy_scan"
-        now_time = datetime.now(tz_tw)
-        csv_path = save_multi_day_report(collected_range_results, output_name, now_time)
-        print(f"🎉 測試完成！選股結果報表已匯出至：{csv_path}")
+    # 自動備份與同步至 NAS (若環境變數已設定)
+    if os.path.exists(file_path) and os.getenv("NAS_SFTP_PATH"):
+        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_strategy/{file_name}"
+        try:
+            archive_and_cleanup(file_path, remote_path)
+            print(f"📦 已同步將 Excel 報告備份至 NAS 遠端：{remote_path}")
+        except Exception as e:
+            print(f"⚠️ NAS 備份跳過或失敗: {e}")
 
 
 if __name__ == "__main__":
-    run_qiantang_strategy_test(
-        source=CHOSEN_SOURCE,
-        stock_source=STOCK_MODE,
-        stock_input=STOCK_INPUT,
-        strategies=TEST_QIANTANG_STRATEGY,
-        start_date_str=TEST_START_DATE,
-        end_date_str=TEST_END_DATE,
-    )
+    run_qiantang_strategy_excel_scan()
