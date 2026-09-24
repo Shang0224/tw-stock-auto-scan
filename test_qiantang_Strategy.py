@@ -184,6 +184,7 @@ def run_qiantang_strategy_excel_scan(
     grouped = global_df.groupby("stock_id")
 
     for stock_id, group_df in grouped:
+        print(f"stock_id:{stock_id} \n")
         sid = str(stock_id)
         if sid not in stock_meta_map:
             continue
