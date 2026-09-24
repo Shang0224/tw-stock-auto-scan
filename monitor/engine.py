@@ -2,6 +2,7 @@
 import inspect
 import pandas as pd
 import numpy as np
+from monitor.config import PARAM_PROFILES
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
     """內部輔助函式：針對 FinMind 格式計算技術指標（正宗錢塘潮輕鬆線）、20日均量與成交金額"""
