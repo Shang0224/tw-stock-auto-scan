@@ -21,7 +21,7 @@ from monitor.qiantang_monitor import (
     mon_qiantang_jiang_long_fu_hu,        # 降龍伏虎 (主力大舉洗盤 / 籌碼沉澱)
 
     #以下為底部轉折
-    mon_qiantang_didi_chuanxin            # 地底穿心
+    mon_qiantang_didi_chuanxin,           # 地底穿心
     mon_qiantang_ni_diu_ta_jian,          # 你丟他撿 (主力持續派發 / 散戶接盤)
     mon_qiantang_yuexia_laoren,           # 輕鬆轉空, 月下老人 (技術面/籌碼面轉空訊號)
 
