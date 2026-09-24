@@ -144,20 +144,19 @@ def run_qiantang_strategy_excel_scan(
         print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
         return
 
-    unique_stock_ids = list(set([str(s["stock_id"]) for s in stock_ids]))
-
-    # 清理股票代號清單
+    # 清理並提取股票代號清單 (一步到位)
     unique_stock_ids = list(
         set(
             [
-                str(sid)
+                str(s["stock_id"] if isinstance(s, dict) else s)
                 .replace(".TW", "")
                 .replace(".TWO", "")
                 .replace("^", "")
-                for sid in stock_ids
+                for s in stock_ids
             ]
         )
     )
+    
     stock_name_dict, dl = get_stock_name_dict()
 
     print(f"unique_stock_ids : {unique_stock_ids}\n")
