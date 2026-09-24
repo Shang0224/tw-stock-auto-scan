@@ -4,7 +4,7 @@ on:
   # 1. 自動排程：台股盤後籌碼約在 15:30~16:00 全數更新完畢
   # 設定在每週一至週五的台北時間 18:00 (國際標準時 UTC 10:00) 自動執行
   schedule:
-    - cron: '00 10 * * 1-5'
+    - cron: '00 14 * * 1-5'
   
   # 2. 手動觸發：允許在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
   workflow_dispatch:
@@ -66,34 +66,34 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py..."
-            python test_qiantang_Strategy.py
-            #python main_qiantang_Strategy.py #手動強制執行每日偵測時, 打開這個註解, 然後註解掉上一行
+            #python test_qiantang_Strategy.py
+            python main_qiantang_Strategy.py #手動強制執行每日偵測時, 打開這個註解, 然後註解掉上一行
           else
             echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py..."
             python main_qiantang_Strategy.py
           fi
 
-      # 🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
-      #- name: Send LINE alert on failure
-      #  if: failure()
-      #  env:
-      #    LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
-      #    LINE_USER_ID: ${{ vars.LINE_USER_ID }}
-      #  run: |
-      #    python -c "
-      #    import os, requests
-      #    token = os.environ.get('LINE_ACCESS_TOKEN')
-      #    user_id = os.environ.get('LINE_USER_ID')
+       🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
+      - name: Send LINE alert on failure
+        if: failure()
+        env:
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+        run: |
+          python -c "
+          import os, requests
+          token = os.environ.get('LINE_ACCESS_TOKEN')
+          user_id = os.environ.get('LINE_USER_ID')
           
-      #    msg = '⚠️ [GitHub Actions 警報] 錢塘潮七合一選股工作流執行失敗！\n可能是 Tailscale 連線逾時或 NAS SFTP 服務異常，請至 GitHub 檢查 Log。'
+          msg = '⚠️ [GitHub Actions 警報] 錢塘潮七合一選股工作流執行失敗！\n可能是 Tailscale 連線逾時或 NAS SFTP 服務異常，請至 GitHub 檢查 Log。'
           
-      #    if token and user_id:
-      #        url = 'https://api.line.me/v2/bot/message/push'
-      #        headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
-      #        payload = {'to': user_id, 'messages': [{'type': 'text', 'text': msg}]}
-      #         res = requests.post(url, headers=headers, json=payload)
-      #        print('LINE 警報發送結果：', res.status_code)      
-      #    "
+          if token and user_id:
+              url = 'https://api.line.me/v2/bot/message/push'
+              headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {token}'}
+              payload = {'to': user_id, 'messages': [{'type': 'text', 'text': msg}]}
+               res = requests.post(url, headers=headers, json=payload)
+              print('LINE 警報發送結果：', res.status_code)      
+          "
 
       # 🔴 步驟六：當前面任一步驟失敗時，寄出 Email 警報
       - name: Send Email alert on failure
