@@ -155,14 +155,15 @@ def run_qiantang_strategy_range_scan(
         print(f"❌ [錯誤] 無法解析股票清單 ({stock_input})。")
         return
 
-    # 乾淨提取純代號串列 (對齊 .split('.') 保護機制)
+    # 清理並提取股票代號清單 (一步到位)
     unique_stock_ids = list(
         set(
             [
                 str(s["stock_id"] if isinstance(s, dict) else s)
-                .split(".")
+                .replace(".TWO", "")
+                .replace(".TW", "")
                 .replace("^", "")
-                for s in monitor_stocks
+                for s in stock_ids
             ]
         )
     )
