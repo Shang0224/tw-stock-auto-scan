@@ -133,17 +133,17 @@ def run_qiantang_strategy_excel_scan(
 
     # 2. 解析股票清單與抓取名稱字典
     if stock_source == 'csv':
-        monitor_stocks = parse_stock_ids(stock_data)
+        stock_ids = parse_stock_ids(stock_data)
         source_label = os.path.basename(stock_data)
     else:
-        monitor_stocks = parse_stock_ids(stock_data) = stock_data if stock_data else ['2377', '2357']
+        stock_ids = stock_data if stock_data else ['2377', '2357']
         source_label = f"CustomList({len(stock_ids)}檔)"
     
     if not monitor_stocks:
         print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
         return
 
-    unique_stock_ids = list(set([str(s["stock_id"]) for s in monitor_stocks]))
+    unique_stock_ids = list(set([str(s["stock_id"]) for s in stock_ids]))
     stock_name_dict, dl = get_stock_name_dict()
 
     print("🚀 【錢塘潮選股系統】啟動掃描...")
