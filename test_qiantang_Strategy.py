@@ -144,10 +144,11 @@ def scan_qiantang_strategy_day(
                 }
 
                 # 🌟 將全套績效欄位寫入分頁紀錄字典中
-                hit_record.update(fwd_perf)      # 包含 T+3日績效, T+5日績效, T+10日績效, T+20日績效
+                hit_record.update(fwd_perf)      # 包含 T+3日績效, T+5日績效, T+10日績效, T+20日績效                
                 hit_record.update(extreme_perf)  # 包含 1Y內最高績效, 1Y內最低績效
 
                 day_hits.append(hit_record)
+                print(f"hit_record : {hit_record}")
 
     return day_hits
 
