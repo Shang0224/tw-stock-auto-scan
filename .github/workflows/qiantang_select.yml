@@ -1,4 +1,4 @@
-name: 錢塘潮七合一自動選股排程
+name: 000錢塘潮七策略選股
 
 on:
   # 1. 自動排程：台股盤後籌碼約在 15:30~16:00 全數更新完畢
@@ -65,11 +65,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 qiantang_7in1.py..."
-            python qiantang_7in1.py
+            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py..."
+            python test_qiantang_Strategy.py
           else
-            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 qiantang_7in1.py..."
-            python qiantang_7in1.py
+            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py..."
+            python main_qiantang_Strategy.py
           fi
 
       # 🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
