@@ -262,7 +262,7 @@ def run_seven_combine_filter(stock_list):
         if not dashboard_df.empty
         else dashboard_df
     )
-    send_qiantang_7in1_line_summary(line_target_df, tw_time)
+    #send_qiantang_7in1_line_summary(line_target_df, tw_time)
 
 
 if __name__ == "__main__":
