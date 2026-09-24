@@ -205,7 +205,7 @@ def run_qiantang_strategy_excel_scan(
             monitor_list=strategies,
             param_profiles=PARAM_PROFILES,
         )
-
+        print(f"hits:{hits} \n")
         if hits:
             latest_row = sorted_df.iloc[-1]
             close_price = round(float(latest_row["close"]), 2)
@@ -215,10 +215,13 @@ def run_qiantang_strategy_excel_scan(
             hit_formula_names = []
 
             for hit in hits:
+                
                 strat_func_name = hit.get("strategy_name", "")
                 formula_label = hit.get("選股公式", strat_func_name)
                 hit_formula_names.append(formula_label)
 
+                print(f"strat_func_name:{strat_func_name} \n")
+                
                 # 寫入單一策略 Sheet 結果
                 detail_record = {
                     "股票代號": sid,
