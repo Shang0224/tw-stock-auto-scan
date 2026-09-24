@@ -137,7 +137,7 @@ def run_qiantang_strategy_excel_scan(
         stock_ids = parse_stock_ids(stock_input)
         source_label = os.path.basename(stock_input)
     else:
-        stock_ids = stock_data if stock_data else ['2377', '2357']
+        stock_ids = stock_input if stock_input else ['2377', '2357']
         source_label = f"CustomList({len(stock_ids)}檔)"
     
     if not stock_ids:
