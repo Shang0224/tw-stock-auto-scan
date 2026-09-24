@@ -137,14 +137,14 @@ def run_qiantang_strategy_excel_scan(
         stock_ids = parse_stock_ids(stock_input)
         source_label = os.path.basename(stock_input)
     else:
-        stock_ids = stock_input if stock_input else ['2377', '2357']
+        stock_ids = stock_input
         source_label = f"CustomList({len(stock_ids)}檔)"
     
     if not stock_ids:
         print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
         return
 
-    #unique_stock_ids = list(set([str(s["stock_id"]) for s in stock_ids]))
+    unique_stock_ids = list(set([str(s["stock_id"]) for s in stock_ids]))
 
     # 清理股票代號清單
     unique_stock_ids = list(
