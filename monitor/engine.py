@@ -3,7 +3,6 @@ import inspect
 import pandas as pd
 import numpy as np
 from monitor.config import PARAM_PROFILES
-from monitor.registry import ACTIVE_MONITORS
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
     """內部輔助函式：針對 FinMind 格式計算技術指標（正宗錢塘潮輕鬆線）、20日均量與成交金額"""
@@ -121,8 +120,8 @@ def scan_sell_signals(
     """
     【持股賣訊掃描】專門處理實盤/廣播的持股比對與報酬率計算
     """
-    if monitor_list is None:
-        monitor_list = ACTIVE_MONITORS
+    if not monitor_list:
+        raise ValueError("【錯誤】未傳入 monitor_list，系統不執行預設策略，請於呼叫端明確指定！")
 
     if all_df is None or all_df.empty or portfolio_df is None or portfolio_df.empty:
         return []
