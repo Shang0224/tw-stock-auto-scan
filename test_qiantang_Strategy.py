@@ -113,12 +113,11 @@ def scan_qiantang_strategy_day(
             vol_today = float(latest_row.get("Trading_Volume", 0))
             vol_lots = int(vol_today / 1000)
 
-            # 🌟 1. 計算 T+3, T+5, T+10, T+20 前瞻區間報酬
+            # 🌟 1. 計算 T+3, T+5, T+10, T+20 (預設)前瞻區間報酬
             fwd_perf = calculate_forward_horizon_returns(
                 stock_id=sid,
                 trigger_date_str=day_str,
-                global_df=global_df,
-                horizons=[1-4]
+                global_df=global_df
             )
 
             # 🌟 2. 計算未來 1 年內的最高與最低極值報酬
