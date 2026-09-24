@@ -196,6 +196,7 @@ def run_qiantang_strategy_excel_scan(
         if sorted_df.empty or len(sorted_df) < 5:
             continue
 
+        print(f"呼叫核心檢測引擎 stock_name:{stock_name}  stock_cat:{stock_cat}\n")
         # 呼叫核心檢測引擎
         hits = scan_single_stock_monitors(
             df_single=sorted_df,
