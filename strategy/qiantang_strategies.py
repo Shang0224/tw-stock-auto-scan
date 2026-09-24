@@ -640,3 +640,5 @@ def st_qiantang_f7_super_stock(
         '選股公式': 'F7_飆股',
         '操作建議': '籌碼極度高度集中，內外資法人大舉連買卡位，具備強烈黑馬飆股特徵。'
     } if is_hit else {}
+
+    return is_hit, info
