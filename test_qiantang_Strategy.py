@@ -343,7 +343,9 @@ def run_qiantang_strategy_range_scan(
                 sheet_df = sheet_df.drop(columns=["strategy_name"], errors="ignore")
 
             # 🌟 精準取得 data_list 第一筆字典 (data_list) 中的中文選股公式名稱
-            sheet_label = data_list.get("選股公式", func_name) if data_list else func_name
+            #sheet_label = data_list.get("選股公式", func_name) if data_list else func_name
+            sheet_label = data_list[0].get("選股公式", func_name) if data_list else func_name
+             
             sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
 
     print(f"\n🎉 區間掃描完成！包含完整績效分析之選股報告已成功匯出至：【{file_path}】")
