@@ -149,6 +149,7 @@ def scan_qiantang_strategy_day(
 
                 day_hits.append(hit_record)
 
+                print(f"hit_record : {hit_record}")
     return day_hits
 
 
