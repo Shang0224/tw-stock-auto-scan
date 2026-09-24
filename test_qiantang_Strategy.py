@@ -213,9 +213,7 @@ def run_qiantang_strategy_excel_scan(
             for hit in hits:          
                 formula_label = hit.get("選股公式", strat_func_name)
                 hit_formula_names.append(formula_label)
-
-                print(f"strat_func_name:{strat_func_name} \n")
-                
+               
                 # 寫入單一策略 Sheet 結果
                 detail_record = {
                     "股票代號": sid,
