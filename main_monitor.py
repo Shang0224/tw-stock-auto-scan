@@ -102,7 +102,7 @@ def monitor_portfolio(user_id: str = None):
     warnings = scan_sell_signals(
         portfolio_df=portfolio_df,
         all_df=all_df,
-        MONITORS
+        monitor_list=MONITORS
     )
 
     # 6. 派發 LINE 通知
