@@ -120,7 +120,7 @@ def scan_sell_signals(
     【持股賣訊掃描】專門處理實盤/廣播的持股比對與報酬率計算
     """
     if not monitor_list:
-        raise ValueError("【錯誤】未傳入 monitor_list，系統不執行預設策略，請於呼叫端明確指定！")
+        raise ValueError("【錯誤】未指定 monitor_list 策略清單，請於呼叫端明確傳入！")
 
     if all_df is None or all_df.empty or portfolio_df is None or portfolio_df.empty:
         return []
