@@ -210,7 +210,8 @@ def run_qiantang_strategy_excel_scan(
 
             hit_formula_names = []
 
-            for hit in hits:          
+            for hit in hits:
+                strat_func_name = hit.get("strategy_name", "")
                 formula_label = hit.get("選股公式", strat_func_name)
                 hit_formula_names.append(formula_label)
                
