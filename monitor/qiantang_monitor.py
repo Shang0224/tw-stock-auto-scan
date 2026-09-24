@@ -7,7 +7,9 @@ from monitor.config import DEBUG_VERBOSE
 # 錢塘潮 11 大防禦賣訊
 # ==========================================
 
+# 預設 DEBUG 標記 (若系統已有可直接使用)
 DEBUG_VERBOSE = True
+
 def mon_qiantang_yuexia_laoren(
     df_single: pd.DataFrame, 
     profile: dict = None, 
@@ -85,12 +87,6 @@ def mon_qiantang_yuexia_laoren(
 
     info = {'轉多買訊': '月下老人', '操作建議': '首日跌破輕鬆線且情緒達冰點，量能滿足雙軌過濾條件，關注恐慌沉澱後的轉折買點。'} if is_hit else {}
     return is_hit, info
-
-import numpy as np
-import pandas as pd
-
-# 預設 DEBUG 標記 (若系統已有可直接使用)
-DEBUG_VERBOSE = True
 
 
 def mon_qiantang_ni_diu_ta_jian(
@@ -695,8 +691,8 @@ def mon_qiantang_ming_ri_huang_hua(
     # 1. 數值與區間極值計算 (針對 2 天前作檢核)
     surge_ratio_2 = close_2 / close_3 if (is_valid(close_3) and close_3 > 0) else 0
     
-    # 計算 2 天前的 21 天成交量最大值 (視窗從 -23 到 -3)
-    max_21_vol_at_d2 = df_single['Trading_Volume'].iloc[-23:-3].max()
+    # 計算 2 天前的 21 天成交量最大值 (視窗從 -23 到 -2)
+    max_21_vol_at_d2 = df_single['Trading_Volume'].iloc[-23:-2].max()
     
     d2_volume_20_ma = d2.get('volume_20_ma', 0)
     d2_required_vol_2_5x = d2_volume_20_ma * 2.5
