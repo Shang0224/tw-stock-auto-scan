@@ -1,0 +1,222 @@
+# qiantang_strategies.py
+"""
+錢塘潮選股系統 - 多方選股策略庫 (qiantang_strategies.py)
+說明：本模組收錄錢塘潮 7 大多方選股公式，統一採用 `st_` 前綴命名，
+並符合 engine.py 策略呼叫簽名 `st_func(df_single, profile=None) -> tuple[bool, dict]`。
+"""
+
+import pandas as pd
+import numpy as np
+
+
+def is_valid(val):
+    """檢查數值是否有效 (非 None 且非 NaN)"""
+    return val is not None and pd.notna(val)
+
+
+def _check_basic_pass(today_row) -> bool:
+    """
+    錢塘潮選股基礎通行證：
+    1. 收盤價 > 輕鬆線 (close > easy_line)
+    2. 收盤價 >= 5 元 (close >= 5.0)
+    """
+    close = today_row.get("close", 0)
+    easy = today_row.get("easy_line", 0)
+    if not (is_valid(close) and is_valid(easy)):
+        return False
+    return (close > easy) and (close >= 5.0)
+
+
+# =========================================================================
+# 1. 【筆張現形】 (f1_spt_growth)
+# =========================================================================
+def st_qiantang_f1_spt_growth(
+    df_single: pd.DataFrame, profile: dict = None
+) -> tuple[bool, dict]:
+    """
+    【筆張現形】
+    核心邏輯：
+    1. 基礎通行證：上輕鬆線 且 收盤價 >= 5 元
+    2. 成交量門檻：成交量 >= 500 張 (500,000 股)
+    3. 單筆均張 (SPT) 連續 2 日遞增 (SPT_t > SPT_{t-1} > SPT_{t-2})
+    """
+    if len(df_single) < 3:
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+
+    if not _check_basic_pass(today):
+        return False, {}
+
+    vol_0 = today.get("Trading_Volume", 0)
+    cond_vol = (vol_0 >= 500 * 1000) if is_valid(vol_0) else False
+
+    # 優先取用預處理算好的單筆均張 (shares_per_trans)
+    spt_0 = today.get("shares_per_trans", None)
+    spt_1 = d1.get("shares_per_trans", None)
+    spt_2 = d2.get("shares_per_trans", None)
+
+    # 備援：若欄位缺失，現場動態推算 (Volume / turnover)
+    if not all(map(is_valid, [spt_0, spt_1, spt_2])):
+        turn_0 = today.get("Trading_turnover", 0)
+        turn_1 = d1.get("Trading_turnover", 0)
+        turn_2 = d2.get("Trading_turnover", 0)
+        spt_0 = (vol_0 / turn_0) if is_valid(turn_0) and turn_0 > 0 else 0
+        spt_1 = (d1.get("Trading_Volume", 0) / turn_1) if is_valid(turn_1) and turn_1 > 0 else 0
+        spt_2 = (d2.get("Trading_Volume", 0) / turn_2) if is_valid(turn_2) and turn_2 > 0 else 0
+
+    cond_spt_growing = (spt_0 > spt_1 > spt_2) if all(map(is_valid, [spt_0, spt_1, spt_2])) else False
+
+    is_hit = cond_vol and cond_spt_growing
+
+    info = {
+        "選股公式": "筆張現形",
+        "操作建議": f"單筆均張連2日遞增 ({spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f})，大戶單筆下單力道增強，鎖碼意圖明顯。",
+        "成交量(張)": int(vol_0 / 1000) if is_valid(vol_0) else 0,
+    } if is_hit else {}
+
+    return is_hit, info
+
+
+# =========================================================================
+# 2. 【出量上輕】 (f2_volume_breakout)
+# =========================================================================
+def st_qiantang_f2_volume_breakout(
+    df_single: pd.DataFrame, profile: dict = None
+) -> tuple[bool, dict]:
+    """
+    【出量上輕】
+    核心邏輯：
+    1. 基礎通行證：上輕鬆線 且 收盤價 >= 5 元
+    2. 成交量門檻：當日成交量 >= 350 張 (350,000 股)
+    3. 量能爆發雙軌門檻：
+       - 模式 A：今日成交量 >= 昨日成交量 * 3.0 且 今日成交量 >= 3,000 張
+       - 模式 B：今日成交量 >= 昨日成交量 * 4.5 且 今日成交量 < 3,000 張
+    """
+    if len(df_single) < 2:
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+
+    if not _check_basic_pass(today):
+        return False, {}
+
+    v0 = today.get("Trading_Volume", 0)
+    v1 = d1.get("Trading_Volume", 0)
+
+    if not (is_valid(v0) and is_valid(v1) and v1 > 0):
+        return False, {}
+
+    cond_vol_min = (v0 >= 350 * 1000)
+
+    mode_a = (v0 >= v1 * 3.0) and (v0 >= 3000 * 1000)
+    mode_b = (v0 >= v1 * 4.5) and (v0 < 3000 * 1000)
+
+    is_hit = cond_vol_min and (mode_a or mode_b)
+
+    multiple = v0 / v1 if v1 > 0 else 0
+    info = {
+        "選股公式": "出量上輕",
+        "操作建議": f"量能劇烈放大 (今日量 {v0/1000:,.0f} 張，為昨日 {multiple:.1f} 倍)，突破盤整啟動強攻。",
+        "成交量(張)": int(v0 / 1000),
+    } if is_hit else {}
+
+    return is_hit, info
+
+
+# =========================================================================
+# 3. 【洗盤後】 (f3_after_shakeout)
+# =========================================================================
+def st_qiantang_f3_after_shakeout(
+    df_single: pd.DataFrame, profile: dict = None
+) -> tuple[bool, dict]:
+    """
+    【洗盤後】
+    核心邏輯：
+    1. 基礎通行證：今日收盤 > 今日輕鬆線 且 收盤價 >= 5 元
+    2. 成交量門檻：今日成交量 >= 350 張 (350,000 股)
+    3. 洗盤軌跡：近 1~3 日內 (昨日、前日或大前天) 曾落於輕鬆線之下 (close <= easy_line)
+    """
+    if len(df_single) < 4:
+        return False, {}
+
+    today = df_single.iloc[-1]
+
+    if not _check_basic_pass(today):
+        return False, {}
+
+    v0 = today.get("Trading_Volume", 0)
+    cond_vol = (v0 >= 350 * 1000) if is_valid(v0) else False
+
+    # 檢視倒數第 2, 3, 4 筆 (昨日、前日、大前天)
+    d1_close, d1_easy = df_single.iloc[-2].get("close", 0), df_single.iloc[-2].get("easy_line", 0)
+    d2_close, d2_easy = df_single.iloc[-3].get("close", 0), df_single.iloc[-3].get("easy_line", 0)
+    d3_close, d3_easy = df_single.iloc[-4].get("close", 0), df_single.iloc[-4].get("easy_line", 0)
+
+    was_below_1d = (d1_close <= d1_easy) if (is_valid(d1_close) and is_valid(d1_easy)) else False
+    was_below_2d = (d2_close <= d2_easy) if (is_valid(d2_close) and is_valid(d2_easy)) else False
+    was_below_3d = (d3_close <= d3_easy) if (is_valid(d3_close) and is_valid(d3_easy)) else False
+
+    cond_shakeout = was_below_1d or was_below_2d or was_below_3d
+
+    is_hit = cond_vol and cond_shakeout
+
+    info = {
+        "選股公式": "洗盤後",
+        "操作建議": "近 3 日內曾跌破輕鬆線完成洗盤甩轎，今日帶量強勢重新站回輕鬆線，啟動攻擊波。",
+        "成交量(張)": int(v0 / 1000) if is_valid(v0) else 0,
+    } if is_hit else {}
+
+    return is_hit, info
+
+
+# =========================================================================
+# 4. 【強力上】 (f4_strong_rise)
+# =========================================================================
+def st_qiantang_f4_strong_rise(
+    df_single: pd.DataFrame, profile: dict = None
+) -> tuple[bool, dict]:
+    """
+    【強力上】
+    核心邏輯：
+    1. 基礎通行證：上輕鬆線 且 收盤價 >= 5 元
+    2. 成交量門檻：當日成交量 >= 350 張 (350,000 股)
+    3. 漲幅爆發力組合：
+       - 今日漲幅 >= 6.5% (今日收盤 / 昨日收盤 >= 1.065)
+       - 昨日漲幅 <= 6.0% (昨日收盤 / 前日收盤 <= 1.060，即昨日蓄勢未暴漲)
+    """
+    if len(df_single) < 3:
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+
+    if not _check_basic_pass(today):
+        return False, {}
+
+    c0 = today.get("close", 0)
+    c1 = d1.get("close", 0)
+    c2 = d2.get("close", 0)
+    v0 = today.get("Trading_Volume", 0)
+
+    if not (all(map(is_valid, [c0, c1, c2, v0])) and c1 > 0 and c2 > 0):
+        return False, {}
+
+    cond_vol = (v0 >= 350 * 1000)
+    cond_today_surge = (c0 / c1 >= 1.065)
+    cond_yday_stable = (c1 / c2 <= 1.060)
+
+    is_hit = cond_vol and cond_today_surge and cond_yday_stable
+
+    today_pct = ((c0 / c1) - 1) * 100
+    info = {
+        "選股公式": "強力上",
+        "操作建議": f"昨日平穩整理後，今日長紅爆發強漲 ({today_pct:.1f}%)，突破上攻力道強勁。",
+        "成交量(張)": int(v0 / 1000),
+    } if is_hit else {}
+
+    return is_hit, info
