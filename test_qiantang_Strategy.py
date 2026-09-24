@@ -64,7 +64,7 @@ STOCK_INPUT = [
     {"stock_id": "3706", "name": "神達", "category": "MID100"},
     {"stock_id": "2330", "name": "台積電", "category": "TW50"},
     {"stock_id": "2317", "name": "鴻海", "category": "TW50"},
-    {"stock_id": "2337", "name": "原相", "category": "ICDesign"},
+    {"stock_id": "2337.TWO", "name": "原相", "category": "ICDesign"},
 ]
 # ---------------------------------------------------------------------
 
