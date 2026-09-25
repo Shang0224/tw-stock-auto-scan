@@ -1,17 +1,13 @@
 name: 000錢塘潮七策略選股
 
 on:
-  # 1. 自動排程：台股盤後籌碼約在 15:30~16:00 全數更新完畢
-  # 設定在每週一至週五的台北時間 22:00 (國際標準時 UTC 14:00) 自動執行
+  # 自動排程：每週一至週五的台灣時間 12:00、13:00、14:00 (對應 UTC 04:00, 05:00, 06:00)
   schedule:
-    # 台灣時間 22:00 (UTC 14:00) 自動掃描 TW50.csv
-    - cron: '0 01 * * 1-5'
-    # 台灣時間 23:00 (UTC 15:00) 自動掃描 MID100.csv
-    - cron: '0 02 * * 1-5'
-    # 台灣時間 24:00 (UTC 16:00) 自動掃描 ICDesignList.csv
-    - cron: '0 03 * * 1-5'
+    - cron: '0 4 * * 1-5' # 台灣時間 12:00 執行 -> 掃描 TW50.csv
+    - cron: '0 5 * * 1-5' # 台灣時間 13:00 執行 -> 掃描 MID100.csv
+    - cron: '0 6 * * 1-5' # 台灣時間 14:00 執行 -> 掃描 ICDesignList.csv
   
-  # 2. 手動觸發：允許在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
+  # 手動觸發：允許在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
   workflow_dispatch:
 
 jobs:
@@ -69,41 +65,29 @@ jobs:
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          #if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          #  echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py..."
-          #  python test_qiantang_Strategy.py
-            #python mian_qiantang_Strategy.py #手動強制執行每日偵測時, 打開這個註解, 然後註解掉上一行
-          #else
-          #  echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py..."
-          #  python main_qiantang_Strategy.py
-          #fi
-          
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            # 🎯 1. 手動觸發模式：執行 test_qiantang_Strategy.py          
-            echo "🎯 [手動觸發] 執行 test_qiantang_Strategy.py"
-
-            #python test_qiantang_Strategy.py
-            python mian_qiantang_Strategy.py #手動強制執行每日偵測時, 打開這個註解, 然後註解掉上一行, 不傳入參數, 欲掃描股票由程式決定
+            # 🎯 1. 手動觸發模式：執行主程式          
+            echo "🎯 [手動觸發] 執行 main_qiantang_Strategy.py"
+            python main_qiantang_Strategy.py
           else
-            # ⏰ 2. 自動排程模式：執行 main_qiantang_Strategy.py
+            # ⏰ 2. 自動排程模式：根據 UTC 小時自動對應目標檔案
             HOUR=$(date +%H)
-            if [ "$HOUR" == "01" ]; then
-              TARGET_FILE="data/TW50.csv"
-            elif [ "$HOUR" == "02" ]; then
-              TARGET_FILE="data/MID100.csv"
+            
+            if [ "$HOUR" == "04" ]; then
+              TARGET_FILE="data/TW50.csv"      # 台灣時間 12:00
+            elif [ "$HOUR" == "05" ]; then
+              TARGET_FILE="data/MID100.csv"    # 台灣時間 13:00
             else
-              TARGET_FILE="data/ICDesignList.csv"
+              TARGET_FILE="data/ICDesignList.csv" # 台灣時間 14:00
             fi
             
             export STOCK_FILES="$TARGET_FILE"
             
-            echo "⏰ [自動排程] UTC $HOUR 點，執行 main_qiantang_Strategy.py"
+            echo "⏰ [自動排程] UTC \(HOUR 點 (台灣時間約\)(($HOUR + 8)) 點) 執行"
             echo "📄 目標檔案：$TARGET_FILE"
             
-            # 同時傳入環境變數與 CLI 參數，確保 main_qiantang_Strategy.py 無論哪種解析方式都能順利接收
             python main_qiantang_Strategy.py "$TARGET_FILE"
           fi
-
 
       # 🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
       - name: Send LINE alert on failure
