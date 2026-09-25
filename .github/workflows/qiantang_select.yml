@@ -4,7 +4,12 @@ on:
   # 1. 自動排程：台股盤後籌碼約在 15:30~16:00 全數更新完畢
   # 設定在每週一至週五的台北時間 22:00 (國際標準時 UTC 14:00) 自動執行
   schedule:
-    - cron: '00 01 * * 1-5'
+    # 台灣時間 22:00 (UTC 14:00) 自動掃描 TW50.csv
+    - cron: '0 01 * * 1-5'
+    # 台灣時間 23:00 (UTC 15:00) 自動掃描 MID100.csv
+    - cron: '0 02 * * 1-5'
+    # 台灣時間 24:00 (UTC 16:00) 自動掃描 ICDesignList.csv
+    - cron: '0 03 * * 1-5'
   
   # 2. 手動觸發：允許在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
   workflow_dispatch:
@@ -84,7 +89,7 @@ jobs:
             HOUR=$(date +%H)
             if [ "$HOUR" == "01" ]; then
               TARGET_FILE="data/TW50.csv"
-            elif [ "$HOUR" == "15" ]; then
+            elif [ "$HOUR" == "02" ]; then
               TARGET_FILE="data/MID100.csv"
             else
               TARGET_FILE="data/ICDesignList.csv"
