@@ -290,4 +290,24 @@ def run_qiantang_strategy_excel_scan(
 
 
 if __name__ == "__main__":
-    run_qiantang_strategy_excel_scan()
+
+    # 若 CLI 命令有傳入檔名參數（如 python test_qiantang_Strategy.py data/watch_list.csv）
+    # sys.argv[1] 即可拿到第一個參數，否則退回預設值
+    if len(sys.argv) > 1: #自動排程會傳入檔案, 執行此敘述
+        csv_file_path = sys.argv[1]
+        run_qiantang_strategy_range_scan(
+            stock_source="csv",
+            stock_input=csv_file_path
+        )
+        print(f"🚀 排程執行，讀取 CSV 檔案：{csv_file_path}")
+    else:
+        run_qiantang_strategy_excel_scan() #手動強制執行, 則執行此段, 執行那些股票由程式開頭的STOCK_INPUT決定        
+        print(f"🚀 手動強制測試")
+    
+
+
+
+
+
+    
+    
