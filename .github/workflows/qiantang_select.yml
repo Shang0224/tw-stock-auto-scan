@@ -77,8 +77,8 @@ jobs:
             # 🎯 1. 手動觸發模式：執行 test_qiantang_Strategy.py          
             echo "🎯 [手動觸發] 執行 test_qiantang_Strategy.py"
 
-            python test_qiantang_Strategy.py
-            #python mian_qiantang_Strategy.py "data/ICDesignList.csv" #手動強制執行每日偵測時, 打開這個註解, 然後註解掉上一行
+            #python test_qiantang_Strategy.py
+            python mian_qiantang_Strategy.py #手動強制執行每日偵測時, 打開這個註解, 然後註解掉上一行, 不傳入參數, 欲掃描股票由程式決定
           else
             # ⏰ 2. 自動排程模式：執行 main_qiantang_Strategy.py
             HOUR=$(date +%H)
