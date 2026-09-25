@@ -63,10 +63,9 @@ jobs:
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |           
-            echo "⏰ [自動排程] UTC $HOUR 點執行 TW50.csv 掃描"           
-            python main_qiantang_Strategy.py "data/TW50.csv"
-          fi
-
+          echo "⏰ [自動排程] UTC $HOUR 點執行 TW50.csv 掃描"           
+          python main_qiantang_Strategy.py "data/TW50.csv"
+          
       # 🔴 步驟六：當前面任一步驟失敗時，寄出 Email 警報
       - name: Send Email alert on failure
         if: failure()
