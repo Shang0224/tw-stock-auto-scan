@@ -1,11 +1,11 @@
 name: 000錢塘潮七策略選股
 
 on:
-  # 自動排程：每週一至週五的台灣時間 12:00、13:00、14:00 (對應 UTC 04:00, 05:00, 06:00)
+  # 自動排程：每週一至週五的台灣時間 12:10、13:10、14:10 (對應 UTC 04:10, 05:10, 06:10)
   schedule:
-    - cron: '0 4 * * 1-5' # 台灣時間 12:00 執行 -> 掃描 TW50.csv
-    - cron: '0 5 * * 1-5' # 台灣時間 13:00 執行 -> 掃描 MID100.csv
-    - cron: '0 6 * * 1-5' # 台灣時間 14:00 執行 -> 掃描 ICDesignList.csv
+    - cron: '10 4 * * 1-5' # 台灣時間 12:10 執行 -> 掃描 TW50.csv
+    - cron: '10 5 * * 1-5' # 台灣時間 13:10 執行 -> 掃描 MID100.csv
+    - cron: '10 6 * * 1-5' # 台灣時間 14:10 執行 -> 掃描 ICDesignList.csv
   
   # 手動觸發：允許在 GitHub Actions 網頁畫面上點擊「Run workflow」立即執行
   workflow_dispatch:
@@ -74,16 +74,16 @@ jobs:
             HOUR=$(date +%H)
             
             if [ "$HOUR" == "04" ]; then
-              TARGET_FILE="data/TW50.csv"      # 台灣時間 12:00
+              TARGET_FILE="data/TW50.csv"      # 台灣時間 12:10
             elif [ "$HOUR" == "05" ]; then
-              TARGET_FILE="data/MID100.csv"    # 台灣時間 13:00
+              TARGET_FILE="data/MID100.csv"    # 台灣時間 13:10
             else
-              TARGET_FILE="data/ICDesignList.csv" # 台灣時間 14:00
+              TARGET_FILE="data/ICDesignList.csv" # 台灣時間 14:10
             fi
             
             export STOCK_FILES="$TARGET_FILE"
             
-            echo "⏰ [自動排程] UTC \(HOUR 點 (台灣時間約\)(($HOUR + 8)) 點) 執行"
+            echo "⏰ [自動排程] UTC $HOUR 點 10 分執行"
             echo "📄 目標檔案：$TARGET_FILE"
             
             python main_qiantang_Strategy.py "$TARGET_FILE"
