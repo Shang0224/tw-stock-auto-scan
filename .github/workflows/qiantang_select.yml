@@ -68,7 +68,8 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # 🎯 1. 手動觸發模式：執行主程式          
             echo "🎯 [手動觸發] 執行 main_qiantang_Strategy.py"
-            python main_qiantang_Strategy.py
+            python test_qiantang_Strategy.py
+            #python main_qiantang_Strategy.py #手動強制執行時取消註解, 並註解上一行, 執行篩選的股票由程式內部決定
           else
             # ⏰ 2. 自動排程模式：根據 UTC 小時自動對應目標檔案
             HOUR=$(date +%H)
