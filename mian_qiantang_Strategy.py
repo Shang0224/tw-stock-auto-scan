@@ -44,7 +44,7 @@ from utils import (
     fm_get_complete_stock_data,
     get_stock_name_dict,
     parse_monitor_stocks,
-    load_stocks
+    load_stocks_from_csv
 )
 
 # =====================================================================
