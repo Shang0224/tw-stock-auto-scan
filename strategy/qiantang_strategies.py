@@ -6,7 +6,7 @@
 
 import pandas as pd
 import numpy as np
-from config.py.config import DEBUG_VERBOSE
+from strategy.config import DEBUG_VERBOSE
 
 
 def is_valid(val):
