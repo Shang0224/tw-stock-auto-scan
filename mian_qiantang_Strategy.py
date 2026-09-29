@@ -138,8 +138,8 @@ def run_qiantang_strategy_excel_scan(
 
     # 2. 解析股票清單與抓取名稱字典
     if stock_source == 'csv':
-        stock_ids = parse_stock_ids(stock_input) #以後要改呼叫parse_monitor_ids()傳回字典物件
-        source_label = os.path.basename(stock_input)
+        stock_ids = load_stocks_from_csv(stock_input) #以後要改呼叫parse_monitor_ids()傳回字典物件
+        source_label = stock_input
     else:
         stock_ids = stock_input
         source_label = f"CustomList({len(stock_ids)}檔)"
