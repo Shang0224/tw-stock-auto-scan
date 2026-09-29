@@ -8,6 +8,19 @@ import numpy as np
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
+def fm_dataloader_for_institutional_investors():    
+    """獲取全市場基本資訊名稱字典"""
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN_SHANGKUO0224")    
+    dl = DataLoader(token=finmindtoken)    
+    return dl
+
+def fm_dataloader_for_margin_purchase_short_sale():
+    """獲取全市場基本資訊名稱字典"""
+    finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN_0927")    
+    dl = DataLoader(token=finmindtoken)    
+    return dl
+
+
 def get_stock_name_dict():
     """獲取全市場基本資訊名稱字典"""
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN")    
@@ -39,7 +52,7 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
     return pd.concat(all_data, ignore_index=True)
 
 def fetch_finmind_chips(
-    dl, stock_ids: list, start_date: str, end_date: str
+    stock_ids: list, start_date: str, end_date: str
 ) -> pd.DataFrame:
     """抓取 FinMind 三大法人與融資融券籌碼資料
     欄位名稱完全沿用 FinMind 原始名稱與格式
@@ -47,12 +60,15 @@ def fetch_finmind_chips(
     chip_records = []
     print("📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
 
+    dl_inst = fm_dataloader_for_institutional_investors()
+    df_margin = fm_dataloader_for_margin_purchase_short_sale()
+
     for sid in stock_ids:
         try:
-            df_inst = dl.taiwan_stock_institutional_investors(
+            df_inst = dl_inst.taiwan_stock_institutional_investors(
                 stock_id=sid, start_date=start_date, end_date=end_date
             )
-            df_margin = dl.taiwan_stock_margin_purchase_short_sale(
+            df_margin = df_margin.taiwan_stock_margin_purchase_short_sale(
                 stock_id=sid, start_date=start_date, end_date=end_date
             )
 
@@ -159,80 +175,6 @@ def fetch_finmind_chips(
     # 若完全無資料，回傳帶有 FinMind 原生欄位結構的空 DataFrame
     return pd.DataFrame(columns=required_cols)
 
-
-
-def fetch_finmind_chips_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
-    """抓取 FinMind 三大法人與融資融券籌碼資料，並標準化錢塘潮相關指標
-    未來若有分點資料, 則修改此處
-    """
-    chip_records = []
-    print(f"📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
-
-    for sid in stock_ids:
-        try:
-            df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
-            df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
-
-            df_chip = pd.DataFrame()
-
-            # --- 1. 處理三大法人資料 ---
-            if df_inst is not None and not df_inst.empty:
-                # 轉置計算各類別的淨買賣股數  (buy - sell) 
-                df_inst['net_lots'] = df_inst['buy'] - df_inst['sell']
-                df_pivot = df_inst.pivot(index='date', columns='name', values='net_lots').fillna(0)
-
-                # 精準抓取正統外資
-                df_foreign_net = df_pivot.get('Foreign_Investor', pd.Series(0, index=df_pivot.index))
-
-                # 錢塘潮擬真主力：外資 + 投信 + 自營商(自行買賣)，排除 Dealer_Hedging(避險)
-                df_trust_net = df_pivot.get('Investment_Trust', pd.Series(0, index=df_pivot.index))
-                df_dealer_self = df_pivot.get('Dealer_self', pd.Series(0, index=df_pivot.index))
-                
-                df_major_net = df_foreign_net + df_trust_net + df_dealer_self
-
-                df_chip = pd.DataFrame({
-                    'foreign_net': df_foreign_net,
-                    'trust_net': df_trust_net,      # 順便保留投信數據，供備援條件使用
-                    'major_net': df_major_net
-                }).reset_index()
-
-            # --- 2. 處理融資融券資料 ---
-            if df_margin is not None and not df_margin.empty:
-                # 僅抽取日期、融資餘額、融券餘額 (保留原欄位名稱)
-                df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
-
-            if df_chip.empty:
-                df_chip = df_margin_sub
-            else:
-                df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
-
-            # --- 3. 綁定股票代號並存入結果 ---
-            if not df_chip.empty:
-                df_chip['stock_id'] = sid
-                chip_records.append(df_chip)
-
-            time.sleep(0.3)
-
-        except Exception as e:
-            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
-            continue
-
-    # --- 4. 彙整 DataFrame 與補齊策略必要欄位 ---
-    if chip_records:
-        result_df = pd.concat(chip_records, ignore_index=True)
-        
-        # 確保所有策略必備欄位均存在，無分點/無資料時給予 np.nan（嚴禁補 0）
-        required_cols = ['foreign_net', 'trust_net', 'major_net', 'margin_balance', 'short_balance', 'broker_diff']
-        for col in required_cols:
-            if col not in result_df.columns:
-                result_df[col] = np.nan
-
-        return result_df
-
-    # 若完全無資料，回傳帶有標準欄位的空 DataFrame
-    empty_cols = ['date', 'stock_id', 'foreign_net', 'trust_net', 'major_net', 'margin_balance', 'short_balance', 'broker_diff']
-    return pd.DataFrame(columns=empty_cols)
-
 def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """
     🌟 高階包裝函數：統一取得 FinMind 還原 K 線 + 籌碼資料並自動合併
@@ -243,7 +185,7 @@ def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: s
         return pd.DataFrame()
 
     # 2. 抓取籌碼
-    df_chips = fetch_finmind_chips(dl, stock_ids, start_date, end_date)
+    df_chips = fetch_finmind_chips(stock_ids, start_date, end_date)
 
     # 3. 合併資料
     if not df_chips.empty:
@@ -450,7 +392,6 @@ def fm_fetch_all_stocks(dl, stock_ids, start_date, end_date):
     # 一次性垂直合併所有 Dataframe
     return pd.concat(all_data, ignore_index=True)
 
-
 def fetch_finmind_chips_suspend(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 三大法人、融資融券與分點買賣家數差資料"""
     #沒有抓分點買賣資料的權限, 故只能停用
@@ -530,3 +471,77 @@ def fetch_finmind_chips_suspend(dl, stock_ids: list, start_date: str, end_date: 
         return pd.concat(chip_records, ignore_index=True)
     return pd.DataFrame()
 
+
+
+
+def fetch_finmind_chips_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """抓取 FinMind 三大法人與融資融券籌碼資料，並標準化錢塘潮相關指標
+    未來若有分點資料, 則修改此處
+    """
+    chip_records = []
+    print(f"📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
+
+    for sid in stock_ids:
+        try:
+            df_inst = dl.taiwan_stock_institutional_investors(stock_id=sid, start_date=start_date, end_date=end_date)
+            df_margin = dl.taiwan_stock_margin_purchase_short_sale(stock_id=sid, start_date=start_date, end_date=end_date)
+
+            df_chip = pd.DataFrame()
+
+            # --- 1. 處理三大法人資料 ---
+            if df_inst is not None and not df_inst.empty:
+                # 轉置計算各類別的淨買賣股數  (buy - sell) 
+                df_inst['net_lots'] = df_inst['buy'] - df_inst['sell']
+                df_pivot = df_inst.pivot(index='date', columns='name', values='net_lots').fillna(0)
+
+                # 精準抓取正統外資
+                df_foreign_net = df_pivot.get('Foreign_Investor', pd.Series(0, index=df_pivot.index))
+
+                # 錢塘潮擬真主力：外資 + 投信 + 自營商(自行買賣)，排除 Dealer_Hedging(避險)
+                df_trust_net = df_pivot.get('Investment_Trust', pd.Series(0, index=df_pivot.index))
+                df_dealer_self = df_pivot.get('Dealer_self', pd.Series(0, index=df_pivot.index))
+                
+                df_major_net = df_foreign_net + df_trust_net + df_dealer_self
+
+                df_chip = pd.DataFrame({
+                    'foreign_net': df_foreign_net,
+                    'trust_net': df_trust_net,      # 順便保留投信數據，供備援條件使用
+                    'major_net': df_major_net
+                }).reset_index()
+
+            # --- 2. 處理融資融券資料 ---
+            if df_margin is not None and not df_margin.empty:
+                # 僅抽取日期、融資餘額、融券餘額 (保留原欄位名稱)
+                df_margin_sub = df_margin[['date', 'MarginPurchaseTodayBalance', 'ShortSaleTodayBalance']].copy()
+
+            if df_chip.empty:
+                df_chip = df_margin_sub
+            else:
+                df_chip = pd.merge(df_chip, df_margin_sub, on='date', how='outer')
+
+            # --- 3. 綁定股票代號並存入結果 ---
+            if not df_chip.empty:
+                df_chip['stock_id'] = sid
+                chip_records.append(df_chip)
+
+            time.sleep(0.3)
+
+        except Exception as e:
+            print(f"⚠️ 抓取 {sid} 籌碼失敗: {e}")
+            continue
+
+    # --- 4. 彙整 DataFrame 與補齊策略必要欄位 ---
+    if chip_records:
+        result_df = pd.concat(chip_records, ignore_index=True)
+        
+        # 確保所有策略必備欄位均存在，無分點/無資料時給予 np.nan（嚴禁補 0）
+        required_cols = ['foreign_net', 'trust_net', 'major_net', 'margin_balance', 'short_balance', 'broker_diff']
+        for col in required_cols:
+            if col not in result_df.columns:
+                result_df[col] = np.nan
+
+        return result_df
+
+    # 若完全無資料，回傳帶有標準欄位的空 DataFrame
+    empty_cols = ['date', 'stock_id', 'foreign_net', 'trust_net', 'major_net', 'margin_balance', 'short_balance', 'broker_diff']
+    return pd.DataFrame(columns=empty_cols)
