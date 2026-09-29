@@ -1,4 +1,4 @@
-# qiantang_Strategy.py
+# main_qiantang_Strategy.py
 """
 錢塘潮選股系統 - 多方選股策略測試進入點與 Excel 儀表板匯出
 說明：對齊 test_Monitor.py 架構，讀取 watch_list.csv 執行錢塘潮 7 大多方選股公式，
