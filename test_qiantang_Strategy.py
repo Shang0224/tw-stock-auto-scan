@@ -47,6 +47,7 @@ from utils import (
     get_fm_trading_days,
     calculate_forward_horizon_returns, # 前瞻固定天數報酬
     calculate_one_year_extremes,       # 一年內最高與最低極值報酬
+    load_stocks_from_csv,
 )
 
 # =====================================================================
@@ -172,7 +173,7 @@ def run_qiantang_strategy_range_scan(
         raise ValueError("❌ [錯誤] 未指定 TEST_QIANTANG_STRATEGY 策略清單！")
 
     # 1. 解析監控股票清單
-    monitor_stocks = parse_monitor_stocks(stock_source, stock_input)
+    monitor_stocks = load_stocks_from_csv(stock_source, stock_input)
     if not monitor_stocks:
         print(f"❌ [錯誤] 無法解析股票清單 ({stock_input})。")
         return
