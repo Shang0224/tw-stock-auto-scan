@@ -6,7 +6,7 @@
 
 import pandas as pd
 import numpy as np
-from monitor.config import DEBUG_VERBOSE
+from config.py.config import DEBUG_VERBOSE
 
 
 def is_valid(val):
