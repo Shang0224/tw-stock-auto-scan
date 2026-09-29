@@ -292,6 +292,7 @@ def run_qiantang_strategy_excel_scan(
 
 if __name__ == "__main__":
 
+    print("mian_qiantang_Strategy.py")
     # 若 CLI 命令有傳入檔名參數（如 python test_qiantang_Strategy.py data/watch_list.csv）
     # sys.argv[1] 即可拿到第一個參數，否則退回預設值
     if len(sys.argv) > 1: #自動排程會傳入檔案, 執行此敘述
