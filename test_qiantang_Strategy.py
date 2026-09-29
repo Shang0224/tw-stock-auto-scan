@@ -173,7 +173,7 @@ def run_qiantang_strategy_range_scan(
         raise ValueError("❌ [錯誤] 未指定 TEST_QIANTANG_STRATEGY 策略清單！")
 
     # 1. 解析監控股票清單
-    monitor_stocks = load_stocks_from_csv(stock_source, stock_input)
+    monitor_stocks = load_stocks_from_csv(stock_input)
     if not monitor_stocks:
         print(f"❌ [錯誤] 無法解析股票清單 ({stock_input})。")
         return
