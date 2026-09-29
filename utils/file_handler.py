@@ -294,7 +294,7 @@ def parse_stock_ids(files_env):
     for file in files:
         try:
             df = pd.read_csv(file, encoding='big5')
-            stock_ids.extend(df['代號'].astype(str).tolist())
+            stock_ids.extend(df['stock_id'].astype(str).tolist())
             print(f"✅ 讀取成功: {file}")
         except Exception as e:
             print(f"❌ 讀取 {file} 失敗: {e}")
