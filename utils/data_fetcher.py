@@ -61,14 +61,14 @@ def fetch_finmind_chips(
     print("📡 正在透過 FinMind 抓取籌碼與信用交易資料...")
 
     dl_inst = fm_dataloader_for_institutional_investors()
-    df_margin = fm_dataloader_for_margin_purchase_short_sale()
+    dl_margin = fm_dataloader_for_margin_purchase_short_sale()
 
     for sid in stock_ids:
         try:
             df_inst = dl_inst.taiwan_stock_institutional_investors(
                 stock_id=sid, start_date=start_date, end_date=end_date
             )
-            df_margin = df_margin.taiwan_stock_margin_purchase_short_sale(
+            df_margin = dl_margin.taiwan_stock_margin_purchase_short_sale(
                 stock_id=sid, start_date=start_date, end_date=end_date
             )
 
