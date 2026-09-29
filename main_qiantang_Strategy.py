@@ -283,7 +283,7 @@ def run_qiantang_strategy_excel_scan(
 
     # 自動備份與同步至 NAS (若環境變數已設定)
     if os.path.exists(file_path) and os.getenv("NAS_SFTP_PATH"):
-        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_strategy/{file_name}"
+        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_daily_scan/{file_name}"
         try:
             archive_and_cleanup(file_path, remote_path)
             print(f"📦 已同步將 Excel 報告備份至 NAS 遠端：{remote_path}")
