@@ -358,4 +358,6 @@ def run_qiantang_strategy_range_scan(
 
 
 if __name__ == "__main__":
+
+    print("test_qiantang_Strategy.py")
     run_qiantang_strategy_range_scan()
