@@ -5,6 +5,51 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def load_stocks(stock_source: str, stock_input) -> list[dict]:
+    """通用股票清單載入器：支援單一/多個 CSV 檔案或直接傳入清單
+    
+    - 支援 stock_source == 'csv': 讀取單一或多個以逗號分隔的 CSV 檔案路徑 (str)，或 list/tuple
+    - 支援 stock_source != 'csv': 直接傳回預先定義好的 List[dict]
+    """
+    # 1. CSV 檔案讀取模式
+    if stock_source == 'csv':
+        if isinstance(stock_input, str):
+            file_paths = [path.strip() for path in stock_input.split(',') if path.strip()]
+        elif isinstance(stock_input, (list, tuple)):
+            file_paths = [str(path).strip() for path in stock_input if str(path).strip()]
+        else:
+            print(f"❌ [錯誤] 不支援的 stock_input 格式！")
+            return []
+
+        all_stocks = []
+        seen_ids = set()
+
+        for file_path in file_paths:
+            portfolio_df = smart_read_csv(file_path)
+            if portfolio_df is None or portfolio_df.empty:
+                print(f"⚠️ 警告：讀取 {file_path} 失敗或內容為空，已跳過。")
+                continue
+
+            for _, row in portfolio_df.iterrows():
+                stock_id = str(row['stock_id']).strip()
+                if stock_id not in seen_ids:
+                    seen_ids.add(stock_id)
+                    all_stocks.append({
+                        'stock_id': stock_id,
+                        'name': str(row['name']).strip(),
+                        'category': str(row['category']).strip()
+                    })
+
+        return all_stocks
+
+    # 2. 非 CSV 模式
+    if isinstance(stock_input, list):
+        return stock_input
+
+    print(f"❌ [錯誤] 不支援的 stock_source 或 stock_input 格式！")
+    return []
+
+
 def parse_monitor_stocks(stock_source: str, stock_input) -> list[dict]:
     """通用股票清單解析器：精準載入 stock_id, name, 以及 category
     
