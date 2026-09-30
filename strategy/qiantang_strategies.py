@@ -23,6 +23,107 @@ def st_qiantang_f1_spt_growth(
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
     """
+    【F1_筆張現形 - 股數處理與量能相對放大版】
+    邏輯：
+    1. Trading_Volume 全程以「股數」進行運算與門檻判定。
+    2. 收盤價 > 輕鬆線 (easy_line)，且未過度偏離 (close / easy <= 1.12)。
+    3. 單筆均張連續 2 日遞增 (t > t-1 > t-2)。
+    4. 當日單筆均張顯著超越 5 日均張 (spt_0 >= spt_ma5 * 1.15)。
+    5. 當日成交股數相較於 5 日均量顯著放大 (vol_0 >= vol_ma5 * 1.3)，且成交金額 >= 1,000 萬元 (防無流動性殭屍股)。
+
+    修改自st_qiantang_f1_spt_growth_old
+    """
+    profile = profile or {}
+
+    # 內部過濾條件變數設定
+    vol_boost_ratio = 1.3             # 相對量能放大倍數 (當日股數 / 5日均量股數)
+    min_safety_turnover = 10_000_000  # 底層安全門檻：1,000 萬台幣 (以股數*股價計算)
+    spt_growth_ratio = 1.15           # 單筆均張放大倍數 (相較於 5日均張)
+    max_easy_bias = 1.12              # 輕鬆線乖離率上限 (防止過熱追高)
+
+    if len(df_single) < 5:
+        if verbose:
+            print("❌ [筆張現形] 資料筆數不足 5 筆")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    vol_0 = today.get('Trading_Volume', None)  # 單位：股數
+
+    spt_0 = today.get('shares_per_trans', None)
+    spt_1 = d1.get('shares_per_trans', None)
+    spt_2 = d2.get('shares_per_trans', None)
+
+    # 計算 5 日成交量均值 (MA5 Volume，單位：股數) 與 5 日單筆均張均值 (MA5 SPT)
+    vol_series = df_single['Trading_Volume'].tail(5)
+    vol_ma5 = vol_series.mean() if len(vol_series) == 5 else None
+
+    spt_series = df_single['shares_per_trans'].tail(5)
+    spt_ma5 = spt_series.mean() if len(spt_series) == 5 else None
+
+    # 當日成交金額計算 (股數 * 收盤價)
+    turnover_amount = (vol_0 * close_0) if (is_valid(vol_0) and is_valid(close_0)) else 0.0
+
+    # 1. 站上輕鬆線且未過熱 (1.0 < close / easy_line <= max_easy_bias)
+    cond1_easy_ok = False
+    if is_valid(close_0) and is_valid(easy_0) and easy_0 > 0:
+        bias = close_0 / easy_0
+        cond1_easy_ok = (1.0 < bias <= max_easy_bias)
+
+    # 2. 單筆均張連續 2 日遞增 (t > t-1 > t-2)
+    cond2_spt_growing = (spt_0 > spt_1 > spt_2) if (is_valid(spt_0) and is_valid(spt_1) and is_valid(spt_2)) else False
+
+    # 3. 當日單筆均張顯著突破 5 日均張
+    cond3_spt_surge = (spt_0 >= spt_ma5 * spt_growth_ratio) if (is_valid(spt_0) and is_valid(spt_ma5)) else False
+
+    # 4. 量能相對放大率 (當日股數 >= 5日均量股數 * 1.3) + 底層安全門檻 (成交金額 >= 1000萬)
+    cond4_vol_boost_ok = False
+    if is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0:
+        is_relative_boost = (vol_0 >= vol_ma5 * vol_boost_ratio)
+        is_not_zombie = (turnover_amount >= min_safety_turnover)
+        cond4_vol_boost_ok = is_relative_boost and is_not_zombie
+
+    # 總體過濾結果
+    is_hit = cond1_easy_ok and cond2_spt_growing and cond3_spt_surge and cond4_vol_boost_ok
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        
+        # 僅在顯示時轉換為張數 (/ 1000.0)
+        vol_lots = (vol_0 / 1000.0) if is_valid(vol_0) else 0.0
+        vol_ma5_lots = (vol_ma5 / 1000.0) if is_valid(vol_ma5) else 0.0
+        actual_boost = (vol_0 / vol_ma5) if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0) else 0.0
+
+        print("\n" + "=" * 65)
+        print(f"🔔 [F1_筆張現形] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 65)
+        print(f"  [{ '✓' if cond1_easy_ok else '✕' }] 1. 站上輕鬆線且未過熱 : Close=${close_0:.2f}, Easy=${easy_0:.2f}")
+        print(f"  [{ '✓' if cond2_spt_growing else '✕' }] 2. 單筆均張連續2日遞增 : {spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f}")
+        print(f"  [{ '✓' if cond3_spt_surge else '✕' }] 3. 均張顯著放大 (>= MA5*{spt_growth_ratio}) : {spt_0:.2f} vs MA5:{spt_ma5:.2f}")
+        print(f"  [{ '✓' if cond4_vol_boost_ok else '✕' }] 4. 量能相對放大 (>= 5日均量*{vol_boost_ratio:.1f}) : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張, 金額:{turnover_amount/10000:,.0f}萬)")
+        print("-" * 65)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發強勢筆張現形]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 65 + "\n")
+
+    info = {
+        '選股公式': 'F1_筆張現形',
+        '操作建議': '單筆均張與當日總量能同步相較於 5 日均值顯著放大，為主力帶量實質卡位訊號。'
+    } if is_hit else {}
+
+    return is_hit, info
+
+
+def st_qiantang_f1_spt_growth_old(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
     【F1_筆張現形】
     邏輯：
     1. 收盤價 > 輕鬆線 (easy_line)
