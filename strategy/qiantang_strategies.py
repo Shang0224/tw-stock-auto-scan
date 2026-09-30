@@ -185,7 +185,7 @@ def st_qiantang_f1_spt_growth_20260930(
 # =====================================================================
 # F2. 出量上輕
 # =====================================================================
-def st_qiantang_f2_volume_breakout(
+def st_qiantang_f2_volume_breakout_20260930_1(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
@@ -199,6 +199,8 @@ def st_qiantang_f2_volume_breakout(
     4. 流動性雙模式：
         - IC設計：金額優先 (turnover_0 >= min_amount)
         - 台灣50 / 中型100：雙軌制 (vol_0 >= min_vol OR turnover_0 >= min_amount)
+
+    從st_qiantang_f2_volume_breakout改過來, 但效果不好改成st_qiantang_f2_volume_breakout_20260930_1
     """
     profile = profile or {}
     f2_cfg = profile.get('f2_volume_breakout', {})
@@ -279,7 +281,7 @@ def st_qiantang_f2_volume_breakout(
 
     return is_hit, info
 
-def st_qiantang_f2_volume_breakout_20260930_1(
+def st_qiantang_f2_volume_breakout(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
@@ -293,6 +295,8 @@ def st_qiantang_f2_volume_breakout_20260930_1(
     4. 爆量與資金雙軌確認 (模式A 或 模式B)：
         - 模式A (大中型股)：昨日量 * 3 且 當日量 >= 3,000 張 且 成交金額 >= 5 億元
         - 模式B (中小型/IC設計股)：昨日量 * 4.5 且 當日量 < 3,000 張 且 成交金額 >= 2 億元
+
+    st_qiantang_f2_volume_breakout_20260930_1 改回st_qiantang_f2_volume_breakout
     """
     profile = profile or {}
     if len(df_single) < 2:
