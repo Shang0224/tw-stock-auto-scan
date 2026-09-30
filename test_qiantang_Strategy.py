@@ -54,7 +54,7 @@ from utils import (
 # 🎛 多方策略測試控制面板 (指定天期區間)
 # =====================================================================
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2021-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
