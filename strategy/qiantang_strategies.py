@@ -185,23 +185,25 @@ def st_qiantang_f1_spt_growth_20260930(
 # =====================================================================
 # F2. 出量上輕
 # =====================================================================
+# =====================================================================
+# F2. 出量上輕
+# =====================================================================
 def st_qiantang_f2_volume_breakout(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
     """
-    【F2_出量上輕 (雙軌成交金額優化版 - Mode B 升級版)】
+    【F2_出量上輕 (雙軌成交金額優化版 - 大小型股動態倍數升級版)】
     邏輯：
     1. 上輕鬆 (close > easy_line)
     2. 收盤價 >= 5 元 (防呆安全底線)
     3. 成交量 >= 350 張 (基本流動性防呆底線)
     4. 爆量與資金雙軌確認 (模式A 或 模式B)：
-        - 模式A (主流大中型股)：昨日量 * 3.0 且 當日量 >= 3,000 張 且 成交金額 >= 5.0 億元
-        - 模式B (中小型/IC設計黑馬)：昨日量 * 3.0 且 當日量 < 3,000 張 且 成交金額 >= 1.5 億元
-          ★ 疊加質化濾網：當日漲幅 >= 3.5% (實體紅K吃貨) 且 輕鬆線呈向上揚升趨勢 (過濾偽突破雜訊)
-
-    從st_qiantang_f2_volume_breakout_20260930_1改過
+        - 模式A (主流大中型股)：量增 >= 2.5 倍 且 當日量 >= 3,000 張 且 成交金額 >= 5.0 億元
+          ★ 質化濾網：漲幅 >= 2.5% (大型股實體紅K) 且 輕鬆線呈向上揚升趨勢
+        - 模式B (中小型/IC設計黑馬)：量增 >= 3.0 倍 且 當日量 < 3,000 張 且 成交金額 >= 1.5 億元
+          ★ 質化濾網：漲幅 >= 3.5% (中小型實體紅K) 且 輕鬆線呈向上揚升趨勢
     """
     profile = profile or {}
     if len(df_single) < 2:
@@ -237,25 +239,32 @@ def st_qiantang_f2_volume_breakout(
     else:
         cond_easy_trend = True
 
-    # 實體紅 K 強勢度檢查 (漲幅 >= 3.5%)
-    cond_strong_k = (change_pct >= 3.5) if is_valid(change_pct) else False
+    # 實體紅 K 強勢度檢查
+    cond_strong_k_a = (change_pct >= 2.5) if is_valid(change_pct) else False  # Mode A 大型股門檻 (>= 2.5%)
+    cond_strong_k_b = (change_pct >= 3.5) if is_valid(change_pct) else False  # Mode B 中小型股門檻 (>= 3.5%)
+
+    # 量增倍數條件區分（大型股 2.5 倍，中小型股 3.0 倍）
+    cond_vol_surge_a = (vol_0 >= vol_1 * 2.5) if (is_valid(vol_0) and is_valid(vol_1)) else False
+    cond_vol_surge_b = (vol_0 >= vol_1 * 3.0) if (is_valid(vol_0) and is_valid(vol_1)) else False
 
     # 2. 雙軌爆量與資金模式
-    # 模式 A：主流大中型股通道 (量增>=3.0倍, 張數>=3000張, 金額>=5.0億)
+    # 模式 A：主流大中型股通道 (量增>=2.5倍, 張數>=3000張, 金額>=5.0億, 且漲幅>=2.5%與輕鬆線揚升)
     mode_a = (
-        (vol_0 >= vol_1 * 3.0) and 
+        cond_vol_surge_a and 
         (vol_0 >= 3000 * 1000) and 
-        (turnover_0 >= 5.0)
-    ) if (is_valid(vol_0) and is_valid(vol_1)) else False
+        (turnover_0 >= 5.0) and 
+        cond_strong_k_a and 
+        cond_easy_trend
+    )
 
-    # 模式 B：中小型飆股 / IC設計黑馬通道 (量增>=3.0倍, 張數<3000張, 金額>=1.5億, 且強勢漲幅+輕鬆線揚升)
+    # 模式 B：中小型飆股 / IC設計黑馬通道 (量增>=3.0倍, 張數<3000張, 金額>=1.5億, 且漲幅>=3.5%與輕鬆線揚升)
     mode_b = (
-        (vol_0 >= vol_1 * 3.0) and 
+        cond_vol_surge_b and 
         (vol_0 < 3000 * 1000) and 
         (turnover_0 >= 1.5) and 
-        cond_strong_k and 
+        cond_strong_k_b and 
         cond_easy_trend
-    ) if (is_valid(vol_0) and is_valid(vol_1)) else False
+    )
 
     cond4_vol_surge = mode_a or mode_b
 
@@ -271,10 +280,10 @@ def st_qiantang_f2_volume_breakout(
         print("\n" + "=" * 55)
         print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
-        print(f"   [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ({close_0:.2f} > {easy_0:.2f})" if is_valid(close_0) and is_valid(easy_0) else "   [✕] 1. 收盤 > 輕鬆線 : N/A")
-        print(f"   [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "   [✕] 2. 收盤價 >= 5元 : N/A")
-        print(f"   [{ '✓' if cond3_base_vol else '✕' }] 3. 成交量 >= 350張 : {vol_0_lots:,.0f} 張")
-        print(f"   [{ '✓' if cond4_vol_surge else '✕' }] 4. 出量爆發 (倍數 {multiple:.1f}x | 金額 {turnover_0:.2f}億 | 漲幅 {change_pct:.2f}%) : 模式A({mode_a}) | 模式B({mode_b})")
+        print(f"    [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ({close_0:.2f} > {easy_0:.2f})" if is_valid(close_0) and is_valid(easy_0) else "    [✕] 1. 收盤 > 輕鬆線 : N/A")
+        print(f"    [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "    [✕] 2. 收盤價 >= 5元 : N/A")
+        print(f"    [{ '✓' if cond3_base_vol else '✕' }] 3. 成交量 >= 350張 : {vol_0_lots:,.0f} 張")
+        print(f"    [{ '✓' if cond4_vol_surge else '✕' }] 4. 出量爆發 (倍數 {multiple:.1f}x | 金額 {turnover_0:.2f}億 | 漲幅 {change_pct:.2f}%) : 模式A({mode_a}) | 模式B({mode_b})")
         print("-" * 55)
         print(f"🎯 最終觸發結果: {'🔥 [觸發出量上輕]' if is_hit else '⚪ [未觸發]'}")
         print("=" * 55 + "\n")
@@ -283,7 +292,7 @@ def st_qiantang_f2_volume_breakout(
         '選股公式': 'F2_出量上輕',
         '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
         '成交金額億': round(turnover_0, 2),
-        '觸發模式': '模式A(大中型)' if mode_a else ('模式B(中小型/IC設計)' if mode_b else '未觸發')
+        '觸發模式': '模式A(主流大型)' if mode_a else ('模式B(中小型/IC設計)' if mode_b else '未觸發')
     } if is_hit else {}
 
     return is_hit, info
