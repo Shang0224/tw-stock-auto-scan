@@ -61,7 +61,8 @@ DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 # ---------------------------------------------------------------------
 # 模式 A：CSV 檔案載入模式
 STOCK_MODE = "csv"
-STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
+STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
+#STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 
 # 模式 B：自訂 List[dict] 載入模式
