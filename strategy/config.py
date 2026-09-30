@@ -2,7 +2,7 @@
 
 DEBUG_VERBOSE = True
 
-PARAM_PROFILES = {
+BUY_PARAM_PROFILES = {
     'TW50': {
         'name': '台灣50',
         'min_vol': 3000 * 1000,                  # 👈 各策略共用的最低張數門檻（3,000 張）
