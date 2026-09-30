@@ -28,8 +28,8 @@ from strategy.qiantang_strategies import (
 )
 
 TEST_QIANTANG_STRATEGY = [
-    st_qiantang_f1_spt_growth,      # 筆張現形, 不需籌碼指標
-    #st_qiantang_f2_volume_breakout, # 出量上輕, 不需籌碼指標
+    #st_qiantang_f1_spt_growth,      # 筆張現形, 不需籌碼指標
+    st_qiantang_f2_volume_breakout, # 出量上輕, 不需籌碼指標
     #st_qiantang_f3_after_shakeout,  # 洗盤後, 不需籌碼指標
     #st_qiantang_f4_strong_rise,     # 強力上, 不需籌碼指標
     #st_qiantang_f5_major_buy_easy,  # 主外上輕
