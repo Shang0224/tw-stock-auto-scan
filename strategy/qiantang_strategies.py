@@ -185,7 +185,104 @@ def st_qiantang_f1_spt_growth_20260930(
 # =====================================================================
 # F2. 出量上輕
 # =====================================================================
+# =====================================================================
+# F2. 出量上輕 (精簡版：僅針對 台灣50 / 中型100 / IC設計)
+# =====================================================================
 def st_qiantang_f2_volume_breakout(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
+    【F2_出量上輕 (台灣50 / 中型100 / IC設計 專用版)】
+    邏輯：
+    1. 上輕鬆 (close > easy_line)
+    2. 價格底線 (close >= min_price)
+    3. 相對爆量 (vol_0 >= vol_1 * surge_mult)
+    4. 流動性雙模式：
+        - IC設計：金額優先 (turnover_0 >= min_amount)
+        - 台灣50 / 中型100：雙軌制 (vol_0 >= min_vol OR turnover_0 >= min_amount)
+    """
+    profile = profile or {}
+    f2_cfg = profile.get('f2_volume_breakout', {})
+    
+    # 讀取 Profile 專屬參數
+    profile_key = profile.get('profile_key', '')
+    min_price = f2_cfg.get('min_price', profile.get('min_price', 5.0))
+    min_vol = profile.get('min_vol', 1000 * 1000)      # 最低股數 (張數 * 1000)
+    min_amount = profile.get('min_amount', 2.0)        # 最低金額 (億元)
+    surge_mult = f2_cfg.get('surge_mult', 2.5)         # 爆量倍數
+
+    if len(df_single) < 2:
+        if verbose:
+            print(f"❌ [出量上輕] 資料筆數不足 2 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    vol_0 = today.get('Trading_Volume', None)
+    vol_1 = d1.get('Trading_Volume', None)
+
+    # 計算當日成交金額 (億元)
+    turnover_0 = (close_0 * vol_0 / 100_000_000) if (is_valid(close_0) and is_valid(vol_0)) else 0.0
+
+    # 1. 基本條件與相對爆量檢驗
+    cond1_above_easy = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
+    cond2_price_ok = (close_0 >= min_price) if is_valid(close_0) else False
+    cond3_vol_surge = (vol_0 >= vol_1 * surge_mult) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else False
+
+    # 2. 流動性過濾（移除純張數，僅保留 金額優先 與 雙軌制）
+    if is_valid(vol_0):
+        if profile_key == 'ICDesign' or min_vol == 0:
+            # IC設計 / 高價晶片股：金額優先
+            cond4_liquidity = (turnover_0 >= min_amount)
+        else:
+            # 台灣50 / 中型100：雙軌制 (張數 OR 金額)
+            cond4_liquidity = (vol_0 >= min_vol) or (turnover_0 >= min_amount)
+    else:
+        cond4_liquidity = False
+
+    # 最終觸發判斷
+    is_hit = cond1_above_easy and cond2_price_ok and cond3_vol_surge and cond4_liquidity
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        vol_0_lots = vol_0 / 1000.0 if is_valid(vol_0) else 0.0
+        min_vol_lots = min_vol / 1000.0
+        multiple = (vol_0 / vol_1) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else 0.0
+        profile_name = profile.get('name', '預設族群')
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str} | 適用族群: {profile_name}")
+        print("-" * 55)
+        print(f"  [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ({close_0:.2f} > {easy_0:.2f})" if (is_valid(close_0) and is_valid(easy_0)) else "  [✕] 1. 收盤 > 輕鬆線 : N/A")
+        print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= {min_price:.1f}元 : ${close_0:.2f}" if is_valid(close_0) else f"  [✕] 2. 收盤價 >= {min_price:.1f}元 : N/A")
+        print(f"  [{ '✓' if cond3_vol_surge else '✕' }] 3. 相對爆量 (當前 {multiple:.1f}x | 目標 >= {surge_mult:.1f}x)")
+        
+        if profile_key == 'ICDesign' or min_vol == 0:
+            print(f"  [{ '✓' if cond4_liquidity else '✕' }] 4. 流動性 [金額優先] (金額 {turnover_0:.2f} >= {min_amount:.1f}億)")
+        else:
+            print(f"  [{ '✓' if cond4_liquidity else '✕' }] 4. 流動性 [雙軌制] (張數 {vol_0_lots:,.0f} >= {min_vol_lots:,.0f}張 OR 金額 {turnover_0:.2f} >= {min_amount:.1f}億)")
+            
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發出量上輕]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '選股公式': 'F2_出量上輕',
+        '套用族群': profile.get('name', '預設族群'),
+        '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
+        '成交金額億': round(turnover_0, 2),
+        '爆量倍數': round((vol_0 / vol_1), 2) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else 0.0
+    } if is_hit else {}
+
+    return is_hit, info
+
+def st_qiantang_f2_volume_breakout_20260930-1(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
