@@ -9,13 +9,15 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
 def fm_dataloader_for_institutional_investors():    
-    """獲取全市場基本資訊名稱字典"""
+    
+    print("📡 fm_dataloader_for_institutional_investors (FINMIND_ACCESS_TOKEN_SHANGKUO0224)-----------------------")
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN_SHANGKUO0224")    
     dl = DataLoader(token=finmindtoken)    
     return dl
 
 def fm_dataloader_for_margin_purchase_short_sale():
-    """獲取全市場基本資訊名稱字典"""
+    
+    print("📡 fm_dataloader_for_margin_purchase_short_sale (FINMIND_ACCESS_TOKEN_0927)-----------------------")
     finmindtoken = os.getenv("FINMIND_ACCESS_TOKEN_0927")    
     dl = DataLoader(token=finmindtoken)    
     return dl
