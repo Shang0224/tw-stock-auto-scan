@@ -31,7 +31,7 @@ def st_qiantang_f1_spt_growth(
     4. 當日單筆均張顯著超越 5 日均張 (spt_0 >= spt_ma5 * 1.15)。
     5. 當日成交股數相較於 5 日均量顯著放大 (vol_0 >= vol_ma5 * 1.3)，且成交金額 >= 1,000 萬元 (防無流動性殭屍股)。
 
-    修改自st_qiantang_f1_spt_growth_old
+    修改自st_qiantang_f1_spt_growth_20260930
     """
     profile = profile or {}
 
@@ -118,7 +118,7 @@ def st_qiantang_f1_spt_growth(
     return is_hit, info
 
 
-def st_qiantang_f1_spt_growth_old(
+def st_qiantang_f1_spt_growth_20260930(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
@@ -186,6 +186,89 @@ def st_qiantang_f1_spt_growth_old(
 # F2. 出量上輕
 # =====================================================================
 def st_qiantang_f2_volume_breakout(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
+    【F2_出量上輕 (雙軌成交金額優化版)】
+    邏輯：
+    1. 上輕鬆 (close > easy_line)
+    2. 收盤價 >= 5 元 (防呆安全底線)
+    3. 成交量 >= 350 張 (基本流動性防呆底線)
+    4. 爆量與資金雙軌確認 (模式A 或 模式B)：
+        - 模式A (大中型股)：昨日量 * 3 且 當日量 >= 3,000 張 且 成交金額 >= 5 億元
+        - 模式B (中小型/IC設計股)：昨日量 * 4.5 且 當日量 < 3,000 張 且 成交金額 >= 2 億元
+    """
+    profile = profile or {}
+    if len(df_single) < 2:
+        if verbose:
+            print(f"❌ [出量上輕] 資料筆數不足 2 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    vol_0 = today.get('Trading_Volume', None)
+    vol_1 = d1.get('Trading_Volume', None)
+
+    # 1. 基本防呆與條件檢查
+    cond1_above_easy = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
+    cond2_price_ok = (close_0 >= 5.0) if is_valid(close_0) else False
+    cond3_base_vol = (vol_0 >= 350 * 1000) if is_valid(vol_0) else False
+
+    # 計算當日成交金額 (億元)：收盤價 * 總股數 / 1億
+    turnover_0 = (close_0 * vol_0 / 100_000_000) if (is_valid(close_0) and is_valid(vol_0)) else 0.0
+
+    # 2. 雙軌爆量與資金模式
+    # 模式 A：主流大中型股通道 (量增>=3倍, 張數>=3000張, 金額>=5億)
+    mode_a = (
+        (vol_0 >= vol_1 * 3.0) and 
+        (vol_0 >= 3000 * 1000) and 
+        (turnover_0 >= 5.0)
+    ) if (is_valid(vol_0) and is_valid(vol_1)) else False
+
+    # 模式 B：中小型飆股 / IC設計黑馬通道 (量增>=4.5倍, 張數<3000張, 金額>=2億)
+    mode_b = (
+        (vol_0 >= vol_1 * 4.5) and 
+        (vol_0 < 3000 * 1000) and 
+        (turnover_0 >= 2.0)
+    ) if (is_valid(vol_0) and is_valid(vol_1)) else False
+
+    cond4_vol_surge = mode_a or mode_b
+
+    # 最終觸發判斷
+    is_hit = cond1_above_easy and cond2_price_ok and cond3_base_vol and cond4_vol_surge
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        vol_0_lots = vol_0 / 1000.0 if is_valid(vol_0) else 0.0
+        multiple = (vol_0 / vol_1) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else 0.0
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f"  [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : \({close_0:.2f} >\){easy_0:.2f}" if is_valid(close_0) and is_valid(easy_0) else "  [✕] 1. 收盤 > 輕鬆線 : N/A")
+        print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "  [✕] 2. 收盤價 >= 5元 : N/A")
+        print(f"  [{ '✓' if cond3_base_vol else '✕' }] 3. 成交量 >= 350張 : {vol_0_lots:,.0f} 張")
+        print(f"  [{ '✓' if cond4_vol_surge else '✕' }] 4. 出量爆發 (倍數 {multiple:.1f}x | 金額 {turnover_0:.2f}億) : 模式A({mode_a}) | 模式B({mode_b})")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發出量上輕]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '選股公式': 'F2_出量上輕',
+        '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
+        '成交金額億': round(turnover_0, 2),
+        '觸發模式': '模式A(大中型)' if mode_a else ('模式B(中小型/IC設計)' if mode_b else '未觸發')
+    } if is_hit else {}
+
+    return is_hit, info
+
+def st_qiantang_f2_volume_breakout_20260930(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
