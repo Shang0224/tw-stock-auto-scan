@@ -245,7 +245,10 @@ def st_qiantang_f2_volume_breakout(
     cond3_base_vol = v0 >= 350 * 1000
 
     turnover = c0 * v0 / 100_000_000
-    change_pct = (c0 - c1) / c1 * 100.0 if c1 > 0 else cur["change_pct"]
+    change_pct = (
+        (c0 - c1) / c1 * 100.0 if is_valid(c0) and is_valid(c1) and c1 > 0 else 0.0
+    )
+    #change_pct = (c0 - c1) / c1 * 100.0 if c1 > 0 else cur["change_pct"]
 
     # 輕鬆線趨勢檢查 (當前 > 5日前)
     if pos >= 5:
