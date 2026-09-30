@@ -6,7 +6,7 @@
 
 import pandas as pd
 import numpy as np
-from strategy.config import DEBUG_VERBOSE
+from strategy.config import DEBUG_VERBOSE, BUY_PARAM_PROFILES
 
 
 def is_valid(val):
