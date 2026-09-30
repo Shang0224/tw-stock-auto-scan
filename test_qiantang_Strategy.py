@@ -9,13 +9,13 @@ import os
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
+from strategy.engine import scan_single_stock
 from strategy.config import BUY_PARAM_PROFILES
 
 # 1. 匯入核心執行引擎與預處理
 from monitor.engine import (
     PARAM_PROFILES,
     preprocess_all_technical_indicators,
-    scan_single_stock_monitors,
 )
 
 # 2. 匯入 7 大多方選股策略
@@ -107,10 +107,10 @@ def scan_qiantang_strategy_day(
             continue
 
         # 呼叫引擎執行策略檢測
-        hits = scan_single_stock_monitors(
+        hits = scan_single_stock(
             df_single=df_single,
             category=stock_cat,
-            monitor_list=strategies,
+            fun_list=strategies,
             param_profiles=profiles_map,
         )
 
