@@ -86,7 +86,7 @@ def scan_qiantang_strategy_day(
     global_df: pd.DataFrame,
     monitor_stocks: list,
     strategies: list,
-    profiles_map: dict = PARAM_PROFILES,
+    profiles_map: dict = BUY_PARAM_PROFILES,
 ) -> list:
     """單日個股選股掃描核心，並於觸發時附加前瞻與極值績效"""
     day_hits = []
@@ -110,7 +110,7 @@ def scan_qiantang_strategy_day(
         hits = scan_single_stock(
             df_single=df_single,
             category=stock_cat,
-            fun_list=strategies,
+            func_list=strategies,
             param_profiles=profiles_map,
         )
 
@@ -260,7 +260,7 @@ def run_qiantang_strategy_range_scan(
             global_df=global_df,
             monitor_stocks=monitor_stocks,
             strategies=strategies,
-            profiles_map=PARAM_PROFILES,
+            profiles_map=BUY_PARAM_PROFILES,
         )
 
         if day_hits:
