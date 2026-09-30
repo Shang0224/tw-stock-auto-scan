@@ -28,7 +28,7 @@ def scan_single_stock(
 
     hits = []
     for run_func in func_list:
-        sig_params = inspect.signature(monitor_func).parameters
+        sig_params = inspect.signature(run_func).parameters
         
         if 'profile' in sig_params:
             is_hit, info = run_func(df_single, profile=profile)
