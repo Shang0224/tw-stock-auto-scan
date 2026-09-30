@@ -37,7 +37,7 @@ def scan_single_stock(
 
         if is_hit:
             res_info = info if isinstance(info, dict) else {"detail": str(info)}
-            res_info["strategy_name"] = monitor_func.__name__
+            res_info["strategy_name"] = run_func.__name__
             res_info["category"] = category
             hits.append(res_info)
 
