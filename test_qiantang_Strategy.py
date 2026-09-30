@@ -2,7 +2,7 @@
 """
 錢塘潮選股系統 - 多方選股策略指定天期區間歷史掃描 (含未來前瞻與極值績效追蹤)
 說明：對齊 test_Monitor.py 逐日推進與交易日過濾架構，執行錢塘潮 7 大多方選股公式，
-     並自動計算觸發後 T+3/T+5/T+10/T+20 報酬率與未來 1 年內最高/最低極值報酬，匯出至 Excel 儀表板。
+     並自動計算觸發後 T+3/T+5/T+10/T+20 報酬率與未來 1 年內最高/最低極值報酬，支援 Excel 與 CSV 獨立控制匯出與上傳。
 """
 
 import os
@@ -58,7 +58,10 @@ TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
-# ---------------------------------------------------------------------
+# 🌟 檔案輸出控制開關
+EXPORT_EXCEL = False            # 是否輸出與上傳 Excel 報告
+EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
+
 # 模式 A：CSV 檔案載入模式
 STOCK_MODE = "csv"
 STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
@@ -73,7 +76,6 @@ STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #    {"stock_id": "2317", "name": "鴻海", "category": "TW50"},
 #    {"stock_id": "3227", "name": "原相", "category": "ICDesign"},
 #]
-# ---------------------------------------------------------------------
 
 
 def scan_qiantang_strategy_day(
@@ -163,7 +165,7 @@ def run_qiantang_strategy_range_scan(
     start_date_str=TEST_START_DATE,
     end_date_str=TEST_END_DATE,
 ):
-    """執行錢塘潮多方選股指定天期歷史掃描並產出 Multi-Sheet Excel 儀表板"""
+    """執行錢塘潮多方選股指定天期歷史掃描並產出報表"""
     tz_tw = timezone(timedelta(hours=8))
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=tz_tw)
@@ -180,7 +182,7 @@ def run_qiantang_strategy_range_scan(
         print(f"❌ [錯誤] 無法解析股票清單 ({stock_input})。")
         return
 
-    # 清理股票代號清單 (對齊先長後短 .replace)
+    # 清理股票代號清單
     unique_stock_ids = list(
         set(
             [
@@ -196,7 +198,7 @@ def run_qiantang_strategy_range_scan(
     print(f"🧪 [測試啟動] 錢塘潮多方策略歷史掃描 ({start_date_str} ~ {end_date_str})")
     print(f"📡 監控數量：{len(unique_stock_ids)} 檔個股 ({unique_stock_ids})\n")
 
-    # 2. 準備歷史資料抓取區間 (結束日期往後延展 365 天以計算未來的極值與區間報酬)
+    # 2. 準備歷史資料抓取區間
     fetch_start_str = (start_date - timedelta(days=DAYS_BEFORE)).strftime("%Y-%m-%d")
     fetch_end_str = (end_date + timedelta(days=365)).strftime("%Y-%m-%d")
 
@@ -249,7 +251,7 @@ def run_qiantang_strategy_range_scan(
             current_day += timedelta(days=1)
             continue
 
-        # 執行當日選股掃描 (傳入完整 global_df 供計算未來績效)
+        # 執行當日選股掃描
         day_hits = scan_qiantang_strategy_day(
             day_str=day_str,
             all_df_slice=all_df_slice,
@@ -269,9 +271,13 @@ def run_qiantang_strategy_range_scan(
 
         current_day += timedelta(days=1)
 
-    # 6. 彙整數據與產出 Multi-Sheet Excel 報告
+    # =====================================================================
+    # 6. 彙整數據與產出報表
+    # =====================================================================
     tw_time = datetime.now(tz_tw)
-    file_name = f"錢塘潮選股歷史報告_含績效分析_{start_date_str}_to_{end_date_str}_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
+    current_time_str = tw_time.strftime('%Y%m%d_%H%M')
+    
+    file_name = f"錢塘潮選股歷史報告_含績效分析_{start_date_str}_to_{end_date_str}_{current_time_str}.xlsx"
     file_path = os.path.abspath(file_name)
 
     dashboard_dict = {}
@@ -314,52 +320,79 @@ def run_qiantang_strategy_range_scan(
             "1Y內最低績效": item["1Y內最低績效"],
         })
 
-    with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
-        # Sheet 1: 綜合儀表板
-        dashboard_df = (
-            pd.DataFrame(dashboard_rows).sort_values(by=["日期", "符合公式總數"], ascending=[False, False])
-            if dashboard_rows
-            else pd.DataFrame(
-                columns=[
-                    "日期", "股票代號", "名稱", "收盤", "成交量(張)", "符合公式總數", "符合公式明細",
-                    "T+3日績效", "T+5日績效", "T+10日績效", "T+20日績效", "1Y內最高績效", "1Y內最低績效"
-                ]
-            )
+    dashboard_df = (
+        pd.DataFrame(dashboard_rows).sort_values(by=["日期", "符合公式總數"], ascending=[False, False])
+        if dashboard_rows
+        else pd.DataFrame(
+            columns=[
+                "日期", "股票代號", "名稱", "收盤", "成交量(張)", "符合公式總數", "符合公式明細",
+                "T+3日績效", "T+5日績效", "T+10日績效", "T+20日績效", "1Y內最高績效", "1Y內最低績效"
+            ]
         )
-        dashboard_df.to_excel(writer, sheet_name="🎯 區間綜合強勢股儀表板", index=False)
+    )
 
-        # Sheet 2+: 個別策略 Sheet
-        for strat in strategies:
-            func_name = strat.__name__
-            data_list = results_by_formula.get(func_name, [])
-            sheet_df = pd.DataFrame(data_list)
-            if sheet_df.empty:
-                sheet_df = pd.DataFrame(
-                    columns=[
-                        "日期", "股票代號", "名稱", "今日收盤", "今日成交量(張)", "選股公式", "操作建議",
-                        "T+3日績效", "T+5日績效", "T+10日績效", "T+20日績效", "1Y內最高績效", "1Y內最低績效"
-                    ]
-                )
-            else:
-                sheet_df = sheet_df.drop(columns=["strategy_name"], errors="ignore")
+    # 🌟 條件式輸出 Excel 報表 (依 EXPORT_EXCEL 決定)
+    if EXPORT_EXCEL:
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            dashboard_df.to_excel(writer, sheet_name="🎯 區間綜合強勢股儀表板", index=False)
 
-            #sheet_label = data_list.get("選股公式", func_name) if data_list else func_name
-            sheet_label = data_list[0].get("選股公式", func_name) if data_list else func_name
-            sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
+            for strat in strategies:
+                func_name = strat.__name__
+                data_list = results_by_formula.get(func_name, [])
+                sheet_df = pd.DataFrame(data_list)
+                if sheet_df.empty:
+                    sheet_df = pd.DataFrame(
+                        columns=[
+                            "日期", "股票代號", "名稱", "今日收盤", "今日成交量(張)", "選股公式", "操作建議",
+                            "T+3日績效", "T+5日績效", "T+10日績效", "T+20日績效", "1Y內最高績效", "1Y內最低績效"
+                        ]
+                    )
+                else:
+                    sheet_df = sheet_df.drop(columns=["strategy_name"], errors="ignore")
 
-    print(f"\n🎉 區間掃描完成！包含績效分析之終極選股報告已成功匯出至：【{file_path}】")
+                sheet_label = data_list[0].get("選股公式", func_name) if data_list else func_name
+                sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
 
+        print(f"\n🎉 區間掃描完成！包含績效分析之終極選股 Excel 報告已成功匯出至：【{file_path}】")
+    else:
+        print("\nℹ [提示] EXPORT_EXCEL 為 False，已略過 Excel 報表的本地產出。")
+
+    # 🌟 條件式輸出綜合儀表板 CSV 檔 (依 EXPORT_CSV 決定)
+    csv_file_path = None
+    if EXPORT_CSV:
+        source_folder_name = "qiantang_test_report"
+        os.makedirs(f"data/{source_folder_name}", exist_ok=True)
+        csv_file_name = f"dashboard_summary_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
+        csv_file_path = os.path.abspath(f"data/{source_folder_name}/{csv_file_name}")
+        
+        dashboard_df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+        print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
+    else:
+        print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
+
+    # =====================================================================
     # 7. 自動備份至 NAS
-    if os.getenv("NAS_SFTP_PATH") and os.path.exists(file_path):
-        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_test_report/{file_name}"
-        try:
-            archive_and_cleanup(file_path, remote_path)
-            print(f"📦 已備份至 NAS 遠端：{remote_path}")
-        except Exception as e:
-            print(f"⚠ NAS 備份跳過或失敗: {e}")
+    # =====================================================================
+    if os.getenv("NAS_SFTP_PATH"):
+        # Excel 備份 (受 EXPORT_EXCEL 控制)
+        if EXPORT_EXCEL and os.path.exists(file_path):
+            remote_excel_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_test_report/{file_name}"
+            try:
+                archive_and_cleanup(file_path, remote_excel_path)
+                print(f"📦 Excel 報告已備份至 NAS：{remote_excel_path}")
+            except Exception as e:
+                print(f"⚠ Excel NAS 備份失敗: {e}")
+
+        # 儀表板 CSV 備份 (受 EXPORT_CSV 控制)
+        if EXPORT_CSV and csv_file_path and os.path.exists(csv_file_path):
+            remote_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_test_report/{csv_file_name}"
+            try:
+                archive_and_cleanup(csv_file_path, remote_csv_path)
+                print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
+            except Exception as e:
+                print(f"⚠ CSV NAS 備份失敗: {e}")
 
 
 if __name__ == "__main__":
-
     print("test_qiantang_Strategy.py")
     run_qiantang_strategy_range_scan()
