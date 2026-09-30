@@ -350,7 +350,7 @@ def run_qiantang_strategy_range_scan(
 
     # 7. 自動備份至 NAS
     if os.getenv("NAS_SFTP_PATH") and os.path.exists(file_path):
-        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_strategy/{file_name}"
+        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_test_report/{file_name}"
         try:
             archive_and_cleanup(file_path, remote_path)
             print(f"📦 已備份至 NAS 遠端：{remote_path}")
