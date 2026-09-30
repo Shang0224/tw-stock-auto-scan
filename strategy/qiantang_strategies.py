@@ -33,6 +33,7 @@ def st_qiantang_f1_spt_growth(
 
     修改自st_qiantang_f1_spt_growth_20260930
     """
+    print("st_qiantang_f1_spt_growth*******************************************************")
     profile = profile or {}
 
     # 內部過濾條件變數設定
@@ -210,6 +211,8 @@ def st_qiantang_f2_volume_breakout(
         ★ T-1 與 T 日最低價均不跌破 T-2 發動日最低價 (洗盤不破底)
         ★ 今日 (T) 收實體紅 K 且 收盤價 >= T-2 實體下緣 (Close_T >= Open_T-2)
   """
+
+  print("st_qiantang_f2_volume_breakout*******************************************************")
   profile = profile or {}
 
   # 歷史資料至少需 4 筆以支援 T-2 與其前一日的突破判定 (T, T-1, T-2, T-3)
