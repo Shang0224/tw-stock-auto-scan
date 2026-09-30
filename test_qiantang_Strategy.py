@@ -9,6 +9,8 @@ import os
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
+from strategy.config import BUY_PARAM_PROFILES
+
 # 1. 匯入核心執行引擎與預處理
 from monitor.engine import (
     PARAM_PROFILES,
