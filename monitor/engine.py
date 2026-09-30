@@ -51,6 +51,15 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
     # 計算成交金額（若 FinMind 每日股價沒有直接給 amount，用 close * Trading_Volume 計算）
     df['trading_amount'] = df['close'] * df['Trading_Volume']
 
+    # =========================================================================
+    # 5. 計算單筆均張 (SPT = (Trading_Volume / 1000) / Trading_turnover)
+    # =========================================================================
+    if 'Trading_Volume' in df.columns and 'Trading_turnover' in df.columns:
+        # 防呆：避免成交筆數為 0 導致除以零
+        turnover_safe = df['Trading_turnover'].replace(0, np.nan)
+        df['shares_per_trans'] = (df['Trading_Volume'] / 1000) / turnover_safe
+        df['shares_per_trans'] = df['shares_per_trans'].fillna(0)
+
     return df
 
 def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame:
