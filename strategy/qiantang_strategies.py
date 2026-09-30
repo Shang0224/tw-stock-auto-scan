@@ -279,7 +279,7 @@ def st_qiantang_f2_volume_breakout(
 
     return is_hit, info
 
-def st_qiantang_f2_volume_breakout_20260930-1(
+def st_qiantang_f2_volume_breakout_20260930_1(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE
