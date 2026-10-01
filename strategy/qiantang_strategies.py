@@ -991,8 +991,8 @@ def st_qiantang_f3_after_shakeout(
   # 2. 價格過濾：收盤價 >= 5 元
   cond2_price_ok = close_0 >= 5.0
 
-  # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量的 1.2 倍
-  VOLUME_MULTIPLIER = 1.2
+  # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量的 1.0 倍
+  VOLUME_MULTIPLIER = 1.0
   cond3_base_vol = vol_0 >= 350 * 1000
   cond3_vol_up = vol_0 >= vol_ma5 * VOLUME_MULTIPLIER
   cond3_vol_ok = cond3_base_vol and cond3_vol_up
