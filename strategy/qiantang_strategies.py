@@ -17,9 +17,6 @@ def is_valid(val):
 # =====================================================================
 # F1. 筆張現形
 # =====================================================================
-# =====================================================================
-# F1. 筆張現形 (完整註解、嚴格取值、MA60 濾網與正確 Log 顯示版)
-# =====================================================================
 def st_qiantang_f1_spt_growth(
     df_single: pd.DataFrame,
     profile: dict = None,
@@ -1010,6 +1007,8 @@ def st_qiantang_f3_after_shakeout(
         cond4_candle_ok = is_red_k and body_ratio_ok and upper_shadow_ok
     else:
         cond4_candle_ok = False
+
+    cond4_candle_ok = True #掠過K棒型態的檢查
 
     # 5. 連續確認：今日與昨日皆上輕鬆線
     cond5_today_above = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
