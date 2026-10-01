@@ -947,6 +947,96 @@ def st_qiantang_f3_after_shakeout(
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
     """
+    【F3_洗盤後（優化版：均線趨勢 + 量能放大 + 連續兩天站上）】
+    邏輯：
+    1. 趨勢過濾：今日收盤價 > MA60（季線）
+    2. 價格過濾：收盤價 >= 5 元
+    3. 量能過濾：今日成交量 >= 350 張 且 大於前 5 日均量
+    4. 連續確認：今日與昨日皆上輕鬆線 (close > easy_line)
+    5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線 (close <= easy_line)
+
+    修改自st_qiantang_f3_after_shakeout_20261001
+    """
+    profile = profile or {}
+    # 需要至少 6 筆資料以容納前幾日洗盤與 MA60 運算
+    if len(df_single) < 6:
+        if verbose:
+            print(f"❌ [洗盤後] 資料筆數不足 6 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+    d3 = df_single.iloc[-4]
+    d4 = df_single.iloc[-5]
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    vol_0 = today.get('Trading_Volume', None)
+    ma60_0 = today.get('MA60', None)
+
+    close_1 = d1.get('close', None)
+    easy_1 = d1.get('easy_line', None)
+
+    # 計算前 5 日平均成交量
+    recent_vols = df_single['Trading_Volume'].iloc[-6:-1]
+    vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+
+    # 1. 趨勢過濾：收盤價 > MA60（若 DataFrame 無 MA60 欄位則預設通過）
+    cond1_trend = (close_0 > ma60_0) if (is_valid(close_0) and is_valid(ma60_0)) else True
+
+    # 2. 價格過濾：收盤價 >= 5 元
+    cond2_price_ok = (close_0 >= 5.0) if is_valid(close_0) else False
+
+    # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量
+    cond3_base_vol = (vol_0 >= 350 * 1000) if is_valid(vol_0) else False
+    cond3_vol_up = (vol_0 >= vol_ma5) if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0) else True
+    cond3_vol_ok = cond3_base_vol and cond3_vol_up
+
+    # 4. 連續確認：今日與昨日皆上輕鬆線
+    cond4_today_above = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
+    cond4_yesterday_above = (close_1 > easy_1) if (is_valid(close_1) and is_valid(easy_1)) else False
+    cond4_continuous = cond4_today_above and cond4_yesterday_above
+
+    # 5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線
+    was_below_2d = (d2.get('close', 0) <= d2.get('easy_line', 0)) if (is_valid(d2.get('close')) and is_valid(d2.get('easy_line'))) else False
+    was_below_3d = (d3.get('close', 0) <= d3.get('easy_line', 0)) if (is_valid(d3.get('close')) and is_valid(d3.get('easy_line'))) else False
+    was_below_4d = (d4.get('close', 0) <= d4.get('easy_line', 0)) if (is_valid(d4.get('close')) and is_valid(d4.get('easy_line'))) else False
+
+    cond5_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+    is_hit = cond1_trend and cond2_price_ok and cond3_vol_ok and cond4_continuous and cond5_shakeout
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        vol_lots = vol_0 / 1000.0 if is_valid(vol_0) else 0.0
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [F3_洗盤後優化版] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線趨勢過濾 : Close > MA60")
+        print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "  [✕] 2. 收盤價 >= 5元 : N/A")
+        print(f"  [{ '✓' if cond3_vol_ok else '✕' }] 3. 帶量過關 : {vol_lots:,.0f} 張 (>=350張 且 >= 5日均量)")
+        print(f"  [{ '✓' if cond4_continuous else '✕' }] 4. 連續兩天站上 : 今日({cond4_today_above}) 與 昨日({cond4_yesterday_above})")
+        print(f"  [{ '✓' if cond5_shakeout else '✕' }] 5. 洗盤甩轎軌跡 : 2日前({was_below_2d}) | 3日前({was_below_3d}) | 4日前({was_below_4d})")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發洗盤後優化版]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '選股公式': 'F3_洗盤後_優化版',
+        '操作建議': '結合均線多頭、帶量與連續兩天站穩輕鬆線，過濾假突破雜訊後確認洗盤完成。'
+    } if is_hit else {}
+
+    return is_hit, info
+    
+def st_qiantang_f3_after_shakeout_20261001(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
     【F3_洗盤後】
     邏輯：
     1. 今日上輕鬆 (close > easy_line)
