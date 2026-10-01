@@ -1024,7 +1024,7 @@ def st_qiantang_f3_after_shakeout(
   cond5_shakeout = was_below_2d or was_below_3d or was_below_4d
 
   # 6. 【新增】輕鬆線 OLS 斜率向上 且 5 日累計漲幅 >= 1.5%
-  easy_series = df_single['easy_line'].iloc[-5:]  _# 取最近 5 天的輕鬆線
+  easy_series = df_single['easy_line'].iloc[-5:]  # 取最近 5 天的輕鬆線
   slope = 0.0
   easy_5days_ago = df_single['easy_line'].iloc[-5] if len(df_single) >= 5 else None
 
