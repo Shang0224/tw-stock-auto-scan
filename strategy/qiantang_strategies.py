@@ -945,20 +945,27 @@ def st_qiantang_f3_after_shakeout(
 ) -> tuple[bool, dict]:
   """【F3_洗盤後（優化版：均線趨勢 + 量能 1.2 倍 + 連續兩天站上 + 輕鬆線斜率與漲幅）】
 
-  邏輯： 1. 趨勢過濾：今日收盤價 > MA60（季線） 2. 價格過濾：收盤價 >= 5 元 3. 量能過濾：今日成交量 >= 350
-  張 且 >= 前 5 日均量的 1.2 倍 4. 連續確認：今日與昨日皆上輕鬆線 (close > easy_line) 5. 洗盤甩轎軌跡：在
-  2日前、3日前或 4日前曾跌破輕鬆線 (close <= easy_line) 6. 輕鬆線動能：輕鬆線 OLS 斜率 > 0 且 5
-  日累計漲幅 >= 1.5%
+  邏輯：
+  1. 趨勢過濾：今日收盤價 > MA60（季線，直接計算）
+  2. 價格過濾：收盤價 >= 5 元
+  3. 量能過濾：今日成交量 >= 350 張 且 >= 前 5 日均量的 1.2 倍
+  4. 連續確認：今日與昨日皆上輕鬆線 (close > easy_line)
+  5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線 (close <= easy_line)
+  6. 輕鬆線動能：輕鬆線 OLS 斜率 > 0 且 5 日累計漲幅 >= 1.5%
 
   修改自 st_qiantang_f3_after_shakeout_20261001_1
   """
   profile = profile or {}
 
-  # 需要至少 6 筆（或足夠計算 5 日斜率的資料）
-  if len(df_single) < 6:
+  # 需要至少 60 筆以計算 MA60（同時滿足斜率所需的 6 筆以上）
+  if len(df_single) < 60:
     if verbose:
-      print(f"❌ [洗盤後] 資料筆數不足 6 筆 (目前: {len(df_single)})")
+      print(f"❌ [洗盤後] 資料筆數不足 60 筆，無法計算 MA60 (目前: {len(df_single)})")
     return False, {}
+
+  # 直接計算 60 日均線
+  df_single = df_single.copy()
+  df_single['MA60'] = df_single['close'].rolling(window=60).mean()
 
   today = df_single.iloc[-1]
   d1 = df_single.iloc[-2]
@@ -966,80 +973,53 @@ def st_qiantang_f3_after_shakeout(
   d3 = df_single.iloc[-4]
   d4 = df_single.iloc[-5]
 
-  close_0 = today.get('close', None)
-  easy_0 = today.get('easy_line', None)
-  vol_0 = today.get('Trading_Volume', None)
-  ma60_0 = today.get('MA60', None)
+  close_0 = today['close']
+  easy_0 = today['easy_line']
+  vol_0 = today['Trading_Volume']
+  ma60_0 = today['MA60']
 
-  close_1 = d1.get('close', None)
-  easy_1 = d1.get('easy_line', None)
+  close_1 = d1['close']
+  easy_1 = d1['easy_line']
 
   # 計算前 5 日平均成交量
   recent_vols = df_single['Trading_Volume'].iloc[-6:-1]
-  vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+  vol_ma5 = recent_vols.mean()
 
-  # 1. 趨勢過濾：收盤價 > MA60（若 DataFrame 無 MA60 欄位則預設通過）
-  cond1_trend = (
-      (close_0 > ma60_0) if (is_valid(close_0) and is_valid(ma60_0)) else True
-  )
+  # 1. 趨勢過濾：收盤價 > MA60
+  cond1_trend = close_0 > ma60_0
 
   # 2. 價格過濾：收盤價 >= 5 元
-  cond2_price_ok = (close_0 >= 5.0) if is_valid(close_0) else False
+  cond2_price_ok = close_0 >= 5.0
 
   # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量的 1.2 倍
   VOLUME_MULTIPLIER = 1.2
-  cond3_base_vol = (vol_0 >= 350 * 1000) if is_valid(vol_0) else False
-  cond3_vol_up = (
-      (vol_0 >= vol_ma5 * VOLUME_MULTIPLIER)
-      if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0)
-      else True
-  )
+  cond3_base_vol = vol_0 >= 350 * 1000
+  cond3_vol_up = vol_0 >= vol_ma5 * VOLUME_MULTIPLIER
   cond3_vol_ok = cond3_base_vol and cond3_vol_up
 
   # 4. 連續確認：今日與昨日皆上輕鬆線
-  cond4_today_above = (
-      (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
-  )
-  cond4_yesterday_above = (
-      (close_1 > easy_1) if (is_valid(close_1) and is_valid(easy_1)) else False
-  )
+  cond4_today_above = close_0 > easy_0
+  cond4_yesterday_above = close_1 > easy_1
   cond4_continuous = cond4_today_above and cond4_yesterday_above
 
   # 5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線
-  was_below_2d = (
-      (d2.get('close', 0) <= d2.get('easy_line', 0))
-      if (is_valid(d2.get('close')) and is_valid(d2.get('easy_line')))
-      else False
-  )
-  was_below_3d = (
-      (d3.get('close', 0) <= d3.get('easy_line', 0))
-      if (is_valid(d3.get('close')) and is_valid(d3.get('easy_line')))
-      else False
-  )
-  was_below_4d = (
-      (d4.get('close', 0) <= d4.get('easy_line', 0))
-      if (is_valid(d4.get('close')) and is_valid(d4.get('easy_line')))
-      else False
-  )
+  was_below_2d = d2['close'] <= d2['easy_line']
+  was_below_3d = d3['close'] <= d3['easy_line']
+  was_below_4d = d4['close'] <= d4['easy_line']
   cond5_shakeout = was_below_2d or was_below_3d or was_below_4d
 
   # 6. 【新增】輕鬆線 OLS 斜率向上 且 5 日累計漲幅 >= 1.5%
   easy_series = df_single['easy_line'].iloc[-5:]  # 取最近 5 天的輕鬆線
   slope = 0.0
-  easy_5days_ago = df_single['easy_line'].iloc[-5] if len(df_single) >= 5 else None
+  easy_5days_ago = df_single['easy_line'].iloc[-5]
 
-  if len(easy_series) >= 5 and easy_series.notnull().all():
-    y = easy_series.values
-    x = np.arange(len(y))
-    res = linregress(x, y)
-    slope = res.slope
+  y = easy_series.values
+  x = np.arange(len(y))
+  res = linregress(x, y)
+  slope = res.slope
 
   # 計算 5 日累計漲幅
-  easy_growth = (
-      ((easy_0 - easy_5days_ago) / easy_5days_ago)
-      if (is_valid(easy_0) and is_valid(easy_5days_ago) and easy_5days_ago > 0)
-      else 0.0
-  )
+  easy_growth = (easy_0 - easy_5days_ago) / easy_5days_ago
 
   cond6_slope_ok = slope > 0
   cond6_growth_ok = easy_growth >= 0.015
@@ -1056,49 +1036,29 @@ def st_qiantang_f3_after_shakeout(
   )
 
   if verbose:
-    stock_id = today.get('stock_id', '未知個股')
-    date_str = str(today.get('date', '最新日'))
-    vol_lots = vol_0 / 1000.0 if is_valid(vol_0) else 0.0
-    vol_target = (vol_ma5 * VOLUME_MULTIPLIER) / 1000.0 if vol_ma5 > 0 else 0.0
+    stock_id = today['stock_id']
+    date_str = str(today['date'])
+    vol_lots = vol_0 / 1000.0
+    vol_target = (vol_ma5 * VOLUME_MULTIPLIER) / 1000.0
 
     print('\n' + '=' * 55)
     print(f'🔔 [F3_洗盤後優化版+斜率過濾] 股票: {stock_id} | 日期: {date_str}')
     print('-' * 55)
-    print(f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線趨勢過濾 : Close > MA60")
-    print(
-        f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 :"
-        f' ${close_0:.2f}'
-        if is_valid(close_0)
-        else '  [✕] 2. 收盤價 >= 5元 : N/A'
-    )
-    print(
-        f"  [{ '✓' if cond3_vol_ok else '✕' }] 3. 帶量 1.2 倍 : {vol_lots:,.0f}"
-        f' 張 (>=350張 且 >= {vol_target:,.0f}張)'
-    )
-    print(
-        f"  [{ '✓' if cond4_continuous else '✕' }] 4. 連續兩天站上 :"
-        f' 今日({cond4_today_above}) 與 昨日({cond4_yesterday_above})'
-    )
-    print(
-        f"  [{ '✓' if cond5_shakeout else '✕' }] 5. 洗盤甩轎軌跡 :"
-        f' 2日前({was_below_2d}) | 3日前({was_below_3d}) | 4日前({was_below_4d})'
-    )
-    print(
-        f"  [{ '✓' if cond6_easy_momentum else '✕' }] 6. 輕鬆線動能 : OLS斜率"
-        f' ({slope:.3f}) > 0 且 5日漲幅 ({easy_growth * 100:.2f}%) >= 1.5%'
-    )
+    print(f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線趨勢過濾 : Close > MA60 (MA60: {ma60_0:.2f})")
+    print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}")
+    print(f"  [{ '✓' if cond3_vol_ok else '✕' }] 3. 帶量 1.2 倍 : {vol_lots:,.0f} 張 (>=350張 且 >= {vol_target:,.0f}張)")
+    print(f"  [{ '✓' if cond4_continuous else '✕' }] 4. 連續兩天站上 : 今日({cond4_today_above}) 與 昨日({cond4_yesterday_above})")
+    print(f"  [{ '✓' if cond5_shakeout else '✕' }] 5. 洗盤甩轎軌跡 : 2日前({was_below_2d}) | 3日前({was_below_3d}) | 4日前({was_below_4d})")
+    print(f"  [{ '✓' if cond6_easy_momentum else '✕' }] 6. 輕鬆線動能 : OLS斜率 ({slope:.3f}) > 0 且 5日漲幅 ({easy_growth * 100:.2f}%) >= 1.5%")
     print('-' * 55)
-    print(
-        '🎯 最終觸發結果:'
-        f" {'🔥 [觸發洗盤後動能版]' if is_hit else '⚪ [未觸發]'}"
-    )
+    print(f"🎯 最終觸發結果: {'🔥 [觸發洗盤後動能版]' if is_hit else '⚪ [未觸發]'}")
     print('=' * 55 + '\n')
 
   info = {
       '選股公式': 'F3_洗盤後_優化版_量能1.2倍與輕鬆線動能',
       '操作建議': (
-          '結合均線多頭、1.2倍爆發量、連續站穩輕鬆線，並透過 OLS'
-          ' 斜率與 5 日漲幅確保輕鬆線確實向上發散，過濾橫盤雜訊。'
+          '結合均線多頭、1.2倍爆發量、連續站穩輕鬆線，並透過 OLS '
+          '斜率與 5 日漲幅確保輕鬆線確實向上發散，過濾橫盤雜訊。'
       ),
   } if is_hit else {}
 
