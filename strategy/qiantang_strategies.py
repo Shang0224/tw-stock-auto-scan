@@ -989,9 +989,9 @@ def st_qiantang_f3_after_shakeout(
     # 2. 價格過濾：收盤價 >= 5 元
     cond2_price_ok = (close_0 >= 5.0) if is_valid(close_0) else False
 
-    # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量 * 1.2 倍
+    # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量 * 1.5 倍
     cond3_base_vol = (vol_0 >= 350 * 1000) if is_valid(vol_0) else False
-    cond3_vol_up = (vol_0 >= vol_ma5 * 1.2) if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0) else True
+    cond3_vol_up = (vol_0 >= vol_ma5 * 1.5) if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0) else True
     cond3_vol_ok = cond3_base_vol and cond3_vol_up
 
     # 4. K棒型態過濾：最近一日為扎實紅K（收紅、實體大、上影線短）
