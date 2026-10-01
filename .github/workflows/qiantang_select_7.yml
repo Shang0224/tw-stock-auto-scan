@@ -67,8 +67,8 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py..."
-            #python test_qiantang_Strategy.py
-            python main_qiantang_Strategy.py
+            python test_qiantang_Strategy.py
+            #python main_qiantang_Strategy.py
           else
             echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py..."
             python main_qiantang_Strategy.py
