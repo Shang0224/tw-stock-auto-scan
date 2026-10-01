@@ -96,7 +96,7 @@ def fetch_finmind_chips(
                 inst_records.append(df_chip)
 
             # 拉長間隔，保護 Token 與 IP 頻率
-            time.sleep(0.5)
+            time.sleep(1.0)
 
         except Exception as e:
             print(f"⚠️ [法人] 抓取 {sid} 失敗: {e}")
@@ -120,7 +120,7 @@ def fetch_finmind_chips(
                 margin_records.append(df_margin_sub)
 
             # 拉長間隔，保護 Token 與 IP 頻率
-            time.sleep(0.5)
+            time.sleep(1.0)
 
         except Exception as e:
             print(f"⚠️ [融資融券] 抓取 {sid} 失敗: {e}")
