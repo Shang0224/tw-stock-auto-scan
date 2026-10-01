@@ -947,6 +947,126 @@ def st_qiantang_f3_after_shakeout(
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
     """
+    【F3_洗盤後（優化版：均線趨勢 + 量能放大 + 連續兩天站上 + MACD綠翻紅）】
+    邏輯：
+    1. 趨勢過濾：今日收盤價 > MA60（季線）
+    2. 價格過濾：收盤價 >= 5 元
+    3. 量能過濾：今日成交量 >= 350 張 且 大於前 5 日均量
+    4. 連續確認：今日與昨日皆上輕鬆線 (close > easy_line)
+    5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線 (close <= easy_line)
+    6. 動能過濾：MACD 柱狀體 (OSC) 由綠翻紅 (今日 OSC > 0 且昨日 OSC <= 0)
+
+    修改自 st_qiantang_f3_after_shakeout_20261001_1
+    """
+    profile = profile or {}
+    
+    # 【修改點 1】由於需要計算 MACD (12, 26, 9) 及前幾日洗盤，建議至少需要 35 筆以上資料較為精確（若資料不足可依需求微調）
+    if len(df_single) < 35:
+        if verbose:
+            print(f"❌ [洗盤後] 資料筆數不足 35 筆，無法完整計算 MACD (目前: {len(df_single)})")
+        return False, {}
+
+    # 【修改點 2】自動在函式內計算 MACD 指標 (DIF, DEM, OSC)
+    # 若您的外部資料集已經算好 DIF/DEM/OSC，可省略此段直接取用欄位
+    exp1 = df_single['close'].ewm(span=12, adjust=False).mean()
+    exp2 = df_single['close'].ewm(span=26, adjust=False).mean()
+    dif = exp1 - exp2
+    dem = dif.ewm(span=9, adjust=False).mean()
+    osc = (dif - dem) * 2  # MACD 柱狀體
+
+    # 將計算好的 OSC 暫存或掛載回 DataFrame 局部檢視
+    df_temp = df_single.copy()
+    df_temp['DIF'] = dif
+    df_temp['DEM'] = dem
+    df_temp['OSC'] = osc
+
+    today = df_temp.iloc[-1]
+    d1 = df_temp.iloc[-2]
+    d2 = df_temp.iloc[-3]
+    d3 = df_temp.iloc[-4]
+    d4 = df_temp.iloc[-5]
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    vol_0 = today.get('Trading_Volume', None)
+    ma60_0 = today.get('MA60', None)
+    osc_0 = today.get('OSC', None)
+
+    close_1 = d1.get('close', None)
+    easy_1 = d1.get('easy_line', None)
+    osc_1 = d1.get('OSC', None)
+
+    # 計算前 5 日平均成交量
+    recent_vols = df_temp['Trading_Volume'].iloc[-6:-1]
+    vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+
+    # 1. 趨勢過濾：收盤價 > MA60（若 DataFrame 無 MA60 欄位則預設通過）
+    cond1_trend = (close_0 > ma60_0) if (is_valid(close_0) and is_valid(ma60_0)) else True
+
+    # 2. 價格過濾：收盤價 >= 5 元
+    cond2_price_ok = (close_0 >= 5.0) if is_valid(close_0) else False
+
+    # 3. 量能過濾：成交量 >= 350 張 且 >= 5日均量
+    cond3_base_vol = (vol_0 >= 350 * 1000) if is_valid(vol_0) else False
+    cond3_vol_up = (vol_0 >= vol_ma5) if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0) else True
+    cond3_vol_ok = cond3_base_vol and cond3_vol_up
+
+    # 4. 連續確認：今日與昨日皆上輕鬆線
+    cond4_today_above = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
+    cond4_yesterday_above = (close_1 > easy_1) if (is_valid(close_1) and is_valid(easy_1)) else False
+    cond4_continuous = cond4_today_above and cond4_yesterday_above
+
+    # 5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線
+    was_below_2d = (d2.get('close', 0) <= d2.get('easy_line', 0)) if (is_valid(d2.get('close')) and is_valid(d2.get('easy_line'))) else False
+    was_below_3d = (d3.get('close', 0) <= d3.get('easy_line', 0)) if (is_valid(d3.get('close')) and is_valid(d3.get('easy_line'))) else False
+    was_below_4d = (d4.get('close', 0) <= d4.get('easy_line', 0)) if (is_valid(d4.get('close')) and is_valid(d4.get('easy_line'))) else False
+
+    cond5_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+    # 6. 【新增】MACD 動能過濾：柱狀體由綠翻紅 (今日 OSC > 0 且昨日 OSC <= 0)
+    cond6_macd_turn_red = (osc_0 > 0 and osc_1 <= 0) if (is_valid(osc_0) and is_valid(osc_1)) else False
+
+    # 綜合所有條件（加入 cond6_macd_turn_red）
+    is_hit = (
+        cond1_trend 
+        and cond2_price_ok 
+        and cond3_vol_ok 
+        and cond4_continuous 
+        and cond5_shakeout 
+        and cond6_macd_turn_red
+    )
+
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        vol_lots = vol_0 / 1000.0 if is_valid(vol_0) else 0.0
+
+        print("\n" + "=" * 55)
+        print(f"🔔 [F3_洗盤後優化版+MACD] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 55)
+        print(f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線趨勢過濾 : Close > MA60")
+        print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "  [✕] 2. 收盤價 >= 5元 : N/A")
+        print(f"  [{ '✓' if cond3_vol_ok else '✕' }] 3. 帶量過關 : {vol_lots:,.0f} 張 (>=350張 且 >= 5日均量)")
+        print(f"  [{ '✓' if cond4_continuous else '✕' }] 4. 連續兩天站上 : 今日({cond4_today_above}) 與 昨日({cond4_yesterday_above})")
+        print(f"  [{ '✓' if cond5_shakeout else '✕' }] 5. 洗盤甩轎軌跡 : 2日前({was_below_2d}) | 3日前({was_below_3d}) | 4日前({was_below_4d})")
+        print(f"  [{ '✓' if cond6_macd_turn_red else '✕' }] 6. MACD綠翻紅 : 今日OSC({osc_0:.3f}) > 0 且 昨日OSC({osc_1:.3f}) <= 0" if (is_valid(osc_0) and is_valid(osc_1)) else "  [✕] 6. MACD綠翻紅 : N/A")
+        print("-" * 55)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發洗盤後優化版+MACD]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 55 + "\n")
+
+    info = {
+        '選股公式': 'F3_洗盤後_優化版_MACD動能確認',
+        '操作建議': '結合均線多頭、帶量、連續兩天站穩輕鬆線，並透過 MACD 柱狀體由綠翻紅確認多頭動能啟動，過濾假突破。'
+    } if is_hit else {}
+
+    return is_hit, info
+
+def st_qiantang_f3_after_shakeout_20261001_1(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
     【F3_洗盤後（優化版：均線趨勢 + 量能放大 + 連續兩天站上）】
     邏輯：
     1. 趨勢過濾：今日收盤價 > MA60（季線）
