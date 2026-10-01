@@ -57,6 +57,115 @@ def fetch_finmind_chips(
     stock_ids: list, start_date: str, end_date: str
 ) -> pd.DataFrame:
     """抓取 FinMind 三大法人與融資融券籌碼資料
+    【優化版】將兩個籌碼資料的迴圈完全分開，避免交替請求與頻率限制
+    """
+    print("📡 正在透過 FinMind「分階段」抓取籌碼與信用交易資料...")
+
+    dl_inst = fm_dataloader_for_institutional_investors()
+    dl_margin = fm_dataloader_for_margin_purchase_short_sale()
+
+    inst_records = []
+    margin_records = []
+
+    # --- 階段一：專心用 dl_inst 抓取所有股票的三大法人資料 ---
+    print(f"👉 階段一：開始抓取 {len(stock_ids)} 檔股票的三大法人資料...")
+    for idx, sid in enumerate(stock_ids):
+        try:
+            df_inst = dl_inst.taiwan_stock_institutional_investors(
+                stock_id=sid, start_date=start_date, end_date=end_date
+            )
+            
+            if df_inst is not None and not df_inst.empty:
+                # 計算買賣差額 (buy - sell)
+                df_inst["net_buy"] = df_inst["buy"] - df_inst["sell"]
+
+                # 以 FinMind 的 name 欄位作為 Pivot Columns
+                df_pivot = df_inst.pivot(
+                    index="date", columns="name", values="net_buy"
+                ).fillna(0)
+
+                # 提取 FinMind 原生法人欄位
+                trust_net = df_pivot.get("Investment_Trust", pd.Series(0, index=df_pivot.index))
+                dealer_self = df_pivot.get("Dealer_self", pd.Series(0, index=df_pivot.index))
+
+                # 計算主力淨買賣
+                df_pivot["major_net"] = trust_net + dealer_self
+
+                df_chip = df_pivot.reset_index()
+                df_chip["stock_id"] = sid
+                inst_records.append(df_chip)
+
+            # 拉長間隔，保護 Token 與 IP 頻率
+            time.sleep(1.0)
+
+        except Exception as e:
+            print(f"⚠️ [法人] 抓取 {sid} 失敗: {e}")
+            continue
+
+    # --- 階段二：專心用 dl_margin 抓取所有股票的融資融券資料 ---
+    print(f"👉 階段二：開始抓取 {len(stock_ids)} 檔股票的融資融券資料...")
+    for idx, sid in enumerate(stock_ids):
+        try:
+            df_margin = dl_margin.taiwan_stock_margin_purchase_short_sale(
+                stock_id=sid, start_date=start_date, end_date=end_date
+            )
+
+            if df_margin is not None and not df_margin.empty:
+                df_margin_sub = df_margin[[
+                    "date",
+                    "MarginPurchaseTodayBalance",
+                    "ShortSaleTodayBalance",
+                ]].copy()
+                df_margin_sub["stock_id"] = sid
+                margin_records.append(df_margin_sub)
+
+            # 拉長間隔，保護 Token 與 IP 頻率
+            time.sleep(1.0)
+
+        except Exception as e:
+            print(f"⚠️ [融資融券] 抓取 {sid} 失敗: {e}")
+            continue
+
+    # --- 階段三：在本地透過 Pandas 將兩者進行安全合併 ---
+    print("🔗 正在彙整與合併法人及信用交易資料...")
+    
+    df_inst_all = pd.concat(inst_records, ignore_index=True) if inst_records else pd.DataFrame()
+    df_margin_all = pd.concat(margin_records, ignore_index=True) if margin_records else pd.DataFrame()
+
+    required_cols = [
+        "date",
+        "stock_id",
+        "Foreign_Investor",
+        "Investment_Trust",
+        "Dealer_self",
+        "major_net",
+        "MarginPurchaseTodayBalance",
+        "ShortSaleTodayBalance",
+        "broker_diff",  # 分點預留欄位
+    ]
+
+    if not df_inst_all.empty and not df_margin_all.empty:
+        result_df = pd.merge(
+            df_inst_all, df_margin_all, on=["stock_id", "date"], how="outer"
+        )
+    elif not df_inst_all.empty:
+        result_df = df_inst_all
+    elif not df_margin_all.empty:
+        result_df = df_margin_all
+    else:
+        result_df = pd.DataFrame(columns=required_cols)
+
+    # 若某些欄位在某些日期/股票完全沒出現，補 np.nan
+    for col in required_cols:
+        if col not in result_df.columns:
+            result_df[col] = np.nan
+
+    return result_df
+
+def fetch_finmind_chips_old(
+    stock_ids: list, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """抓取 FinMind 三大法人與融資融券籌碼資料
     欄位名稱完全沿用 FinMind 原始名稱與格式
     """
     chip_records = []
