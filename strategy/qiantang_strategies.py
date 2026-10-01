@@ -23,6 +23,120 @@ def st_qiantang_f1_spt_growth(
     verbose: bool = DEBUG_VERBOSE
 ) -> tuple[bool, dict]:
     """
+    【F1_筆張現形 - 嚴格取值與 MA60 濾網版】
+    邏輯：
+    1. 嚴格欄位取值：若缺少必要欄位直接報錯 (KeyError)。
+    2. Trading_Volume 全程以「股數」進行運算與門檻判定。
+    3. 收盤價 > 輕鬆線 (easy_line)，且未過度偏離 (close / easy <= 1.12)。
+    4. 單筆均張連續 2 日遞增 (t > t-1 > t-2)。
+    5. 當日單筆均張顯著超越 5 日均張 (spt_0 >= spt_ma5 * 1.15)。
+    6. 當日成交股數相較於 5 日均量顯著放大 (vol_0 >= vol_ma5 * 1.3)，且成交金額 >= 1,000 萬元。
+    7. 收盤價必須站上 60 日均線 (MA60)。
+
+    修改自st_qiantang_f1_spt_growth_20261001
+    """
+    print("st_qiantang_f1_spt_growth*******************************************************")
+    profile = profile or {}
+
+    # 內部過濾條件變數設定
+    vol_boost_ratio = 1.3               # 相對量能放大倍數 (當日股數 / 5日均量股數)
+    min_safety_turnover = 10_000_000    # 底層安全門檻：1,000 萬台幣 (以股數*股價計算)
+    spt_growth_ratio = 1.15             # 單筆均張放大倍數 (相較於 5日均張)
+    max_easy_bias = 1.12                # 輕鬆線乖離率上限 (防止過熱追高)
+
+    # 必須確保資料筆數至少有 60 筆以上才能計算 MA60
+    if len(df_single) < 60:
+        if verbose:
+            print("❌ [筆張現形] 資料筆數不足 60 筆（無法計算 MA60 濾網）")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+
+    # 直接取值：若欄位不存在或拼寫錯誤，直接引發 KeyError 報錯
+    close_0 = today['close']
+    easy_0 = today['easy_line']
+    vol_0 = today['Trading_Volume']  # 單位：股數
+
+    spt_0 = today['shares_per_trans']
+    spt_1 = d1['shares_per_trans']
+    spt_2 = d2['shares_per_trans']
+
+    # 計算 5 日成交量均值與 5 日單筆均張均值
+    vol_series = df_single['Trading_Volume'].tail(5)
+    vol_ma5 = vol_series.mean()
+
+    spt_series = df_single['shares_per_trans'].tail(5)
+    spt_ma5 = spt_series.mean()
+
+    # 計算 60 日均線 (MA60)
+    close_series_60 = df_single['close'].tail(60)
+    ma60_0 = close_series_60.mean()
+
+    # 當日成交金額計算 (股數 * 收盤價)
+    turnover_amount = vol_0 * close_0
+
+    # 1. 站上輕鬆線且未過熱 (1.0 < close / easy_line <= max_easy_bias)
+    bias = close_0 / easy_0
+    cond1_easy_ok = (1.0 < bias <= max_easy_bias)
+
+    # 2. 單筆均張連續 2 日遞增 (t > t-1 > t-2)
+    cond2_spt_growing = (spt_0 > spt_1 > spt_2)
+
+    # 3. 當日單筆均張顯著突破 5 日均張
+    cond3_spt_surge = (spt_0 >= spt_ma5 * spt_growth_ratio)
+
+    # 4. 量能相對放大率 + 底層安全門檻
+    is_relative_boost = (vol_0 >= vol_ma5 * vol_boost_ratio)
+    is_not_zombie = (turnover_amount >= min_safety_turnover)
+    cond4_vol_boost_ok = is_relative_boost and is_not_zombie
+
+    # 5. 收盤價必須站上 60 日均線 (MA60)
+    cond5_ma60_ok = (close_0 >= ma60_0)
+
+    # 總體過濾結果
+    is_hit = (
+        cond1_easy_ok 
+        and cond2_spt_growing 
+        and cond3_spt_surge 
+        and cond4_vol_boost_ok 
+        and cond5_ma60_ok
+    )
+
+    if verbose:
+        # 這裡的 stock_id 與 date 如果也是必填欄位，同樣改用中括號確保會報錯
+        stock_id = today['stock_id']
+        date_str = str(today['date'])
+        
+        vol_lots = vol_0 / 1000.0
+        actual_boost = vol_0 / vol_ma5 if vol_ma5 > 0 else 0.0
+
+        print("\n" + "=" * 65)
+        print(f"🔔 [F1_筆張現形] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 65)
+        print(f"  [✓] 1. 站上輕鬆線且未過熱 : Close=\({close_0:.2f}, Easy=\){easy_0:.2f}")
+        print(f"  [✓] 2. 單筆均張連續2日遞增 : {spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f}")
+        print(f"  [✓] 3. 均張顯著放大 (>= MA5*{spt_growth_ratio}) : {spt_0:.2f} vs MA5:{spt_ma5:.2f}")
+        print(f"  [✓] 4. 量能相對放大 (>= 5日均量*{vol_boost_ratio:.1f}) : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張, 金額:{turnover_amount/10000:,.0f}萬)")
+        print(f"  [✓] 5. 收盤價站上 60 日均線 : Close=\({close_0:.2f} vs MA60:\){ma60_0:.2f}")
+        print("-" * 65)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發強勢筆張現形]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 65 + "\n")
+
+    info = {
+        '選股公式': 'F1_筆張現形',
+        '操作建議': '單筆均張與當日總量能同步放大，且股價站穩 60 日均線主升段，為主力帶量實質卡位訊號。'
+    } if is_hit else {}
+
+    return is_hit, info
+    
+def st_qiantang_f1_spt_growth_20261001(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
     【F1_筆張現形 - 股數處理與量能相對放大版】
     邏輯：
     1. Trading_Volume 全程以「股數」進行運算與門檻判定。
