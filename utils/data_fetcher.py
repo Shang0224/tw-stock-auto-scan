@@ -101,6 +101,16 @@ def fetch_finmind_chips(
             print(f"⚠️ [法人] 抓取 {sid} 失敗: {e}")
             continue
 
+    # 取得環境變數
+    event_name = os.environ.get("GITHUB_EVENT_NAME")
+
+    # 判斷是否為排程
+    if event_name == "schedule":
+        print("排程啟動")
+        time.sleep(60*60.0)
+    else:
+        print("非排程啟動")
+    
     # --- 階段二：專心用 dl_margin 抓取所有股票的融資融券資料 ---
     print(f"👉 階段二：開始抓取 {len(stock_ids)} 檔股票的融資融券資料...")
 
