@@ -190,8 +190,6 @@ def run_qiantang_strategy_excel_scan(
 
     for stock_id, group_df in grouped:
         sid = str(stock_id)
-
-        print(f"stock_id : {stock_id}------------")
         if sid not in stock_meta_map:
             continue
 
@@ -202,7 +200,7 @@ def run_qiantang_strategy_excel_scan(
         sorted_df = group_df.sort_values("date").copy()
         if sorted_df.empty or len(sorted_df) < 5:
             continue
-        print(f"stock_name : {stock_name}------------")
+
         # 呼叫核心檢測引擎
         hits = scan_single_stock_monitors(
             df_single=sorted_df,
