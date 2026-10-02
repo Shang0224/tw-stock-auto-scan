@@ -105,6 +105,8 @@ def scan_single_stock_monitors(
     hits = []
     for monitor_func in monitor_list:
         sig_params = inspect.signature(monitor_func).parameters
+
+        print(f"scan_single_stock_monitors function name : {monitor_func.__name__}")
         
         if 'profile' in sig_params:
             is_hit, info = monitor_func(df_single, profile=profile)
