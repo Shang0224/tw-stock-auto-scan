@@ -26,6 +26,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f5_major_buy_easy,  # 主外上輕
     st_qiantang_f6_flower,          # 一朵花
     st_qiantang_f7_super_stock,     # 飆股
+    st_qiantang_f3_after_shakeout_20261001_1
 )
 
 TEST_QIANTANG_STRATEGY = [
