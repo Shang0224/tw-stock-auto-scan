@@ -43,7 +43,7 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
 
             if df is not None and not df.empty:
                 all_data.append(df)
-            time.sleep(0.3)
+            time.sleep(1.0)
         except Exception as e:
             print(f"⚠️ 抓取 {sid} 還原 K 線失敗: {e}")
             continue
@@ -62,7 +62,6 @@ def fetch_finmind_chips(
     print("📡 正在透過 FinMind「分階段」抓取籌碼與信用交易資料...")
 
     dl_inst = fm_dataloader_for_institutional_investors()
-    dl_margin = fm_dataloader_for_margin_purchase_short_sale()
 
     inst_records = []
     margin_records = []
@@ -104,6 +103,9 @@ def fetch_finmind_chips(
 
     # --- 階段二：專心用 dl_margin 抓取所有股票的融資融券資料 ---
     print(f"👉 階段二：開始抓取 {len(stock_ids)} 檔股票的融資融券資料...")
+
+    dl_margin = fm_dataloader_for_margin_purchase_short_sale()
+    
     for idx, sid in enumerate(stock_ids):
         try:
             df_margin = dl_margin.taiwan_stock_margin_purchase_short_sale(
