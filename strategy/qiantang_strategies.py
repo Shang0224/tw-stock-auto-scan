@@ -1419,6 +1419,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_2(
     4. 輕鬆線乖離雙控：0 < (收盤價 - 輕鬆線) / 輕鬆線 <= 4% (貼近支撐買進，防高檔套牢)
     5. 連續確認：今日與昨日皆站上輕鬆線 (close > easy_line)
     6. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線 (close <= easy_line)，確認沉澱完成
+       輕鬆線 OLS 斜率必須大於 0
     7. 右側二次確認：觸發後第 N 日 (T+delay_days) 觀察短線報酬率 >= threshold_pct (預設 -2.0%)，沒跌超過 -2% 才正式買進
     """
     profile = profile or {}
@@ -1484,13 +1485,25 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_2(
         was_below_tm4 = row_tm4['close'] <= row_tm4['easy_line']
         cond6_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
 
+        # 取出觸發日 (pos_idx) 前 5 日的輕鬆線數值
+        easy_5d = df_single['easy_line'].iloc[pos_idx-4 : pos_idx+1].values
+
+        if len(easy_5d) == 5 and not np.isnan(easy_5d).any():
+            # 利用 numpy 進行最小二乘法 (OLS) 一階線性迴歸
+            x = np.array([1, 2, 3, 4, 5])
+            slope, _ = np.polyfit(x, easy_5d, 1)
+            cond_ols_up = slope > 0  # 條件：輕鬆線 OLS 斜率必須大於 0 (方向向上發散)
+        else:
+            cond_ols_up = False
+
         base_hit = (
             cond1_trend and 
             cond2_price_ok and 
             cond3_vol_ok and 
             cond4_bias_ok and 
             cond5_continuous and 
-            cond6_shakeout
+            cond6_shakeout and
+            cond_ols_up
         )
 
         stock_id = str(row_t0['stock_id']) if 'stock_id' in row_t0 else (str(row_t0['股票代號']) if '股票代號' in row_t0 else '')
