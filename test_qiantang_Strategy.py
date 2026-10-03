@@ -377,7 +377,7 @@ def run_qiantang_strategy_range_scan(
     else:
         print("\nℹ [提示] EXPORT_EXCEL 為 False，已略過 Excel 報表的本地產出。")
 
-    # 條件式輸出綜合儀表板 CSV 檔
+    """# 條件式輸出綜合儀表板 CSV 檔
     csv_file_path = None
     if EXPORT_CSV:
         source_folder_name = "qiantang_test_report"
@@ -389,6 +389,28 @@ def run_qiantang_strategy_range_scan(
         print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
     else:
         print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
+    """
+
+    csv_file_path = None
+    
+    # 🌟 1. 自動取得當前測試策略名稱
+    strat_tag = "_".join([s.__name__ for s in strategies]) if strategies else "qiantang"
+
+    # 🌟 2. 找到 EXPORT_CSV 區塊，修改 csv_file_name 這行：
+    if EXPORT_CSV:
+        source_folder_name = "qiantang_test_report"
+        os.makedirs(f"data/{source_folder_name}", exist_ok=True)
+    
+        # ❌ 原本：f"dashboard_summary_{start_date_str}..."
+        # ✅ 改為（直接以策略名稱開頭，不帶 dashboard_summary_）：
+        csv_file_name = f"{strat_tag}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
+    
+        csv_file_path = os.path.abspath(f"data/{source_folder_name}/{csv_file_name}")
+        dashboard_df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+        print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
+     else:
+        print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
+
 
     # =====================================================================
     # 7. 自動備份至 NAS
