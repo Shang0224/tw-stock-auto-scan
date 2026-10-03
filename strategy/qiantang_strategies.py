@@ -1296,13 +1296,121 @@ def st_qiantang_f3_after_shakeout_20261001_1_1(
 
     return is_hit, info
 
+def st_qiantang_f3_after_shakeout_20261001_1_3_1(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = False
+) -> tuple[bool, dict]:
+    """
+    【F3_洗盤後（紅K + 上影線限制 + 乖離量能雙控完整版）】
+    基底架構：0745 純淨洗盤型態
+    
+    風控升級：
+    1. 限制輕鬆線乖離率 <= 4%：確保進場點緊貼輕鬆線支撐，防範追高與拉回。
+    2. 量能倍數 1.2倍 ~ 2.5倍：要求主力帶量攻堅，同時防範 >2.5倍爆天量出貨。
+    3. 🌟 當日紅 K 防線 (Close > Open)：剔除開高走低、留下套牢陰線的假突破。
+    4. 🌟 上影線長度限制 (<= 30%)：剔除上方賣壓沉重、主力拉高避雷針倒貨的K線。
+    """
+    profile = profile or {}
+    if len(df_single) < 60:
+        return False, {}
+
+    df_single = df_single.copy()
+    if 'MA60' not in df_single.columns:
+        df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+    d3 = df_single.iloc[-4]
+    d4 = df_single.iloc[-5]
+
+    # 取得當日價格與量能欄位 (相容大小寫欄位名)
+    close_0 = today.get('close', today.get('Close', 0))
+    open_0 = today.get('open', today.get('Open', 0))
+    high_0 = today.get('high', today.get('High', 0))
+    low_0 = today.get('low', today.get('Low', 0))
+    easy_0 = today.get('easy_line', 0)
+    vol_0 = today.get('Trading_Volume', 0)
+    ma60_0 = today.get('MA60', 0)
+
+    close_1 = d1.get('close', d1.get('Close', 0))
+    easy_1 = d1.get('easy_line', 0)
+
+    # 計算前 5 日平均成交量
+    recent_vols = df_single['Trading_Volume'].iloc[-6:-1]
+    vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+
+    # -------------------------------------------------------------------------
+    # 1. 基礎門檻 (趨勢、價格、量能底線)
+    # -------------------------------------------------------------------------
+    cond1_trend = close_0 > ma60_0 if (close_0 and ma60_0) else False
+    cond2_price_ok = close_0 >= 5.0 if close_0 else False
+
+    # 2. 量能區間：成交量 >= 350 張 且 1.2倍 <= 量能倍數 <= 2.5倍
+    cond3_base_vol = vol_0 >= 350 * 1000 if vol_0 else False
+    vol_ratio = (vol_0 / vol_ma5) if (vol_0 and vol_ma5 > 0) else 0
+    cond3_vol_ok = cond3_base_vol and (1.2 <= vol_ratio <= 2.5)
+
+    # 3. 輕鬆線乖離：0 < (收盤價 - 輕鬆線) / 輕鬆線 <= 4%
+    easy_bias = (close_0 - easy_0) / easy_0 if (close_0 and easy_0 > 0) else 999
+    cond4_bias_ok = 0 < easy_bias <= 0.04
+
+    # 4. 連續確認：今日與昨日皆站上輕鬆線
+    cond5_today_above = close_0 > easy_0 if (close_0 and easy_0) else False
+    cond5_yesterday_above = close_1 > easy_1 if (close_1 and easy_1) else False
+    cond5_continuous = cond5_today_above and cond5_yesterday_above
+
+    # 5. 洗盤甩轎軌跡：T-2, T-3 或 T-4 曾跌破輕鬆線
+    was_below_2d = d2.get('close', d2.get('Close', 0)) <= d2.get('easy_line', 0)
+    was_below_3d = d3.get('close', d3.get('Close', 0)) <= d3.get('easy_line', 0)
+    was_below_4d = d4.get('close', d4.get('Close', 0)) <= d4.get('easy_line', 0)
+    cond6_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+    # -------------------------------------------------------------------------
+    # 🌟 6. 防誘多陷阱防線 (針對型態 A 之 K 線實體與上影線過濾)
+    # -------------------------------------------------------------------------
+    # (A) 當日必須為實體紅 K (Close > Open)
+    cond7_red_k = close_0 > open_0 if (close_0 and open_0 > 0) else False
+
+    # (B) 限制上影線長度 <= 當日 K 棒總波幅 (High - Low) 的 30%
+    body_top = max(close_0, open_0)
+    upper_shadow = high_0 - body_top if (high_0 and body_top > 0) else 0
+    k_range = high_0 - low_0 if (high_0 and low_0 > 0) else 0
+    upper_shadow_ratio = (upper_shadow / k_range) if (k_range > 0) else 0
+    
+    cond8_shadow_ok = upper_shadow_ratio <= 0.30
+
+    # -------------------------------------------------------------------------
+    # 綜合所有條件判定
+    # -------------------------------------------------------------------------
+    is_hit = (
+        cond1_trend and 
+        cond2_price_ok and 
+        cond3_vol_ok and 
+        cond4_bias_ok and 
+        cond5_continuous and 
+        cond6_shakeout and 
+        cond7_red_k and 
+        cond8_shadow_ok
+    )
+
+    info = {
+        '選股公式': 'F3_洗盤後_實體紅K與上影線精準版',
+        '操作建議': f'強勢實體紅K站穩輕鬆線 (乖離: {easy_bias*100:.1f}%, 量能: {vol_ratio:.1f}倍, 上影線: {upper_shadow_ratio*100:.1f}%)'
+    } if is_hit else {}
+
+    return is_hit, info
+
+
+
 def st_qiantang_f3_after_shakeout_20261001_1_3(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = False
 ) -> tuple[bool, dict]:
     """
-    【F3_洗盤後（20261002 乖離與量能雙控版）】
+    【F3_洗盤後（20261002 乖離與量能雙控版）】<---- 過濾回檔觸發非常有效
     直接修改自 0745 版本 (st_qiantang_f3_after_shakeout_20261001_1)：
     1. 保留 0745 無 OLS 的乾淨型態結構
     2. 微調量能區間：1.2 倍 <= 今日成交量 / 5日均量 <= 2.5 倍
