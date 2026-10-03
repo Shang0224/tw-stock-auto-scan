@@ -63,7 +63,7 @@ TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
 # 🌟 大盤趨勢濾網控制開關
-USE_MARKET_FILTER = True        # 是否啟用大盤趨勢濾網 (True: 啟用防守 / False: 關閉防守)
+USE_MARKET_FILTER = False        # 是否啟用大盤趨勢濾網 (True: 啟用防守 / False: 關閉防守)
 MARKET_FILTER_KEY = "EMA60"     # 大盤門檻指標 (預設季線 EMA60)
 
 # 🌟 檔案輸出控制開關
