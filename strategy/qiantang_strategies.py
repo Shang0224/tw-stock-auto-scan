@@ -1406,7 +1406,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_2(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = False,
-    delay_days: int = 1,         # 🌟 彈性右側觀察天數：1(隔日)、2(兩日) 或 3(三日)
+    delay_days: int = 2,         # 🌟 彈性右側觀察天數：1(隔日)、2(兩日) 或 3(三日)
     threshold_pct: float = -0.02  # 🌟 觀察期最大允許跌幅：預設不超過 -2.0%
 ) -> tuple[bool, dict]:
     """
