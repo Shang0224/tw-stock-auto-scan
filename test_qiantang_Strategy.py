@@ -408,7 +408,7 @@ def run_qiantang_strategy_range_scan(
         csv_file_path = os.path.abspath(f"data/{source_folder_name}/{csv_file_name}")
         dashboard_df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
         print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
-     else:
+    else:
         print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
 
 
