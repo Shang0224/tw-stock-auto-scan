@@ -1,7 +1,7 @@
 # utils/__init__.py
 
 # 把各個子檔案的精華函式拉進來
-from utils.data_fetcher import yf_fetch_all_stocks, fm_fetch_all_stocks, get_fm_trading_days, yf_fetch_monitor_stocks, fm_get_complete_stock_data, get_stock_name_dict
+from utils.data_fetcher import yf_fetch_all_stocks, fm_fetch_all_stocks, get_fm_trading_days, yf_fetch_monitor_stocks, fm_get_complete_stock_data, get_stock_name_dict, fetch_market_ema_dict
 from utils.notifier import send_line_message, send_email_with_csv, send_line_summary, send_email_report, send_qiantang_7in1_line_summary, send_line_broadcast
 from utils.storage import upload_to_nas
 from utils.file_handler import (send_report, cleanup_local_file, archive_and_cleanup, save_scan_report, save_multi_day_report, align_and_normalize_results, 
@@ -13,7 +13,7 @@ from utils.indicators import preprocess_all_technical_indicators
 # 這行定義了當別人寫 from utils import * 時，允許拿走哪些東西
 __all__ = [
     'smart_read_csv', 
-    'yf_fetch_all_stocks', 'fm_fetch_all_stocks', 'fm_get_complete_stock_data',
+    'yf_fetch_all_stocks', 'fm_fetch_all_stocks', 'fm_get_complete_stock_data', 'fetch_market_ema_dict'.
     'send_line_message', 'send_email_with_csv', 'send_line_summary', 'send_email_report', 'send_qiantang_7in1_line_summary', 'send_line_broadcast',
     'upload_to_nas',
     'parse_stock_ids', 'get_stock_name_dict', 'send_report', 'cleanup_local_file', 'archive_and_cleanup', 'save_scan_report', 'save_multi_day_report', 'parse_monitor_stocks',
