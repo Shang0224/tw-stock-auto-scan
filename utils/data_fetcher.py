@@ -8,6 +8,64 @@ import numpy as np
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
+import pandas as pd
+import numpy as np
+
+# =============================================================================
+# 1. 底層數據處理函數 (保留未來繪圖、分析與 DataFrame 匯出的靈活性)
+# =============================================================================
+def fetch_and_process_market_data(api_client, start_date: str, end_date: str, stock_id: str = "TAIEX") -> pd.DataFrame:
+    """
+    擷取大盤 (TAIEX) 歷史數據並計算多週期 EMA 均線，回傳 pd.DataFrame。
+    """
+    df_market = api_client.get_market_data(stock_id=stock_id, start_date=start_date, end_date=end_date)
+    
+    if df_market is None or df_market.empty:
+        raise ValueError(f"無法擷取大盤代號 [{stock_id}] 的資料，請檢查 API 狀態或日期區間。")
+
+    df = df_market.copy()
+    
+    # 確保按日期升冪排序
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
+    
+    # 計算多週期大盤趨勢 EMA 均線 (20, 60, 120, 240 日)
+    df['EMA20'] = df['close'].ewm(span=20, adjust=False).mean()
+    df['EMA60'] = df['close'].ewm(span=60, adjust=False).mean()
+    df['EMA120'] = df['close'].ewm(span=120, adjust=False).mean()
+    df['EMA240'] = df['close'].ewm(span=240, adjust=False).mean()
+    
+    return df
+
+
+# =============================================================================
+# 2. 資料結構轉換函數 (DataFrame -> 秒查 Dictionary)
+# =============================================================================
+def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
+    """
+    將計算完成的大盤 DataFrame 轉換為以 'YYYY-MM-DD' 為 Key 的秒查字典。
+    """
+    df = df_market_processed.copy()
+    df['date_str'] = df['date'].dt.strftime('%Y-%m-%d')
+    target_cols = ['close', 'EMA20', 'EMA60', 'EMA120', 'EMA240']
+    
+    # 轉為字典結構以利 O(1) 複雜度查詢
+    return df.set_index('date_str')[target_cols].to_dict(orient='index')
+
+
+# =============================================================================
+# 3. 高階封裝函數 (主程式直接呼叫此函數即可，一步到位)
+# =============================================================================
+def fetch_market_ema_dict(api_client, start_date: str, end_date: str, stock_id: str = "TAIEX") -> dict:
+    """
+    主程式對接專用高階介面：
+    內部自動呼叫 fetch_and_process_market_data 與 build_market_dict，
+    一步到位直接回傳大盤快查字典。
+    """
+    df_market = fetch_and_process_market_data(api_client=api_client, start_date=start_date, end_date=end_date, stock_id=stock_id)
+    market_dict = build_market_dict(df_market)
+    return market_dict
+
 def fm_dataloader_for_institutional_investors():    
     
     print("📡 fm_dataloader_for_institutional_investors (FINMIND_ACCESS_TOKEN_SHANGKUO0224)-----------------------")
