@@ -26,6 +26,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f7_super_stock,     # 飆股
     st_qiantang_f3_after_shakeout_20261001_1,
     st_qiantang_f3_after_shakeout_20261001_1_3,   
+    st_qiantang_f3_after_shakeout_20261001_1_3_1,
 )
 
 # 3. 匯入資料抓取與工具庫 (含大盤 EMA 快查工具)
@@ -54,7 +55,7 @@ TEST_QIANTANG_STRATEGY = [
     # st_qiantang_f5_major_buy_easy,  # F5: 主外上輕
     # st_qiantang_f6_flower,          # F6: 一朵花
     # st_qiantang_f7_super_stock,     # F7: 飆股
-    st_qiantang_f3_after_shakeout_20261001_1_3, # F3: 洗盤後優化版 (唯一開啟)
+    st_qiantang_f3_after_shakeout_20261001_1_3_1, # F3: 洗盤後優化版 (唯一開啟)
 ]
 
 CHOSEN_SOURCE = "fm"
