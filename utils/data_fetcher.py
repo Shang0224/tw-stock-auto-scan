@@ -17,9 +17,12 @@ import numpy as np
 def fetch_and_process_market_data(api_client, start_date: str, end_date: str, stock_id: str = "TAIEX") -> pd.DataFrame:
     """
     擷取大盤 (TAIEX) 歷史數據並計算多週期 EMA 均線，回傳 pd.DataFrame。
-    """
-    df_market = api_client.get_market_data(stock_id=stock_id, start_date=start_date, end_date=end_date)
     
+    支援 FinMind DataLoader (taiwan_stock_daily) 及通用 API 介面。
+    """
+    # 🌟 修正：優先呼叫 FinMind DataLoader 的原生 API 方法 taiwan_stock_daily
+    df_market = api_client.taiwan_stock_daily(stock_id=stock_id, start_date=start_date, end_date=end_date)
+        
     if df_market is None or df_market.empty:
         raise ValueError(f"無法擷取大盤代號 [{stock_id}] 的資料，請檢查 API 狀態或日期區間。")
 
@@ -29,6 +32,9 @@ def fetch_and_process_market_data(api_client, start_date: str, end_date: str, st
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
     
+    # 確保數值型別正確
+    df['close'] = df['close'].astype(float)
+    
     # 計算多週期大盤趨勢 EMA 均線 (20, 60, 120, 240 日)
     df['EMA20'] = df['close'].ewm(span=20, adjust=False).mean()
     df['EMA60'] = df['close'].ewm(span=60, adjust=False).mean()
@@ -36,6 +42,7 @@ def fetch_and_process_market_data(api_client, start_date: str, end_date: str, st
     df['EMA240'] = df['close'].ewm(span=240, adjust=False).mean()
     
     return df
+
 
 
 # =============================================================================
