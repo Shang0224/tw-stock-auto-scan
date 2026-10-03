@@ -1296,6 +1296,88 @@ def st_qiantang_f3_after_shakeout_20261001_1_1(
 
     return is_hit, info
 
+def st_qiantang_f3_after_shakeout_20261001_1_3(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = False
+) -> tuple[bool, dict]:
+    """
+    【F3_洗盤後（20261002 乖離與量能雙控版）】
+    直接修改自 0745 版本 (st_qiantang_f3_after_shakeout_20261001_1)：
+    1. 保留 0745 無 OLS 的乾淨型態結構
+    2. 微調量能區間：1.2 倍 <= 今日成交量 / 5日均量 <= 2.5 倍
+    3. 新增風控防線：輕鬆線乖離率上限 <= 4%
+    """
+    profile = profile or {}
+    if len(df_single) < 60:
+        return False, {}
+
+    df_single = df_single.copy()
+    if 'MA60' not in df_single.columns:
+        df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+    d3 = df_single.iloc[-4]
+    d4 = df_single.iloc[-5]
+
+    close_0 = today.get('close', 0)
+    easy_0 = today.get('easy_line', 0)
+    vol_0 = today.get('Trading_Volume', 0)
+    ma60_0 = today.get('MA60', 0)
+
+    close_1 = d1.get('close', 0)
+    easy_1 = d1.get('easy_line', 0)
+
+    # 計算前 5 日平均成交量
+    recent_vols = df_single['Trading_Volume'].iloc[-6:-1]
+    vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+
+    # 1. 趨勢過濾：收盤價 > MA60 (個股季線)
+    cond1_trend = close_0 > ma60_0 if (close_0 and ma60_0) else False
+
+    # 2. 價格過濾：收盤價 >= 5 元
+    cond2_price_ok = close_0 >= 5.0 if close_0 else False
+
+    # 3. 量能區間過濾：成交量 >= 350 張 且 1.2倍 <= 量能倍數 <= 2.5倍 (🌟 修正處)
+    cond3_base_vol = vol_0 >= 350 * 1000 if vol_0 else False
+    vol_ratio = (vol_0 / vol_ma5) if (vol_0 and vol_ma5 > 0) else 0
+    cond3_vol_ok = cond3_base_vol and (1.2 <= vol_ratio <= 2.5)
+
+    # 4. 輕鬆線乖離過濾：0 < (收盤價 - 輕鬆線) / 輕鬆線 <= 4% (🌟 新增處)
+    easy_bias = (close_0 - easy_0) / easy_0 if (close_0 and easy_0 > 0) else 999
+    cond4_bias_ok = 0 < easy_bias <= 0.04
+
+    # 5. 連續確認：今日與昨日皆站上輕鬆線
+    cond5_today_above = close_0 > easy_0 if (close_0 and easy_0) else False
+    cond5_yesterday_above = close_1 > easy_1 if (close_1 and easy_1) else False
+    cond5_continuous = cond5_today_above and cond5_yesterday_above
+
+    # 6. 洗盤甩轎軌跡：2日前、3日前或 4日前曾跌破輕鬆線
+    was_below_2d = d2.get('close', 0) <= d2.get('easy_line', 0)
+    was_below_3d = d3.get('close', 0) <= d3.get('easy_line', 0)
+    was_below_4d = d4.get('close', 0) <= d4.get('easy_line', 0)
+    cond6_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+    # 綜合所有條件判定
+    is_hit = (
+        cond1_trend and 
+        cond2_price_ok and 
+        cond3_vol_ok and 
+        cond4_bias_ok and 
+        cond5_continuous and 
+        cond6_shakeout
+    )
+
+    info = {
+        '選股公式': 'F3_洗盤後_乖離與量能雙控版',
+        '操作建議': f'洗盤結束且緊貼輕鬆線 (乖離: {easy_bias*100:.1f}%, 量能: {vol_ratio:.1f}倍)'
+    } if is_hit else {}
+
+    return is_hit, info
+
+
 def st_qiantang_f3_after_shakeout_20261001_1(
     df_single: pd.DataFrame,
     profile: dict = None,
