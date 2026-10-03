@@ -1402,14 +1402,6 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_1(
 
     return is_hit, info
 
-
-之所以之前的註解沒有看到這 5 條基本邏輯，是因為原始版本（如 `20261001_1_3` 或 `1152`）開頭的 Docstring **僅記錄了相對於 0745 基準檔的「版本修改摘要（Changelog）」**（例如：1. 保留 0745 結構、2. 微調量能區間...），預設讀者已經知道繼承自 0745 的基礎型態，因此沒有把那 5 條底層條件逐一寫出。
-
-為了讓程式碼更清晰易讀，我們直接將**完整的 5 大基礎選股邏輯**，與**雙控優化**及**右側二次確認風控**完整補齊到策略開頭的註解中：
-
-```python
-import pandas as pd
-
 def st_qiantang_f3_after_shakeout_20261001_1_3_2(
     df_single: pd.DataFrame,
     profile: dict = None,
