@@ -1403,6 +1403,194 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_1(
     return is_hit, info
 
 
+之所以之前的註解沒有看到這 5 條基本邏輯，是因為原始版本（如 `20261001_1_3` 或 `1152`）開頭的 Docstring **僅記錄了相對於 0745 基準檔的「版本修改摘要（Changelog）」**（例如：1. 保留 0745 結構、2. 微調量能區間...），預設讀者已經知道繼承自 0745 的基礎型態，因此沒有把那 5 條底層條件逐一寫出。
+
+為了讓程式碼更清晰易讀，我們直接將**完整的 5 大基礎選股邏輯**，與**雙控優化**及**右側二次確認風控**完整補齊到策略開頭的註解中：
+
+```python
+import pandas as pd
+
+def st_qiantang_f3_after_shakeout_20261001_1_3_2(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = False,
+    delay_days: int = 3,         # 🌟 彈性右側觀察天數：1(隔日)、2(兩日) 或 3(三日)
+    threshold_pct: float = -0.02  # 🌟 觀察期最大允許跌幅：預設不超過 -2.0%
+) -> tuple[bool, dict]:
+    """
+    【F3_洗盤後 (1152 乖離與量能雙控 + 右側二次確認完整版)】
+
+    策略完整邏輯：
+    1. 趨勢過濾：今日收盤價 > MA60（季線多頭格局）
+    2. 價格過濾：收盤價 >= 5 元
+    3. 量能雙控：今日成交量 >= 350 張，且 1.2 倍 <= 今日成交量 / 5日均量 <= 2.5 倍 (帶量攻堅，防爆天量)
+    4. 輕鬆線乖離雙控：0 < (收盤價 - 輕鬆線) / 輕鬆線 <= 4% (貼近支撐買進，防高檔套牢)
+    5. 連續確認：今日與昨日皆站上輕鬆線 (close > easy_line)
+    6. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線 (close <= easy_line)，確認沉澱完成
+    7. 右側二次確認：觸發後第 N 日 (T+delay_days) 觀察短線報酬率 >= threshold_pct (預設 -2.0%)，沒跌超過 -2% 才正式買進
+    """
+    profile = profile or {}
+    
+    # 最小長度需求：60日季線基底 + 5日甩轎軌跡 + delay_days 觀察期
+    min_required_len = 60 + 5 + delay_days
+    if len(df_single) < min_required_len:
+        return False, {}
+
+    df_single = df_single.copy()
+    if 'MA60' not in df_single.columns:
+        df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+    # =========================================================================
+    # 🌟 內部工具函數：專門驗證相對位置 pos_idx 之 1152 基礎條件
+    # =========================================================================
+    def _check_1152_base_signal(pos_idx: int) -> tuple[bool, dict]:
+        row_t0 = df_single.iloc[pos_idx]
+        row_tm1 = df_single.iloc[pos_idx - 1]
+        row_tm2 = df_single.iloc[pos_idx - 2]
+        row_tm3 = df_single.iloc[pos_idx - 3]
+        row_tm4 = df_single.iloc[pos_idx - 4]
+
+        # 1. 價格與輕鬆線 (無預設值 0，缺欄位時直接拋出 KeyError 報錯)
+        close_t0 = row_t0['close']
+        easy_t0 = row_t0['easy_line']
+        ma60_t0 = row_t0['MA60']
+
+        close_tm1 = row_tm1['close']
+        easy_tm1 = row_tm1['easy_line']
+
+        # 成交量
+        vol_t0 = row_t0['Trading_Volume']
+        vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+
+        # 計算 pos_idx 前 5 日平均成交量 (無預設值，缺欄位時直接拋出 KeyError)
+        start_i = pos_idx - 5
+        end_i = pos_idx
+        recent_vols = df_single['Trading_Volume'].iloc[start_i:end_i]
+        vol_ma5 = recent_vols.mean()
+        vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+
+        # --- 邏輯 1：趨勢過濾 (收盤價 > MA60) ---
+        cond1_trend = close_t0 > ma60_t0
+
+        # --- 邏輯 2：價格過濾 (收盤價 >= 5 元) ---
+        cond2_price_ok = close_t0 >= 5.0
+
+        # --- 邏輯 3：量能雙控 (>= 350張 且 1.2倍 <= 量能倍數 <= 2.5倍) ---
+        vol_ratio_t0 = (vol_lots_t0 / vol_ma5_lots) if vol_ma5_lots > 0 else 0
+        cond3_vol_ok = (vol_lots_t0 >= 350) and (1.2 <= vol_ratio_t0 <= 2.5)
+
+        # --- 邏輯 4：輕鬆線乖離過濾 (0 < 乖離率 <= 4%) ---
+        easy_bias_t0 = (close_t0 - easy_t0) / easy_t0 if easy_t0 > 0 else 999
+        cond4_bias_ok = 0 < easy_bias_t0 <= 0.04
+
+        # --- 邏輯 5：連續確認 (今日與昨日皆站上輕鬆線) ---
+        cond5_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+        # --- 邏輯 6：洗盤甩轎軌跡 (2日前、3日前或 4日前曾跌破輕鬆線) ---
+        was_below_tm2 = row_tm2['close'] <= row_tm2['easy_line']
+        was_below_tm3 = row_tm3['close'] <= row_tm3['easy_line']
+        was_below_tm4 = row_tm4['close'] <= row_tm4['easy_line']
+        cond6_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
+
+        base_hit = (
+            cond1_trend and 
+            cond2_price_ok and 
+            cond3_vol_ok and 
+            cond4_bias_ok and 
+            cond5_continuous and 
+            cond6_shakeout
+        )
+
+        stock_id = str(row_t0['stock_id']) if 'stock_id' in row_t0 else (str(row_t0['股票代號']) if '股票代號' in row_t0 else '')
+        date_t0_str = str(row_t0['date']) if 'date' in row_t0 else (str(row_t0['日期']) if '日期' in row_t0 else '')
+
+        details = {
+            'close_t0': close_t0,
+            'easy_t0': easy_t0,
+            'ma60_t0': ma60_t0,
+            'vol_lots_t0': vol_lots_t0,
+            'vol_ma5_lots': vol_ma5_lots,
+            'vol_ratio_t0': vol_ratio_t0,
+            'easy_bias_t0': easy_bias_t0,
+            'cond1_trend': cond1_trend,
+            'cond2_price_ok': cond2_price_ok,
+            'cond3_vol_ok': cond3_vol_ok,
+            'cond4_bias_ok': cond4_bias_ok,
+            'cond5_continuous': cond5_continuous,
+            'cond6_shakeout': cond6_shakeout,
+            'was_below_tm2': was_below_tm2,
+            'was_below_tm3': was_below_tm3,
+            'was_below_tm4': was_below_tm4,
+            'date_t0_str': date_t0_str,
+            'stock_id': stock_id,
+        }
+        return base_hit, details
+
+    # =========================================================================
+    # 🌟 主流程：進行觸發日與觀察日驗證
+    # =========================================================================
+    t0_pos = -(1 + delay_days)       # 計算觸發日相對位置 (delay_days=3 時為 -4)
+    t_confirm_pos = -1               # 最新一筆為觀察確認日
+
+    base_hit, details = _check_1152_base_signal(t0_pos)
+
+    # 取得觀察確認日 (Day T+N) 數據 (若欄位不存在則直接拋出 KeyError)
+    row_confirm = df_single.iloc[t_confirm_pos]
+    close_confirm = row_confirm['close']
+    close_t0 = details['close_t0']
+
+    # --- 邏輯 7：右側二次確認過濾 (T+N 報酬率 >= threshold_pct) ---
+    confirm_return = (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999
+    cond7_right_side_ok = confirm_return >= threshold_pct
+
+    # 綜合所有條件判定
+    is_hit = base_hit and cond7_right_side_ok
+
+    # =========================================================================
+    # 🌟 控制台詳細 Verbose 輸出 (對齊出量上輕 Console 卡牌風格)
+    # =========================================================================
+    if verbose:
+        date_confirm_str = str(row_confirm['date']) if 'date' in row_confirm else (str(row_confirm['日期']) if '日期' in row_confirm else '')
+        stock_id = details['stock_id']
+        date_t0_str = details['date_t0_str']
+        ma60_t0 = details['ma60_t0']
+        vol_lots_t0 = details['vol_lots_t0']
+        vol_ratio_t0 = details['vol_ratio_t0']
+        vol_ma5_lots = details['vol_ma5_lots']
+        easy_bias_t0 = details['easy_bias_t0']
+        easy_t0 = details['easy_t0']
+
+        c1_mark = '✓' if details['cond1_trend'] else '✕'
+        c2_mark = '✓' if details['cond2_price_ok'] else '✕'
+        c3_mark = '✓' if details['cond3_vol_ok'] else '✕'
+        c4_mark = '✓' if details['cond4_bias_ok'] else '✕'
+        c5_mark = '✓' if details['cond5_continuous'] else '✕'
+        c6_mark = '✓' if details['cond6_shakeout'] else '✕'
+        c7_mark = '✓' if cond7_right_side_ok else '✕'
+
+        tm2 = details['was_below_tm2']
+        tm3 = details['was_below_tm3']
+        tm4 = details['was_below_tm4']
+
+        print('\n' + '=' * 60)
+        print(f"🔔 [F3_洗盤後_乖離與量能雙控版 (T+{delay_days})] 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日: {date_confirm_str}")
+        print('-' * 60)
+        print(f"  [{c1_mark}] 1. 季線趨勢過濾 : Close_T > MA60 (MA60: {ma60_t0:.2f}, 觸發價: ${close_t0:.2f})")
+        print(f"  [{c2_mark}] 2. 收盤價 >= 5元 : ${close_t0:.2f}")
+        print(f"  [{c3_mark}] 3. 量能雙控 (1.2~2.5倍) : {vol_lots_t0:,.0f} 張 (倍數: {vol_ratio_t0:.2f}倍, 5日均量: {vol_ma5_lots:,.0f}張)")
+        print(f"  [{c4_mark}] 4. 輕鬆線乖離率 <= 4% : 乖離率 {easy_bias_t0 * 100:.2f}% (輕鬆線: {easy_t0:.2f})")
+        print(f"  [{c5_mark}] 5. 連續兩天站上輕鬆線 : Day T 與 Day T-1 均站上")
+        print(f"  [{c6_mark}] 6. 洗盤甩轎軌跡 : T-2({tm2}) | T-3({tm3}) | T-4({tm4})")
+        print(f"  [{c7_mark}] 7. 🌟 右側二次確認 (T+{delay_days} 報酬 >= {threshold_pct*100:.1f}%) : 報酬 {confirm_return * 100:.2f}% (T+{delay_days}價: ${close_confirm:.2f})")
+        print('-' * 60)
+
+    info = {
+        '選股公式': 'F3_洗盤後_乖離與量能雙控版',
+        '操作建議': f'洗盤結束且緊貼輕鬆線 (乖離: {details["easy_bias_t0"]*100:.1f}%, 量能: {details["vol_ratio_t0"]:.1f}倍)。右側確認通過: T+{delay_days} 報酬 {confirm_return*100:.1f}% (>= {threshold_pct*100:.1f}%)'
+    } if is_hit else {}
+
+    return is_hit, info
+
 
 def st_qiantang_f3_after_shakeout_20261001_1_3(
     df_single: pd.DataFrame,
