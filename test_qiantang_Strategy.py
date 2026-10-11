@@ -77,6 +77,10 @@ EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 STOCK_MODE = "csv"
 STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 
+# ==============================================================================
+# 🎛 走勢圖繪製控制開關
+# ==============================================================================
+GENERATE_WAVE_CHARTS = True  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 def scan_qiantang_strategy_day(
     day_str: str,
@@ -414,6 +418,33 @@ def run_qiantang_strategy_range_scan(
         print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
 
 
+    # ==============================================================================
+# SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
+# ==============================================================================
+if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
+  from datetime import datetime
+  from utils.wave_chart_generator import generate_qiantang_wave_charts
+
+  # 1. 自動建立帶有執行時間戳記的輸出資料夾 (例如: data/wave_plots_20261011_1544)
+  run_time_str = datetime.now().strftime('%Y%m%d_%H%M')
+  wave_output_dir = os.path.join(DATA_DIR, f'wave_plots_{run_time_str}')
+
+  print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
+
+  # 2. 呼叫 utils 繪圖模組並執行自動繪圖與 NAS 同步備份
+  plot_files = generate_qiantang_wave_charts(
+      dashboard_df=dashboard_df,
+      global_df=global_df,
+      output_dir=wave_output_dir,
+      nas_sftp_path=NAS_SFTP_PATH if ENABLE_NAS_BACKUP else None,
+  )
+
+  print(
+      f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
+      f' {wave_output_dir}'
+  )
+
+    
     # =====================================================================
     # 7. 自動備份至 NAS
     # =====================================================================
