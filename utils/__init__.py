@@ -8,7 +8,7 @@ from utils.file_handler import (send_report, cleanup_local_file, archive_and_cle
     process_monitor_stock_data, smart_read_csv, parse_stock_ids, parse_monitor_stocks, load_stocks_from_csv)
 from utils.analytics import calculate_one_year_extremes, calculate_fixed_horizon_returns, calculate_forward_horizon_returns
 from utils.indicators import preprocess_all_technical_indicators
-form utils.wave_chart_generator import wave_chart_generator
+form utils.wave_chart_generator import generate_qiantang_wave_charts
 
 
 # 這行定義了當別人寫 from utils import * 時，允許拿走哪些東西
@@ -21,5 +21,5 @@ __all__ = [
     'calculate_one_year_extremes', 'calculate_fixed_horizon_returns', 'align_and_normalize_results', 'get_fm_trading_days', 'process_monitor_stock_data', 'yf_fetch_monitor_stocks',
     'calculate_forward_horizon_returns',
     'preprocess_all_technical_indicators', 'load_stocks_from_csv',
-    'wave_chart_generator'
+    'generate_qiantang_wave_charts'
 ]
