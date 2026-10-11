@@ -42,6 +42,7 @@ from utils import (
     calculate_one_year_extremes,        # 一年內最高與最低極值報酬
     load_stocks_from_csv,
     fetch_market_ema_dict,               # 🌟 大盤數據與 EMA 秒查字典工具
+    generate_qiantang_wave_charts,
 )
 
 # =====================================================================
