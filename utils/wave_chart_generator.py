@@ -315,6 +315,7 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
     if nas_sftp_path and generated_files:
         folder_name = os.path.basename(os.path.normpath(output_dir))
         target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
+        print(f"target_nas_dir : {target_nas_dir}")
 
         # 1. 直接發起 mkdir 建立 SFTP 遠端目錄 (完全不做事先判斷)
         ensure_remote_sftp_dir(target_nas_dir)
@@ -325,7 +326,7 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
             success_count = 0
             for img_path in generated_files:
                 fname = os.path.basename(img_path)
-                remote_img_path = f"{target_nas_dir}/qiantang_test_report/{fname}"
+                remote_img_path = f"{target_nas_dir}/{fname}"
                 archive_and_cleanup(img_path, remote_img_path)
                 success_count += 1
             print(f"☁️ [純 SFTP 上傳] 已成功同步上傳 {success_count} 張走勢圖至 NAS: {target_nas_dir}")
