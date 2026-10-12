@@ -430,7 +430,7 @@ def run_qiantang_strategy_range_scan(
       DATA_DIR = "output"
 
       # 2. 自動建立帶有執行時間戳記的輸出資料夾 (例如: data/wave_plots_20261011_1544)
-      run_time_str = datetime.now().strftime('%Y%m%d_%H%M')
+      run_time_str = datetime.now(tz_tw).strftime('%Y%m%d_%H%M')
       wave_output_dir = os.path.join(DATA_DIR, f'wave_plots_{run_time_str}')
 
       print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
