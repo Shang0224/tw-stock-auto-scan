@@ -1582,7 +1582,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_2(
         print('-' * 60)
         print(f"  [{c1_mark}] 1. 季線趨勢過濾 : Close_T > MA60 (MA60: {ma60_t0:.2f}, 觸發價: ${close_t0:.2f})")
         print(f"  [{c2_mark}] 2. 收盤價 >= 5元 : ${close_t0:.2f}")
-        print(f"  [{c3_mark}] 3. 量能雙控 (1.2~2.5倍) : {vol_lots_t0:,.0f} 張 (倍數: {vol_ratio_t0:.2f}倍, 5日均量: {vol_ma5_lots:,.0f}張)")
+        print(f"  [{c3_mark}] 3. 量能雙控 (1.2~2.5倍) 且>350張: {vol_lots_t0:,.0f} 張 (倍數: {vol_ratio_t0:.2f}倍, 5日均量: {vol_ma5_lots:,.0f}張)")
         print(f"  [{c4_mark}] 4. 輕鬆線乖離率 <= 4% : 乖離率 {easy_bias_t0 * 100:.2f}% (輕鬆線: {easy_t0:.2f})")
         print(f"  [{c5_mark}] 5. 連續兩天站上輕鬆線 : Day T 與 Day T-1 均站上")
         print(f"  [{c6_mark}] 6. 洗盤甩轎軌跡 : T-2({tm2}) | T-3({tm3}) | T-4({tm4})")
