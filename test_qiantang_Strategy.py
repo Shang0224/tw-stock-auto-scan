@@ -424,7 +424,7 @@ def run_qiantang_strategy_range_scan(
     if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
 
       # 1. 定義基礎資料目錄 (統一使用 "data")
-      DATA_DIR = "data"
+      DATA_DIR = "output"
 
       # 2. 自動建立帶有執行時間戳記的輸出資料夾 (例如: data/wave_plots_20261011_1544)
       run_time_str = datetime.now().strftime('%Y%m%d_%H%M')
