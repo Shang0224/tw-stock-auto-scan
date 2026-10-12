@@ -106,7 +106,9 @@ def group_signals_into_waves(stock_df):
             'stock_id': str(row['股票代號']),
             'stock_name': str(row['名稱']),
             'rule_type': rule_type,
-            'c_low_pct': c_low_pct,  # 🌟 紀錄 1Y 內最低績效極值數值
+            'c_low_pct': c_low_pct,
+            'c_low_date': c_low_date,
+            'c_high_date': c_high_date,
             'first_trigger_str': first_trigger_dt.strftime('%Y%m%d'),
             'start_date': start_date.strftime('%Y-%m-%d'),
             'end_date': end_date.strftime('%Y-%m-%d'),
@@ -295,7 +297,7 @@ def ensure_remote_sftp_dir(remote_dir_path):
 def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_path=None):
     """
     走勢圖生成與 NAS 備份總控入口。
-    檔名命名規則：當觸發後 1Y 內最低績效 <= -10% 時，檔名會包含「先回檔走勢圖」。
+    檔名命名規則：當觸發後「1年內最低績效 <= -10%」且「低點日期早於高點日期 (比1年新高先出來)」時，檔名會包含「先回檔走勢圖」。
     """
     os.makedirs(output_dir, exist_ok=True)
     generated_files = []
@@ -304,9 +306,20 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
         waves = group_signals_into_waves(stock_signals)
 
         for wave in waves:
-            # 🌟 判斷是否「觸發後 1 年內最低績效 <= -10%」（對應規則 3 回檔波段）
-            c_low = wave.get('c_low_pct')
-            tag = "先回檔" if (c_low is not None and c_low <= -10) else ""
+            # 🌟 判斷條件：
+            # 1. 1Y 內最低績效 <= -10%
+            # 2. 1Y 低點日期早於 1Y 高點日期 (低點比高點先出來)
+            c_low_pct = wave.get('c_low_pct')
+            c_low_date = wave.get('c_low_date')
+            c_high_date = wave.get('c_high_date')
+
+            is_pullback_first = (
+                c_low_pct is not None and c_low_pct <= -10 and
+                c_low_date is not None and c_high_date is not None and
+                str(c_low_date) < str(c_high_date)
+            )
+
+            tag = "先回檔" if is_pullback_first else ""
 
             filename = f"{wave['stock_id']}_{wave['stock_name']}_{wave['first_trigger_str']}_{tag}走勢圖.png"
             save_path = os.path.join(output_dir, filename)
@@ -335,3 +348,4 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
             print(f"⚠ 走勢圖 NAS SFTP 備份失敗: {e}")
 
     return generated_files
+
