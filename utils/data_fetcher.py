@@ -95,7 +95,7 @@ def get_stock_name_dict():
     df_info = dl.taiwan_stock_info()
     return dict(zip(df_info['stock_id'], df_info['stock_name'])), dl
 
-def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+def fm_fetch_all_stocks_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """抓取 FinMind 還原 K 線資料 (taiwan_stock_price_adj)"""
     all_data = []
     print(f"📡 串聯抓取 {len(stock_ids)} 檔股票之還原 K 線資料...")
@@ -371,7 +371,10 @@ def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: s
     🌟 高階包裝函數：統一取得 FinMind 還原 K 線 + 籌碼資料並自動合併
     """
     # 1. 抓取 K 線
-    df_daily = fm_fetch_all_stocks(dl, stock_ids, start_date, end_date)
+    #df_daily = fm_fetch_all_stocks(dl, stock_ids, start_date, end_date) 無法抓取還原資料表
+    df_daily = yf_fetch_all_stocks(stock_ids, start_date, end_date)
+    
+    
     if df_daily.empty:
         return pd.DataFrame()
 
