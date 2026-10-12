@@ -11,10 +11,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.patches as patches
 
-# 設定 Matplotlib 中文字型
-plt.rcParams['font.sans-serif'] = ['Noto Sans TC', 'Noto Sans CJK JP', 'Microsoft JhengHei', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
-
+# 設定支援中文的字型清單
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'Microsoft JhengHei', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False  # 正常顯示負號
 
 def parse_perf_field(val):
     """
