@@ -418,37 +418,35 @@ def run_qiantang_strategy_range_scan(
         print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
 
 
-# ==============================================================================
-# SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
-# ==============================================================================
-if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
-  from datetime import datetime
-  from utils.wave_chart_generator import generate_qiantang_wave_charts
+    # ==============================================================================
+    # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
+    # ==============================================================================
+    if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
 
-  # 1. 定義基礎資料目錄 (統一使用 "data")
-  DATA_DIR = "data"
+      # 1. 定義基礎資料目錄 (統一使用 "data")
+      DATA_DIR = "data"
 
-  # 2. 自動建立帶有執行時間戳記的輸出資料夾 (例如: data/wave_plots_20261011_1544)
-  run_time_str = datetime.now().strftime('%Y%m%d_%H%M')
-  wave_output_dir = os.path.join(DATA_DIR, f'wave_plots_{run_time_str}')
+      # 2. 自動建立帶有執行時間戳記的輸出資料夾 (例如: data/wave_plots_20261011_1544)
+      run_time_str = datetime.now().strftime('%Y%m%d_%H%M')
+      wave_output_dir = os.path.join(DATA_DIR, f'wave_plots_{run_time_str}')
 
-  print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
+      print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
 
-  # 3. 取得 NAS 備份路徑 (對齊原主程式的環境變數讀取方式)
-  nas_path = os.getenv('NAS_SFTP_PATH') if os.getenv('NAS_SFTP_PATH') else None
+      # 3. 取得 NAS 備份路徑 (對齊原主程式的環境變數讀取方式)
+      nas_path = os.getenv('NAS_SFTP_PATH') if os.getenv('NAS_SFTP_PATH') else None
 
-  # 4. 呼叫繪圖模組 (搭配最新 v3 版本的純 SFTP 模式，會自動傳至 NAS)
-  plot_files = generate_qiantang_wave_charts(
-      dashboard_df=dashboard_df,
-      global_df=global_df,
-      output_dir=wave_output_dir,
-      nas_sftp_path=nas_path,
-  )
+      # 4. 呼叫繪圖模組 (搭配最新 v3 版本的純 SFTP 模式，會自動傳至 NAS)
+      plot_files = generate_qiantang_wave_charts(
+          dashboard_df=dashboard_df,
+          global_df=global_df,
+          output_dir=wave_output_dir,
+          nas_sftp_path=nas_path,
+      )
 
-  print(
-      f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
-      f' {wave_output_dir}'
-  )
+      print(
+          f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
+          f' {wave_output_dir}'
+      )
 
     
     # =====================================================================
