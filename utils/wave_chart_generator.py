@@ -113,10 +113,10 @@ def group_signals_into_waves(stock_df):
 
     return waves
 
-
 def plot_single_wave_chart(wave_info, kline_df, save_path):
     """
-    繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點（含 MA5, MA10, MA20, MA60, MA240 與輕鬆線）。
+    繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點
+    （含 MA5, MA10, MA20, MA60, MA240 與輕鬆線，高解析度 300 DPI）。
     """
     stock_id = wave_info['stock_id']
     stock_name = wave_info['stock_name']
@@ -149,8 +149,9 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     col_low = 'min' if 'min' in df_sub.columns else ('low' if 'low' in df_sub.columns else '最低')
     col_vol = 'Trading_Volume' if 'Trading_Volume' in df_sub.columns else ('volume' if 'volume' in df_sub.columns else '成交量(張)')
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
-    fig.suptitle(f"{stock_id} {stock_name} - 波段走勢圖 ({wave_info['rule_type']})", fontsize=16, fontweight='bold', y=0.96)
+    # 🌟 放大畫布尺寸 (16, 10) 供多條均線與高解析度呈現
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 10), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+    fig.suptitle(f"{stock_id} {stock_name} - 波段走勢圖 ({wave_info['rule_type']})", fontsize=18, fontweight='bold', y=0.96)
 
     # 1. K 線圖繪製
     for _, row in df_sub.iterrows():
@@ -194,7 +195,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             ax1.annotate(f"觸發\n{t_date_obj.strftime('%m/%d')}\n${t_price:.1f}",
                          (t_date_obj, t_low_p * 0.97),
                          xytext=(0, -38), textcoords='offset points',
-                         ha='center', fontsize=8, color='#1f77b4', fontweight='bold',
+                         ha='center', fontsize=9, color='#1f77b4', fontweight='bold',
                          arrowprops=dict(arrowstyle='->', color='#1f77b4', lw=0.9))
 
     # 4. 標示【高點日期】 (紅色 Red)
@@ -211,7 +212,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             ax1.annotate(f"★ 高點\n{high_date_str}\n${h_price:.1f} (+{high_pct_val:.1f}%)",
                          (h_date_obj, h_price * 1.01),
                          xytext=(0, 26), textcoords='offset points',
-                         ha='center', fontsize=9, color='#d62728', fontweight='bold',
+                         ha='center', fontsize=10, color='#d62728', fontweight='bold',
                          bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffe6e6', edgecolor='#d62728', alpha=0.9),
                          arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2))
 
@@ -229,25 +230,26 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             ax1.annotate(f"▼ 低點\n{low_date_str}\n${l_price:.1f} ({low_pct_val:.1f}%)",
                          (l_date_obj, l_price * 0.99),
                          xytext=(0, -44), textcoords='offset points',
-                         ha='center', fontsize=9, color='#2ca02c', fontweight='bold',
+                         ha='center', fontsize=10, color='#2ca02c', fontweight='bold',
                          bbox=dict(boxstyle='round,pad=0.3', facecolor='#e6ffe6', edgecolor='#2ca02c', alpha=0.9),
                          arrowprops=dict(arrowstyle='->', color='#2ca02c', lw=1.2))
 
     # 6. 成交量圖表
     vol_colors = ['#d62728' if cl >= op else '#2ca02c' for op, cl in zip(df_sub[col_open], df_sub[col_close])]
     ax2.bar(df_sub['DateObj'], df_sub[col_vol], color=vol_colors, alpha=0.7)
-    ax2.set_ylabel('成交量', fontsize=10)
+    ax2.set_ylabel('成交量', fontsize=11)
     ax2.grid(True, linestyle=':', alpha=0.5)
 
-    ax1.set_ylabel('股價 (TWD)', fontsize=10)
+    ax1.set_ylabel('股價 (TWD)', fontsize=11)
     ax1.grid(True, linestyle=':', alpha=0.5)
-    ax1.legend(loc='upper left', frameon=True, fontsize=8) # 調整圖例字體大小適應多條均線
+    ax1.legend(loc='upper left', frameon=True, fontsize=9, ncol=2) # 兩欄圖例避免佔用過多空間
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 
     plt.xticks(rotation=30)
     plt.tight_layout()
 
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    # 🌟 提升至 300 DPI 高解析度輸出
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     return True
 
