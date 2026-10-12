@@ -422,8 +422,6 @@ def run_qiantang_strategy_range_scan(
     # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
     # ==============================================================================
     if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
-      from datetime import datetime
-      from utils.wave_chart_generator import generate_qiantang_wave_charts
 
       # 1. 自動建立帶有執行時間戳記的輸出資料夾 (例如: data/wave_plots_20261011_1544)
       run_time_str = datetime.now().strftime('%Y%m%d_%H%M')
