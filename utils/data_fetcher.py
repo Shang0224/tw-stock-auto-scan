@@ -368,6 +368,89 @@ def fetch_finmind_chips_old(
 
 def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
     """
+    🌟 高階包裝函數（頂級混合架構）：
+    1. 價格與還原 K 線：使用 yfinance (auto_adjust=True) 取得還原價，成交量命名為 yf_volume。
+    2. FinMind 補充數據：保留 Trading_Volume，並抓取 Trading_money、Trading_turnover 與 spread。
+    3. 籌碼資料：抓取三大法人與融資融券籌碼。
+    4. 整合合併與檢核：結合後自動交叉比對 yf_volume 與 Trading_Volume，若差異太大則輸出警告。
+    """
+    print(f"📡 正在取得共 {len(stock_ids)} 檔股票的混合版完整數據（yfinance 還原價 + FinMind 籌碼）...")
+    
+    # 1. 抓取還原 K 線價格資料 (由 yfinance 負責)
+    df_yf = yf_fetch_all_stocks(stock_ids, start_date, end_date)
+    
+    if df_yf.empty:
+        print("❌ 無法取得 yfinance 價格資料")
+        return pd.DataFrame()
+
+    # 將 yfinance 原本的成交量欄位改名為 yf_volume
+    for col_candidate in ['Trading_Volume', 'volume']:
+        if col_candidate in df_yf.columns:
+            df_yf.rename(columns={col_candidate: 'yf_volume'}, inplace=True)
+            break
+
+    # 2. 抓取 FinMind 的日成交資訊（保留原始大寫的 Trading_Volume、Trading_money 等）
+    fm_daily_records = []
+    print("📡 正在透過 FinMind 補充取得 Trading_Volume、Trading_money、Trading_turnover 與 spread 資料...")
+    for sid in stock_ids:
+        try:
+            df_m = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
+            if df_m is not None and not df_m.empty:
+                keep_cols = ['date', 'stock_id', 'Trading_Volume', 'Trading_money', 'spread', 'Trading_turnover']
+                actual_cols = [c for c in keep_cols if c in df_m.columns]
+                
+                df_sub = df_m[actual_cols].copy()
+                fm_daily_records.append(df_sub)
+            time.sleep(0.3)
+        except Exception as e:
+            print(f"⚠️ 補充抓取 {sid} FinMind 日成交欄位失敗: {e}")
+            continue
+
+    df_fm_daily = pd.concat(fm_daily_records, ignore_index=True) if fm_daily_records else pd.DataFrame()
+    
+    # 3. 抓取三大法人與融資融券籌碼
+    df_chips = fetch_finmind_chips(stock_ids, start_date, end_date)
+
+    # 4. 統一日期格式以便後續順利 merge
+    df_yf['date'] = pd.to_datetime(df_yf['date']).dt.strftime('%Y-%m-%d')
+    if not df_fm_daily.empty:
+        df_fm_daily['date'] = pd.to_datetime(df_fm_daily['date']).dt.strftime('%Y-%m-%d')
+    if not df_chips.empty:
+        df_chips['date'] = pd.to_datetime(df_chips['date']).dt.strftime('%Y-%m-%d')
+
+    # 5. 逐步合併：以 yfinance 價格為基底，併入 FinMind 的 Trading_Volume、金額、週轉率與籌碼
+    all_df = df_yf.copy()
+    
+    if not df_fm_daily.empty:
+        all_df = pd.merge(all_df, df_fm_daily, on=['stock_id', 'date'], how='left')
+        
+    if not df_chips.empty:
+        all_df = pd.merge(all_df, df_chips, on=['stock_id', 'date'], how='left')
+
+    # 6. 🌟 交叉比對成交量：檢查 yf_volume 與 FinMind Trading_Volume 差異是否過大
+    if 'yf_volume' in all_df.columns and 'Trading_Volume' in all_df.columns:
+        valid_subset = all_df.dropna(subset=['yf_volume', 'Trading_Volume'])
+        if not valid_subset.empty:
+            diff = (valid_subset['yf_volume'] - valid_subset['Trading_Volume']).abs()
+            # 避免分母為 0，將 0 替換為 1 計算相對誤差
+            safe_fm_vol = valid_subset['Trading_Volume'].replace(0, 1)
+            rel_diff = diff / safe_fm_vol
+            
+            # 定義門檻：相對誤差 > 5% 且絕對差 > 1,000 股（避免因微小四捨五入誤報）
+            mismatch_mask = (rel_diff > 0.05) & (diff > 1000)
+            mismatch_count = mismatch_mask.sum()
+            
+            if mismatch_count > 0:
+                print(f"⚠️ 【警告】發現 {mismatch_count} 筆資料的 yf_volume 與 FinMind Trading_Volume 差異太大！")
+                mismatch_samples = valid_subset[mismatch_mask][['date', 'stock_id', 'yf_volume', 'Trading_Volume']].head(3)
+                print(f"🔍 異常資料範例：\n{mismatch_samples.to_string(index=False)}")
+            else:
+                print("✅ 成交量交叉驗證通過：yfinance 與 FinMind 數據高度吻合。")
+
+    return all_df
+
+def fm_get_complete_stock_data_old(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+    """
     🌟 高階包裝函數：統一取得 FinMind 還原 K 線 + 籌碼資料並自動合併
     """
     # 1. 抓取 K 線
