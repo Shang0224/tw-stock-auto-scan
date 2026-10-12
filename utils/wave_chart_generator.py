@@ -1,5 +1,4 @@
 # utils/wave_chart_generator.py
-
 import os
 import re
 import shutil
@@ -245,10 +244,59 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     return True
 
 
+def ensure_remote_sftp_dir(remote_dir_path):
+    """
+    連結 NAS SFTP 並直接嘗試建立遠端資料夾層級 (完全不進行事先 stat 檢查/判斷)
+    """
+    try:
+        import paramiko
+    except ImportError:
+        print("⚠ 未安裝 paramiko，無法自動建立 SFTP 遠端目錄")
+        return
+
+    host = os.getenv('NAS_VPN_IP')
+    port = int(os.getenv('NAS_SFTP_PORT', 22))
+    username = os.getenv('NAS_ACCOUNT')
+    password = os.getenv('NAS_PASSWORD')
+
+    if not all([host, username, password]):
+        print("⚠ 缺少 NAS SFTP 連線設定 (NAS_VPN_IP / NAS_ACCOUNT / NAS_PASSWORD)")
+        return
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.connect(host, port=port, username=username, password=password, timeout=10)
+        sftp = ssh.open_sftp()
+
+        # 直接逐層發起 mkdir 指令，若目錄已存在則由 except 捕捉忽略
+        parts = remote_dir_path.strip('/').split('/')
+        current_path = ''
+        for part in parts:
+            if not part:
+                continue
+            current_path += f'/{part}'
+            try:
+                sftp.mkdir(current_path)
+                print(f"📁 [SFTP] 已直接建立遠端資料夾：{current_path}")
+            except Exception:
+                # 目錄已存在時伺服器會丟出例外，直接忽略即可
+                pass
+
+        sftp.close()
+    except Exception as e:
+        print(f"⚠ 自動建立 NAS 遠端目錄提示: {e}")
+    finally:
+        try:
+            ssh.close()
+        except Exception:
+            pass
+
+
 def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_path=None):
     """
     走勢圖生成與 NAS 備份總控入口。
-    純 SFTP 傳輸模式：統一透過 archive_and_cleanup 模組將走勢圖上傳至 NAS。
+    純 SFTP 傳輸模式：直接發起 mkdir 建立遠端資料夾，並透過 archive_and_cleanup 模組上傳走勢圖至 NAS。
     """
     os.makedirs(output_dir, exist_ok=True)
     generated_files = []
@@ -264,20 +312,27 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
             if success:
                 generated_files.append(save_path)
 
-    # 若傳入 NAS SFTP 路徑，統一使用純 SFTP 連線逐一推送圖片至 NAS
-    if nas_sftp_path:
+    # 若傳入 NAS SFTP 路徑，直接建立遠端目錄，再逐一推送圖片至 NAS
+    if nas_sftp_path and generated_files:
         folder_name = os.path.basename(os.path.normpath(output_dir))
         target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
 
+        # 1. 直接發起 mkdir 建立 SFTP 遠端目錄 (完全不做事先判斷)
+        ensure_remote_sftp_dir(target_nas_dir)
+
+        # 2. 透過 archive_and_cleanup 逐一上傳圖片
         try:
             from utils import archive_and_cleanup
+            success_count = 0
             for img_path in generated_files:
                 fname = os.path.basename(img_path)
                 remote_img_path = f"{target_nas_dir}/{fname}"
                 archive_and_cleanup(img_path, remote_img_path)
-            print(f"☁️ [純 SFTP 上傳] 已成功同步上傳 {len(generated_files)} 張走勢圖至 NAS: {target_nas_dir}")
+                success_count += 1
+            print(f"☁️ [純 SFTP 上傳] 已成功同步上傳 {success_count} 張走勢圖至 NAS: {target_nas_dir}")
         except Exception as e:
             print(f"⚠ 走勢圖 NAS SFTP 備份失敗: {e}")
 
     return generated_files
+
 
