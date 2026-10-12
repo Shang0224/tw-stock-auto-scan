@@ -327,7 +327,14 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
                 str(c_low_date) < str(c_high_date)
             )
 
-            tag = f"先回檔{c_low_pct}" if is_pullback_first else ""
+            #tag = f"先回檔{c_low_pct}" if is_pullback_first else ""
+            # 依據條件設定對應的 tag
+            if is_pullback_first:
+                tag = f"先回檔{c_low_pct}%"
+            elif is_pullback_after:
+                tag = f"後回檔{c_low_pct}%"
+            else:
+                tag = ""
 
             filename = f"{wave['stock_id']}_{wave['stock_name']}_{wave['first_trigger_str']}_{tag}走勢圖.png"
             save_path = os.path.join(output_dir, filename)
