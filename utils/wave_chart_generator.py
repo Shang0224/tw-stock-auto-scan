@@ -16,6 +16,7 @@ import matplotlib.patches as patches
 plt.rcParams['font.sans-serif'] = ['Noto Sans TC', 'Noto Sans CJK JP', 'Microsoft JhengHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
+
 def parse_perf_field(val):
     """
     解析 1Y內最高績效 / 1Y內最低績效 欄位字串。
@@ -126,7 +127,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     s_date = wave_info['start_date']
     e_date = wave_info['end_date']
 
-    # 確保欄位名稱相符 (支援 stock_id / 股票代號, date / 日期, open/close/max/min 或 開盤/收盤/最高/最低)
+    # 確保欄位名稱相符
     df_sub = kline_df.copy()
     if 'stock_id' not in df_sub.columns and '股票代號' in df_sub.columns:
         df_sub['stock_id'] = df_sub['股票代號'].astype(str)
@@ -247,6 +248,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_path=None):
     """
     走勢圖生成與 NAS 備份總控入口。
+    純 SFTP 傳輸模式：統一透過 archive_and_cleanup 模組將走勢圖上傳至 NAS。
     """
     os.makedirs(output_dir, exist_ok=True)
     generated_files = []
@@ -262,10 +264,20 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
             if success:
                 generated_files.append(save_path)
 
-    # 若啟用了 NAS 備份，同步複製整包走勢圖資料夾
-    if nas_sftp_path and os.path.exists(nas_sftp_path):
-        target_nas_dir = os.path.join(nas_sftp_path, os.path.basename(os.path.normpath(output_dir)))
-        shutil.copytree(output_dir, target_nas_dir, dirs_exist_ok=True)
-        print(f"☁️ 已同步備份 {len(generated_files)} 張走勢圖至 NAS: {target_nas_dir}")
+    # 若傳入 NAS SFTP 路徑，統一使用純 SFTP 連線逐一推送圖片至 NAS
+    if nas_sftp_path:
+        folder_name = os.path.basename(os.path.normpath(output_dir))
+        target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
+
+        try:
+            from utils import archive_and_cleanup
+            for img_path in generated_files:
+                fname = os.path.basename(img_path)
+                remote_img_path = f"{target_nas_dir}/{fname}"
+                archive_and_cleanup(img_path, remote_img_path)
+            print(f"☁️ [純 SFTP 上傳] 已成功同步上傳 {len(generated_files)} 張走勢圖至 NAS: {target_nas_dir}")
+        except Exception as e:
+            print(f"⚠ 走勢圖 NAS SFTP 備份失敗: {e}")
 
     return generated_files
+
