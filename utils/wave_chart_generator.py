@@ -326,7 +326,7 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
             success_count = 0
             for img_path in generated_files:
                 fname = os.path.basename(img_path)
-                remote_img_path = f"{target_nas_dir}/{fname}"
+                remote_img_path = f"{target_nas_dir}/qiantang_test_report/{fname}"
                 archive_and_cleanup(img_path, remote_img_path)
                 success_count += 1
             print(f"☁️ [純 SFTP 上傳] 已成功同步上傳 {success_count} 張走勢圖至 NAS: {target_nas_dir}")
