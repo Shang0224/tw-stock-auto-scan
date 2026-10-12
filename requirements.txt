@@ -10,3 +10,4 @@ paramiko
 fugle-marketdata
 openpyxl
 scipy
+matplotlib
