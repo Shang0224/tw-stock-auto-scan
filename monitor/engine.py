@@ -60,6 +60,16 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
         df['shares_per_trans'] = (df['Trading_Volume'] / 1000) / turnover_safe
         df['shares_per_trans'] = df['shares_per_trans'].fillna(0)
 
+    # =========================================================================
+    # 6. 移動平均線計算 (MA5, MA10, MA20, MA60, MA120, MA240)
+    # =========================================================================
+    df['MA5'] = df['close'].rolling(window=5).mean()
+    df['MA10'] = df['close'].rolling(window=10).mean()
+    df['MA20'] = df['close'].rolling(window=20).mean()
+    df['MA60'] = df['close'].rolling(window=60).mean()
+    df['MA120'] = df['close'].rolling(window=120).mean()
+    df['MA240'] = df['close'].rolling(window=240).mean()
+
     return df
 
 def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame:
