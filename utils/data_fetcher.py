@@ -557,7 +557,7 @@ def yf_fetch_all_stocks(stock_ids, start_date, end_date):
     final_df = pd.concat(all_data, ignore_index=True)
     return final_df
 
-def fm_fetch_all_stocks(dl, stock_ids, start_date, end_date):
+def fm_fetch_all_stocks_old(dl, stock_ids, start_date, end_date):
     all_data = []
     
     print(f"串聯抓取 {len(stock_ids)} 檔股票...")
