@@ -314,7 +314,7 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
     # 若傳入 NAS SFTP 路徑，直接建立遠端目錄，再逐一推送圖片至 NAS
     if nas_sftp_path and generated_files:
         folder_name = os.path.basename(os.path.normpath(output_dir))
-        target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
+        target_nas_dir = f"{nas_sftp_path.rstrip('/')}/qiantang_test_report/{folder_name}"
         print(f"target_nas_dir : {target_nas_dir}")
 
         # 1. 直接發起 mkdir 建立 SFTP 遠端目錄 (完全不做事先判斷)
