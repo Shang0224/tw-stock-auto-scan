@@ -105,8 +105,10 @@ def fm_fetch_all_stocks(dl, stock_ids: list, start_date: str, end_date: str) -> 
             df = dl.taiwan_stock_price_adj(stock_id=sid, start_date=start_date, end_date=end_date)
             if df is None or df.empty:
                 df = dl.taiwan_stock_daily(stock_id=sid, start_date=start_date, end_date=end_date)
-                print("fm  taiwan_stock_daily--非還原K線------------------------------------")
-
+                print(f"sid:{sid} fm  taiwan_stock_daily--非還原K線------------------------------------")
+            else:
+                print(f"sid:{sid} fm  taiwan_stock_daily--還原K線------------------------------------")
+                
             if df is not None and not df.empty:
                 all_data.append(df)
             time.sleep(1.0)
