@@ -436,7 +436,8 @@ def run_qiantang_strategy_range_scan(
       print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
 
       # 3. 取得 NAS 備份路徑 (對齊原主程式的環境變數讀取方式)
-      nas_path = os.getenv('NAS_SFTP_PATH') if os.getenv('NAS_SFTP_PATH') else None
+      #nas_path = os.getenv('NAS_SFTP_PATH') if os.getenv('NAS_SFTP_PATH') else None
+      nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/{source_folder_name}" if os.getenv('NAS_SFTP_PATH') else None  
 
       # 4. 呼叫繪圖模組 (搭配最新 v3 版本的純 SFTP 模式，會自動傳至 NAS)
       plot_files = generate_qiantang_wave_charts(
@@ -457,7 +458,7 @@ def run_qiantang_strategy_range_scan(
     # =====================================================================
     if os.getenv("NAS_SFTP_PATH"):
         if EXPORT_EXCEL and os.path.exists(file_path):
-            remote_excel_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_test_report/{file_name}"
+            remote_excel_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_folder_name}/{file_name}"
             try:
                 archive_and_cleanup(file_path, remote_excel_path)
                 print(f"📦 Excel 報告已備份至 NAS：{remote_excel_path}")
@@ -465,7 +466,7 @@ def run_qiantang_strategy_range_scan(
                 print(f"⚠ Excel NAS 備份失敗: {e}")
 
         if EXPORT_CSV and csv_file_path and os.path.exists(csv_file_path):
-            remote_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_test_report/{csv_file_name}"
+            remote_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/{source_folder_name}/{csv_file_name}"
             try:
                 archive_and_cleanup(csv_file_path, remote_csv_path)
                 print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
