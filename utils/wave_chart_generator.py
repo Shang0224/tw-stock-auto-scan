@@ -244,7 +244,12 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
     ax1.set_ylabel('股價 (TWD)', fontsize=10)
     ax1.grid(True, linestyle=':', alpha=0.5)
-    ax1.legend(loc='upper left', frameon=True)
+    #ax1.legend(loc='upper left', frameon=True)
+    # 🌟 修改後：橫向平鋪於圖表上方外側 (完全不遮擋 K 線資料)
+    ax1.legend(
+        loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=3, frameon=True
+    )
+
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 
     plt.xticks(rotation=30)
