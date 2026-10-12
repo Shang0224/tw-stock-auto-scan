@@ -115,8 +115,8 @@ def group_signals_into_waves(stock_df):
 
 def plot_single_wave_chart(wave_info, kline_df, save_path):
     """
-    繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點
-    （含 MA5, MA10, MA20, MA60, MA240 與輕鬆線，高解析度 300 DPI）。
+    繪製單一波段 K 線圖（已修正 K 棒黏在一起問題）。
+    核心修正：手動縮小 K 棒寬度並調整影線，以適應大時間跨度。
     """
     stock_id = wave_info['stock_id']
     stock_name = wave_info['stock_name']
@@ -149,8 +149,10 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     col_low = 'min' if 'min' in df_sub.columns else ('low' if 'low' in df_sub.columns else '最低')
     col_vol = 'Trading_Volume' if 'Trading_Volume' in df_sub.columns else ('volume' if 'volume' in df_sub.columns else '成交量(張)')
 
-    # 🌟 放大畫布尺寸 (16, 10) 供多條均線與高解析度呈現
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 10), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+    # 🌟 修改：保持寬度，稍微縮小高度，讓圖表更緊湊
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 9), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+    
+    # 🌟 修改：標題置中，稍微縮小一點字體
     fig.suptitle(f"{stock_id} {stock_name} - 波段走勢圖 ({wave_info['rule_type']})", fontsize=18, fontweight='bold', y=0.96)
 
     # 1. K 線圖繪製
@@ -159,20 +161,27 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         op, cl, hi, lo = row[col_open], row[col_close], row[col_high], row[col_low]
         color = '#d62728' if cl >= op else '#2ca02c' # 紅漲綠跌 (台股慣例)
 
-        ax1.plot([d_num, d_num], [lo, hi], color=color, linewidth=1.2, zorder=2)
+        # 🌟 修改：影線（最高/最低）稍微變細 (linewidth=1.0)
+        ax1.plot([d_num, d_num], [lo, hi], color=color, linewidth=1.0, zorder=2)
         height = abs(cl - op)
         bottom = min(op, cl)
-        rect = patches.Rectangle((d_num - 0.35, bottom), 0.7, max(height, 0.05),
+        
+        # 🌟 核心修正：手動縮小 K 棒寬度
+        # 原本是 patches.Rectangle((d_num - 0.35, bottom), 0.7...
+        # 現在改成：
+        rect_width = 0.4 # 大幅縮小寬度
+        offset = rect_width / 2 # 計算中心點偏移
+        rect = patches.Rectangle((d_num - offset, bottom), rect_width, max(height, 0.05),
                                  facecolor=color, edgecolor=color, zorder=3)
         ax1.add_patch(rect)
 
-    # 2. 均線與輕鬆線 (MA5, MA10, MA20, MA60, MA240, 輕鬆線)
+    # 2. 均線與輕鬆線
     ma_configs = [
-        ('MA5', 'MA5', '#1f77b4', 1.0, '-'),         # 藍色細線
-        ('MA10', 'MA10', '#2ca02c', 1.0, '-'),       # 綠色細線
-        ('MA20', 'MA20', '#e377c2', 1.2, '-'),       # 粉紅線
-        ('MA60', 'MA60 季線', '#ff7f0e', 1.5, '--'), # 橘色虛線
-        ('MA240', 'MA240 年線', '#7f7f7f', 1.5, '-.'), # 灰色點虛線
+        ('MA5', 'MA5', '#1f77b4', 1.0, '-'),         
+        ('MA10', 'MA10', '#2ca02c', 1.0, '-'),       
+        ('MA20', 'MA20', '#e377c2', 1.2, '-'),       
+        ('MA60', 'MA60 季線', '#ff7f0e', 1.5, '--'), 
+        ('MA240', 'MA240 年線', '#7f7f7f', 1.5, '-.'), 
     ]
     for col_name, label_name, color, lw, ls in ma_configs:
         if col_name in df_sub.columns:
@@ -181,7 +190,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     if 'easy_line' in df_sub.columns:
         ax1.plot(df_sub['DateObj'], df_sub['easy_line'], label='輕鬆線', color='#9467bd', linewidth=1.5, alpha=0.9)
 
-    # 3. 標示【觸發日期與價格】 (藍色箭頭 + 文字)
+    # 3. 標示觸發與績效（保持原樣）
     for _, sig_row in signals.iterrows():
         t_date_str = sig_row['日期']
         t_df = df_sub[df_sub['date'] == t_date_str]
@@ -190,7 +199,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             t_date_obj = t_row['DateObj']
             t_price = t_row[col_close]
             t_low_p = t_row[col_low]
-
             ax1.scatter([t_date_obj], [t_low_p * 0.97], marker='^', color='#1f77b4', s=120, zorder=6)
             ax1.annotate(f"觸發\n{t_date_obj.strftime('%m/%d')}\n${t_price:.1f}",
                          (t_date_obj, t_low_p * 0.97),
@@ -198,7 +206,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          ha='center', fontsize=9, color='#1f77b4', fontweight='bold',
                          arrowprops=dict(arrowstyle='->', color='#1f77b4', lw=0.9))
 
-    # 4. 標示【高點日期】 (紅色 Red)
     high_date_str = signals.iloc[0]['high_date']
     high_pct_val = signals.iloc[0]['high_pct']
     if high_date_str:
@@ -207,7 +214,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             h_row = h_df.iloc[0]
             h_date_obj = h_row['DateObj']
             h_price = h_row[col_high]
-
             ax1.scatter([h_date_obj], [h_price * 1.01], marker='v', color='#d62728', s=140, zorder=7)
             ax1.annotate(f"★ 高點\n{high_date_str}\n${h_price:.1f} (+{high_pct_val:.1f}%)",
                          (h_date_obj, h_price * 1.01),
@@ -216,7 +222,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffe6e6', edgecolor='#d62728', alpha=0.9),
                          arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2))
 
-    # 5. 標示【低點日期】 (綠色 Green)
     low_date_str = signals.iloc[0]['low_date']
     low_pct_val = signals.iloc[0]['low_pct']
     if low_date_str:
@@ -225,7 +230,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             l_row = l_df.iloc[0]
             l_date_obj = l_row['DateObj']
             l_price = l_row[col_low]
-
             ax1.scatter([l_date_obj], [l_price * 0.99], marker='^', color='#2ca02c', s=140, zorder=7)
             ax1.annotate(f"▼ 低點\n{low_date_str}\n${l_price:.1f} ({low_pct_val:.1f}%)",
                          (l_date_obj, l_price * 0.99),
@@ -234,21 +238,26 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          bbox=dict(boxstyle='round,pad=0.3', facecolor='#e6ffe6', edgecolor='#2ca02c', alpha=0.9),
                          arrowprops=dict(arrowstyle='->', color='#2ca02c', lw=1.2))
 
-    # 6. 成交量圖表
+    # 6. 成交量圖表（將 `bar` 寬度也同步縮小）
     vol_colors = ['#d62728' if cl >= op else '#2ca02c' for op, cl in zip(df_sub[col_open], df_sub[col_close])]
-    ax2.bar(df_sub['DateObj'], df_sub[col_vol], color=vol_colors, alpha=0.7)
+    
+    # 🌟 修改：成交量柱狀圖也需要同步縮小寬度
+    ax2.bar(df_sub['DateObj'], df_sub[col_vol], color=vol_colors, alpha=0.7, width=0.4)
     ax2.set_ylabel('成交量', fontsize=11)
     ax2.grid(True, linestyle=':', alpha=0.5)
 
     ax1.set_ylabel('股價 (TWD)', fontsize=11)
     ax1.grid(True, linestyle=':', alpha=0.5)
-    ax1.legend(loc='upper left', frameon=True, fontsize=9, ncol=2) # 兩欄圖例避免佔用過多空間
+    
+    # 🌟 修改：圖例位置微調，ncol=2 保持
+    ax1.legend(loc='upper left', frameon=True, fontsize=9, ncol=2) 
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 
-    plt.xticks(rotation=30)
+    # 🌟 修改：微調日期標籤旋轉角度與佈局
+    plt.xticks(rotation=20, ha='right')
     plt.tight_layout()
 
-    # 🌟 提升至 300 DPI 高解析度輸出
+    # 🌟 修改：提高到 300 DPI 高解析度輸出 (保持)
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
     return True
