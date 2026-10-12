@@ -75,7 +75,7 @@ EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 
 # 模式 A：CSV 檔案載入模式
 STOCK_MODE = "csv"
-STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
+STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['2376', '1513', '6515', '2646', '6446']
