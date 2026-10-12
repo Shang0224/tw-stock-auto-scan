@@ -331,7 +331,7 @@ def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_
             # 依據條件設定對應的 tag
             if is_pullback_first:
                 tag = f"先回檔{c_low_pct}%"
-            elif is_pullback_after:
+            elif c_low_pct < -10.0:
                 tag = f"後回檔{c_low_pct}%"
             else:
                 tag = ""
