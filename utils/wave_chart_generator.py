@@ -116,7 +116,7 @@ def group_signals_into_waves(stock_df):
 
 def plot_single_wave_chart(wave_info, kline_df, save_path):
     """
-    繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點。
+    繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點（含 MA5, MA10, MA20, MA60, MA240 與輕鬆線）。
     """
     stock_id = wave_info['stock_id']
     stock_name = wave_info['stock_name']
@@ -165,11 +165,20 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                                  facecolor=color, edgecolor=color, zorder=3)
         ax1.add_patch(rect)
 
-    # 2. 均線與輕鬆線
-    if 'MA60' in df_sub.columns:
-        ax1.plot(df_sub['DateObj'], df_sub['MA60'], label='MA60 季線', color='#ff7f0e', linewidth=1.5, linestyle='--')
+    # 2. 均線與輕鬆線 (MA5, MA10, MA20, MA60, MA240, 輕鬆線)
+    ma_configs = [
+        ('MA5', 'MA5', '#1f77b4', 1.0, '-'),         # 藍色細線
+        ('MA10', 'MA10', '#2ca02c', 1.0, '-'),       # 綠色細線
+        ('MA20', 'MA20', '#e377c2', 1.2, '-'),       # 粉紅線
+        ('MA60', 'MA60 季線', '#ff7f0e', 1.5, '--'), # 橘色虛線
+        ('MA240', 'MA240 年線', '#7f7f7f', 1.5, '-.'), # 灰色點虛線
+    ]
+    for col_name, label_name, color, lw, ls in ma_configs:
+        if col_name in df_sub.columns:
+            ax1.plot(df_sub['DateObj'], df_sub[col_name], label=label_name, color=color, linewidth=lw, linestyle=ls, alpha=0.85)
+
     if 'easy_line' in df_sub.columns:
-        ax1.plot(df_sub['DateObj'], df_sub['easy_line'], label='輕鬆線 (easy_line)', color='#9467bd', linewidth=1.5)
+        ax1.plot(df_sub['DateObj'], df_sub['easy_line'], label='輕鬆線', color='#9467bd', linewidth=1.5, alpha=0.9)
 
     # 3. 標示【觸發日期與價格】 (藍色箭頭 + 文字)
     for _, sig_row in signals.iterrows():
@@ -232,7 +241,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
     ax1.set_ylabel('股價 (TWD)', fontsize=10)
     ax1.grid(True, linestyle=':', alpha=0.5)
-    ax1.legend(loc='upper left', frameon=True)
+    ax1.legend(loc='upper left', frameon=True, fontsize=8) # 調整圖例字體大小適應多條均線
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 
     plt.xticks(rotation=30)
