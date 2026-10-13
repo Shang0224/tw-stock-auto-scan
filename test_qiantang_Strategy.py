@@ -43,7 +43,8 @@ from utils import (
     load_stocks_from_csv,
     fetch_market_ema_dict,               # 🌟 大盤數據與 EMA 秒查字典工具
     generate_qiantang_wave_charts,
-    parse_stock_dict,
+    #parse_stock_dict,
+    parse_and_validate_stocks,
 )
 
 # =====================================================================
