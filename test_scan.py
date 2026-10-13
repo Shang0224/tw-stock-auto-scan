@@ -24,7 +24,8 @@ from utils import (
     save_multi_day_report,
     calculate_one_year_extremes,
     align_and_normalize_results,
-    get_fm_trading_days
+    get_fm_trading_days,
+    parse_and_validate_stocks,
 )
 
 # =====================================================================
@@ -43,12 +44,12 @@ STOCK_INPUT = 'data/MID100.csv,data/TW50.csv'
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
 """
-STOCK_INPUT = [
-    {"stock_id": "3661", "yf_suffix": "TW", "name": "世芯-KY", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
-    {"stock_id": "3035", "yf_suffix": "TW", "name": "智原", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
-    {"stock_id": "3529", "yf_suffix": "TWO", "name": "力旺", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
-    {"stock_id": "6643", "yf_suffix": "TWO", "name": "M31", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
-]
+STOCK_INPUT = {
+    "3661": {"yf_suffix": "TW", "name": "世芯-KY", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    "3035": {"yf_suffix": "TW", "name": "智原", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    "3529": {"yf_suffix": "TWO", "name": "力旺", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+    "6643": {"yf_suffix": "TWO", "name": "M31", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+}
 """
 
 TEST_STRATEGIES = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout]
@@ -73,17 +74,18 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         end_date = start_date
         is_range_test = False
 
-    # 1. 呼叫函數，傳入模式與數據，一次接收三種成果
-    stock_records, stock_ids, raw_stock_ids = parse_and_validate_stocks(
+    # 1. 呼叫函數，傳入模式與數據
+    stock_records = parse_and_validate_stocks(
         stock_source=stock_source, 
         stock_data=stock_data
     )
 
-    # 2. 標籤標示 (維持原本 Log 需求)
-    source_label = os.path.basename(stock_data) if stock_source == 'csv' else f"CustomList({len(stock_records)}檔)"
+    # 2. 提煉純數字代號串列與 Log 標籤
+    stock_ids = list(stock_dict.keys())
+    
+    source_label = os.path.basename(stock_data) if stock_source == 'csv' else f"CustomList({len(stock_ids)}檔)"
 
     print(f"📋 解析完成標的清單 ({len(stock_ids)}檔): {stock_ids}")
-    print(f"🔹 無後綴純代號清單: {raw_stock_ids}")
 
     mode_label = f"區間測試 ({start_date_str} ~ {end_date_str})" if is_range_test else f"單日測試 ({start_date_str})"
     print(f"🧪 [測試啟動] 模式：{mode_label} | 來源：{source.upper()} | 標的：{source_label}")
@@ -362,67 +364,6 @@ def run_strategy_test_old(source, start_date_str, end_date_str, stock_source, st
         current_day += timedelta(days=1)
         
     print(f"\n🎉 所有的測試任務已全部執行完畢！")
-
-def parse_and_validate_stocks(stock_source: str, stock_data):
-    """
-    解析並嚴格校驗股票資料
-    
-    :param stock_source: 模式判斷 ('csv' 或 'noncsv')
-    :param stock_data: 當 'csv' 時為檔案路徑 (str)；當 'noncsv' 時為字典清單 (list[dict])
-    :return: 傳出三種結果 (tuple):
-             1. stock_records: list[dict] -> 原始字典清單
-             2. stock_ids_with_suffix: list[str] -> 帶有 yf_suffix 的代號清單 (如 '6138.TWO')
-             3. stock_ids_without_suffix: list[str] -> 沒有加上 yf_suffix 的純代號清單 (如 '6138')
-    """
-    # ----------------------------------------------------
-    # 1. 取得統一格式的股票紀錄清單 (型別一律為 list[dict])
-    # ----------------------------------------------------
-    if stock_source == 'csv':
-        # parse_stock_list 讀取 CSV 後回傳 list[dict]
-        stock_records = parse_stock_list(stock_data)
-    else:
-        # noncsv 模式：固定為 list[dict]，若無傳入則給予預設備用值
-        stock_records = stock_data if stock_data else [
-            {"stock_id": "2377", "yf_suffix": "TW", "name": "微星"},
-            {"stock_id": "2357", "yf_suffix": "TW", "name": "華碩"}
-        ]
-
-    stock_ids_with_suffix = []
-    stock_ids_without_suffix = []
-
-    # ----------------------------------------------------
-    # 2. 嚴格校驗並分別提煉純代號與含後綴代號
-    # ----------------------------------------------------
-    for idx, item in enumerate(stock_records, start=1):
-        sid = str(item.get('stock_id', '')).strip()
-        suffix = str(item.get('yf_suffix', '')).strip()
-        stock_name = item.get('name', '未知股票')
-
-        # 跳過空白項目
-        if not sid:
-            continue
-
-        # 🚨 報錯機制：若缺少 yf_suffix 且非大盤指數 (如 ^TWII)，立即拋出 ValueError
-        if not suffix and not sid.startswith("^"):
-            raise ValueError(
-                f"❌ [資料格式錯誤] 第 {idx} 筆股票 '{sid} {stock_name}' 缺少 yf_suffix！(必須明確填寫 'TW' 或 'TWO')"
-            )
-
-        # 組合帶有後綴的 Yahoo Finance 格式代號 (例如 '[已移除可疑連結]' 或 '6138.TWO')
-        full_id = f"{sid}.{suffix}" if suffix else sid
-        
-        stock_ids_with_suffix.append(full_id)
-        stock_ids_without_suffix.append(sid)
-
-    # 驗證：若完全沒解析到任何有效股票則主動報錯
-    if not stock_ids_with_suffix:
-        raise ValueError("❌ [標的錯誤] 未解析到任何有效的股票代號，程式停止執行！")
-
-    # ----------------------------------------------------
-    # 3. 傳出三種對應成果
-    # ----------------------------------------------------
-    return stock_records, stock_ids_with_suffix, stock_ids_without_suffix
-
 
 def run_single_day_core(test_time, stock_ids, stock_name_dict, all_df, strategies, source, status_col):
     """單日掃描核心：計算策略、生本地 CSV、發 LINE，並透過正式架構封存與上傳"""
