@@ -1,3 +1,4 @@
+#stock_scan_schedule.yml
 name: 00掃描台灣50與中型100
 
 on:
