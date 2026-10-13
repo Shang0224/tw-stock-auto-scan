@@ -225,7 +225,7 @@ def run_qiantang_strategy_range_scan(
     print(f"📡 正在向 FinMind 批量抓取歷史與未來 K 線資料 ({fetch_start_str} ~ {fetch_end_str})...")
     stock_name_dict, dl = get_stock_name_dict()
 
-    global_df = fm_get_complete_stock_data(dl, stock_ids, fetch_start_str, fetch_end_str)
+    global_df = fm_get_complete_stock_data(dl, stock_records, fetch_start_str, fetch_end_str)
     if global_df.empty:
         print("❌ [錯誤] FinMind 數據抓取為空，結束執行。")
         return
