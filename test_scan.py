@@ -104,7 +104,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
         market_df = yf_fetch_all_stocks(['^TWII'], fetch_start_str, fetch_end_str)
     elif source.lower() == 'fm':
-        global_df = fm_fetch_all_stocks(dl, stock_ids, fetch_start_str, fetch_end_str)
+        global_df = fm_fetch_all_stocks(dl, raw_stock_ids, fetch_start_str, fetch_end_str)
         # FinMind 對應的大盤代碼，可依你的 FinMind 資料源調整（例如 'TAIEX' 或指數代碼）
         market_df = fm_fetch_all_stocks(dl, ['TAIEX'], fetch_start_str, fetch_end_str)
     else:
