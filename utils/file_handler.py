@@ -5,6 +5,45 @@ from FinMind.data import DataLoader            # 🟢 修正 1：補上漏掉的
 from utils.notifier import send_line_message 
 from utils.storage import upload_to_nas  
 
+def parse_and_validate_stocks(stock_source: str, stock_data) -> dict[str, dict]:
+    """
+    執行 Fail-Fast 校驗並確保所有個股具備完整的預設欄位
+    
+    :param stock_source: 'csv' 或 'noncsv'
+    :param stock_data: 
+        - csv 模式: CSV 檔案路徑字串
+        - noncsv 模式: 已建置好的 dict[str, dict] (或備用 list[dict])
+    :return: stock_dict (dict[str, dict])
+    """
+    # 1. 取得基本字典結構
+    if stock_source == 'csv':
+        stock_dict = parse_stock_dict(stock_data)
+    elif isinstance(stock_data, dict):
+        # 🌟 noncsv 模式：若傳入的就是 dict[str, dict]，直接使用
+        stock_dict = stock_data
+    elif isinstance(stock_data, list):
+        # 防呆相容：若傳入的是舊版的 list[dict]，自動轉為 dict[str, dict]
+        stock_dict = {str(item['stock_id']).strip(): item for item in stock_data if item.get('stock_id')}
+    else:
+        stock_dict = {}
+
+    # 2. 逐筆執行 Fail-Fast 格式驗證
+    for idx, (sid, info) in enumerate(stock_dict.items(), start=1):
+        suffix = str(info.get('yf_suffix', '')).strip()
+        name = info.get('name', '未知股票')
+
+        # 若不是大盤指數且缺少 yf_suffix，立即報錯中斷
+        if not suffix and not sid.startswith("^"):
+            raise ValueError(
+                f"❌ [資料格式錯誤] 第 {idx} 筆股票 '{sid} {name}' 缺少 yf_suffix！(必須明確填寫 'TW' 或 'TWO')"
+            )
+
+    if not stock_dict:
+        raise ValueError("❌ [標的錯誤] 未解析到任何有效的股票代號！")
+
+    return stock_dict
+
+
 def parse_stock_dict(files_env: str) -> dict[str, dict]:
     """解析 CSV 檔案字串，回傳以 stock_id 為 Key 的去重字典 (dict[str, dict])"""
     files = [f.strip() for f in files_env.split(",") if f.strip()]
