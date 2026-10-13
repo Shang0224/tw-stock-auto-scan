@@ -32,12 +32,12 @@ from utils import (
 # =====================================================================
 CHOSEN_SOURCE = 'yf' 
 #CHOSEN_SOURCE = 'fm' 
-TEST_START_DATE = '2025-09-01'
+TEST_START_DATE = '2015-09-01'
 TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
-STOCK_INPUT = 'data/TestData/qiantang_ICDesign_test.csv'
-#STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
+#STOCK_INPUT = 'data/TestData/qiantang_ICDesign_test.csv'
+STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
