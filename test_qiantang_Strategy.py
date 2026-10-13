@@ -36,7 +36,7 @@ from utils import (
     fm_get_complete_stock_data,
     get_stock_name_dict,
     parse_monitor_stocks,
-    parse_stock_ids,
+    #parse_stock_ids,
     get_fm_trading_days,
     calculate_forward_horizon_returns,  # 前瞻固定天數報酬
     calculate_one_year_extremes,        # 一年內最高與最低極值報酬
