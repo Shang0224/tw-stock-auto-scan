@@ -319,7 +319,7 @@ def send_report(results, source_name, tw_time, status_col_name='觸發策略'):
         return None  # 🟢 優化 3：明確回傳 None，讓後續 archive 知道今天不用上傳
 
 
-def parse_stock_ids(files_env):
+def parse_stock_ids_old(files_env):
     """解析 CSV 檔案取得去重後的股票代號"""
     print(f"files_env : {files_env}")
     
@@ -334,3 +334,53 @@ def parse_stock_ids(files_env):
             print(f"❌ 讀取 {file} 失敗: {e}")
     return list(set(stock_ids))
 
+def parse_stock_list(files_env: str) -> list[dict]:
+  """解析 CSV 檔案字串（支援多個以逗號分隔的檔名），回傳去重後的股票字典串列 (list[dict])"""
+  print(f"files_env : {files_env}")
+
+  # 1. 拆分傳入的檔案路徑字串，並過濾掉空白項目
+  files = [f.strip() for f in files_env.split(",") if f.strip()]
+  stocks = []
+  seen_stock_ids = set()  # 用於跨檔案去重
+
+  for file in files:
+    try:
+      # 2. 讀取 CSV 檔案 (直接指定 dtype={"stock_id": str} 避免前導 0 遺失或變成浮點數)
+      df = pd.read_csv(file, encoding="utf-8", dtype={"stock_id": str})
+
+      # 3. 確保 stock_id 欄位存在
+      if "stock_id" not in df.columns:
+        print(f"⚠️ 警告: {file} 缺少 'stock_id' 欄位，已跳過")
+        continue
+
+      # 4. 清除 stock_id 空白，並將其他 NaN 轉為空字串
+      df["stock_id"] = df["stock_id"].str.strip()
+      df = df.fillna("")
+
+      # 5. 將 DataFrame 轉換為字典串列
+      records = df.to_dict(orient="records")
+
+      # 6. 逐筆進行去重與收集
+      added_count = 0
+      for record in records:
+        stock_id = record.get("stock_id", "")
+
+        # 檢查 stock_id 是否有效（排除空字串、NaN 轉成的字串等）
+        if (
+            stock_id
+            and stock_id.lower() not in ("nan", "none", "nat")
+            and stock_id not in seen_stock_ids
+        ):
+          seen_stock_ids.add(stock_id)
+          stocks.append(record)
+          added_count += 1
+
+      print(
+          f"✅ 讀取成功: {file} (此檔 {len(records)} 筆，新加入 {added_count}"
+          " 筆)"
+      )
+
+    except Exception as e:
+      print(f"❌ 讀取 {file} 失敗: {e}")
+
+  return stocks
