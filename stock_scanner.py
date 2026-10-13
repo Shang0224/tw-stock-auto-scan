@@ -19,14 +19,15 @@ from strategy.bottom_rebound import st_bottom_v_turn, st_bottom_consolidation, s
 from utils import (
     yf_fetch_all_stocks,
     fm_fetch_all_stocks,
-    parse_stock_ids,
+    #parse_stock_ids,
     get_stock_name_dict,
     send_report,          # 變精簡了，只負責生報表、發 LINE
     archive_and_cleanup,   # 新增這個：負責排程專用的備份與清理
     save_scan_report,
     send_line_summary,
     send_line_message,
-    send_email_report    
+    send_email_report,
+    parse_and_validate_stocks
 )
 
 def yfinance_scan_ma240():
