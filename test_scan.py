@@ -104,7 +104,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     print(f"📡 正在抓取全段歷史數據緩衝與大盤指數 ({fetch_start_str} ~ {fetch_end_str})...")
     if source.lower() == 'yf':
         # 1. 直接組合出帶後綴的 yfinance 代號清單 (例如 ['3880.TW', '3529.TWO'])
-        yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_dict.items()]
+        yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_records.items()]
 
         # 2. 傳入 yf_tickers 抓取個股歷史 K 線
         global_df = yf_fetch_all_stocks(yf_tickers, fetch_start_str, fetch_end_str)
