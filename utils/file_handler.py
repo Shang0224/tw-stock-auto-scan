@@ -321,7 +321,7 @@ def send_report(results, source_name, tw_time, status_col_name='觸發策略'):
 
 def parse_stock_ids(files_env):
     """解析 CSV 檔案取得去重後的股票代號"""
-
+    print(f"files_env : {files_env}")
     encodings = ['utf-8', 'big5', 'utf-8-sig', 'cp950']
     files = [f.strip() for f in files_env.split(',')]
     stock_ids = []
