@@ -43,6 +43,7 @@ from utils import (
     load_stocks_from_csv,
     fetch_market_ema_dict,               # 🌟 大盤數據與 EMA 秒查字典工具
     generate_qiantang_wave_charts,
+    parse_stock_dict,
 )
 
 # =====================================================================
@@ -61,7 +62,7 @@ TEST_QIANTANG_STRATEGY = [
 ]
 
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2015-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
@@ -186,26 +187,36 @@ def run_qiantang_strategy_range_scan(
         raise ValueError("❌ [錯誤] 未指定 TEST_QIANTANG_STRATEGY 策略清單！")
 
     # 1. 解析監控股票清單
-    monitor_stocks = load_stocks_from_csv(stock_input)
-    if not monitor_stocks:
+    #monitor_stocks = load_stocks_from_csv(stock_input)
+
+        # 1. 呼叫函數，傳入模式與數據
+    stock_records = parse_and_validate_stocks(
+        stock_source=stock_source, 
+        stock_data=stock_data
+    )
+   
+    if not stock_records:
         print(f"❌ [錯誤] 無照解析股票清單 ({stock_input})。")
         return
 
+    # 2. 提煉純數字代號串列與 Log 標籤
+    stock_ids = list(stock_records.keys())
+    
     # 清理股票代號清單
-    unique_stock_ids = list(
-        set(
-            [
-                str(s["stock_id"] if isinstance(s, dict) else s)
-                .replace(".TWO", "")
-                .replace(".TW", "")
-                .replace("^", "")
-                for s in monitor_stocks
-            ]
-        )
-    )
+    #unique_stock_ids = list(
+    #    set(
+    #        [
+    #            str(s["stock_id"] if isinstance(s, dict) else s)
+    #            .replace(".TWO", "")
+    #            .replace(".TW", "")
+    #            .replace("^", "")
+    #            for s in monitor_stocks
+    #        ]
+    #    )
+    #)
 
     print(f"🧪 [測試啟動] 錢塘潮多方策略歷史掃描 ({start_date_str} ~ {end_date_str})")
-    print(f"📡 監控數量：{len(unique_stock_ids)} 檔個股 ({unique_stock_ids})\n")
+    print(f"📡 監控數量：{len(stock_ids)} 檔個股 ({stock_ids})\n")
 
     # 2. 準備歷史資料抓取區間
     fetch_start_str = (start_date - timedelta(days=DAYS_BEFORE)).strftime("%Y-%m-%d")
@@ -214,7 +225,7 @@ def run_qiantang_strategy_range_scan(
     print(f"📡 正在向 FinMind 批量抓取歷史與未來 K 線資料 ({fetch_start_str} ~ {fetch_end_str})...")
     stock_name_dict, dl = get_stock_name_dict()
 
-    global_df = fm_get_complete_stock_data(dl, unique_stock_ids, fetch_start_str, fetch_end_str)
+    global_df = fm_get_complete_stock_data(dl, stock_ids, fetch_start_str, fetch_end_str)
     if global_df.empty:
         print("❌ [錯誤] FinMind 數據抓取為空，結束執行。")
         return
