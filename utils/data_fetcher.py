@@ -590,7 +590,7 @@ def yf_fetch_all_stocks(ticker_list: list[str], start_date: str, end_date: str) 
 
         try:
             # 直接呼叫匯入的 download 函式
-            df = download(
+            df = yf.download(
                 ticker,
                 start=start_date,
                 end=end_date_plus_one,
