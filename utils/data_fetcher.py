@@ -374,7 +374,7 @@ def fm_get_complete_stock_data(dl, stock_records: list, start_date: str, end_dat
     3. 籌碼資料：抓取三大法人與融資融券籌碼。
     4. 整合合併與檢核：結合後自動交叉比對 yf_volume 與 Trading_Volume，若差異太大則輸出警告。
     """
-    print(f"📡 正在取得共 {len(stock_ids)} 檔股票的混合版完整數據（yfinance 還原價 + FinMind 籌碼）...")
+    print(f"📡 正在取得共 {len(stock_records)} 檔股票的混合版完整數據（yfinance 還原價 + FinMind 籌碼）...")
 
     # 直接組合出帶後綴的 yfinance 代號清單 (例如 ['3880.TW', '3529.TWO'])
     yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_records.items()]
