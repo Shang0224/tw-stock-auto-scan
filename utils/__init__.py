@@ -6,7 +6,7 @@ from utils.notifier import send_line_message, send_email_with_csv, send_line_sum
 from utils.storage import upload_to_nas
 from utils.file_handler import (send_report, cleanup_local_file, archive_and_cleanup, save_scan_report, save_multi_day_report, 
     align_and_normalize_results, process_monitor_stock_data, smart_read_csv, parse_monitor_stocks, 
-    load_stocks_from_csv, parse_stock_list, parse_stock_ids_old, parse_stock_dict)
+    load_stocks_from_csv, parse_stock_list, parse_stock_ids_old, parse_stock_dict, parse_and_validate_stocks)
 from utils.analytics import calculate_one_year_extremes, calculate_fixed_horizon_returns, calculate_forward_horizon_returns
 from utils.indicators import preprocess_all_technical_indicators
 from utils.wave_chart_generator import generate_qiantang_wave_charts
@@ -22,5 +22,5 @@ __all__ = [
     'save_multi_day_report', 'parse_monitor_stocks', 'parse_stock_list', 'parse_stock_ids_old',
     'calculate_one_year_extremes', 'calculate_fixed_horizon_returns', 'align_and_normalize_results', 'get_fm_trading_days', 'process_monitor_stock_data', 
     'yf_fetch_monitor_stocks', 'calculate_forward_horizon_returns', 'preprocess_all_technical_indicators', 'load_stocks_from_csv',
-    'generate_qiantang_wave_charts', 'parse_stock_dict'
+    'generate_qiantang_wave_charts', 'parse_stock_dict', 'parse_and_validate_stocks'
 ]
