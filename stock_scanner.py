@@ -34,7 +34,11 @@ def yfinance_scan_ma240():
     tz_tw = timezone(timedelta(hours=8))
     tw_time = datetime.now(tz_tw)
     
-    files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+    #files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+    #files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+
+    #files_env = 'data/MID100.csv,data/TW50.csv'
+    files_env = 'data/TestData/qiantang_ICDesign_test.csv'
 
     print(f"\n抓資料前")
     
