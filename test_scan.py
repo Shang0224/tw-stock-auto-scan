@@ -14,7 +14,7 @@ from strategy.near_ma240 import st_near_ma240_df
 # 🌟 完美導入你專屬的 utils 程式庫工具
 from utils import (
     get_stock_name_dict,
-    parse_stock_ids,
+    parse_stock_list,
     yf_fetch_all_stocks,
     fm_fetch_all_stocks,
     save_multi_day_report, # 🌟 新增：專門處理多日格式化的存檔函數
@@ -72,7 +72,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
         is_range_test = False
 
     if stock_source == 'csv':
-        stock_ids = parse_stock_ids(stock_data)
+        stock_ids = parse_stock_list(stock_data)
         source_label = os.path.basename(stock_data)
     else:
         stock_ids = stock_data if stock_data else ['2377', '2357']
