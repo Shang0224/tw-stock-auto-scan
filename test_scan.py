@@ -38,7 +38,7 @@ TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
 #STOCK_INPUT = 'data/MID100.csv,data/TW50.csv'
-#STOCK_INPUT = 'data/TestData/qiantang_ICDesign_test.csv'
+STOCK_INPUT = 'data/TestData/qiantang_ICDesign_test.csv'
 #STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
 #STOCK_MODE = 'noncsv' 
