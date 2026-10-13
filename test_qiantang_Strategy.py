@@ -171,7 +171,7 @@ def scan_qiantang_strategy_day(
 def run_qiantang_strategy_range_scan(
     source=CHOSEN_SOURCE,
     stock_source=STOCK_MODE,
-    stock_input=STOCK_INPUT,
+    stock_data=STOCK_INPUT,
     strategies=TEST_QIANTANG_STRATEGY,
     start_date_str=TEST_START_DATE,
     end_date_str=TEST_END_DATE,
