@@ -14,7 +14,7 @@ from strategy.near_ma240 import st_near_ma240_df
 # 🌟 完美導入你專屬的 utils 程式庫工具
 from utils import (
     get_stock_name_dict,
-    parse_stock_ids,
+    parse_stock_ids_old,
     parse_stock_list,
     yf_fetch_all_stocks,
     fm_fetch_all_stocks,
