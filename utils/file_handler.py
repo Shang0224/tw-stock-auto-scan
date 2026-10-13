@@ -44,49 +44,49 @@ def parse_and_validate_stocks(stock_source: str, stock_data) -> dict[str, dict]:
     return stock_dict
 
 
+import pandas as pd
+
+
 def parse_stock_dict(files_env: str) -> dict[str, dict]:
-    """解析 CSV 檔案字串，回傳以 stock_id 為 Key 的去重字典 (dict[str, dict])"""
-    files = [f.strip() for f in files_env.split(",") if f.strip()]
-    stock_dict = {}
+  """解析 CSV 檔案字串，回傳以 stock_id 為 Key 的去重字典"""
+  files = [f.strip() for f in files_env.split(",") if f.strip()]
+  stock_dict = {}
 
-    for file in files:
-        try:
-            # 1. 讀取 CSV 檔案 (改用 utf-8-sig 避開 Excel BOM '\ufeffstock_id' 問題)
-            df = [已移除可疑連結]_csv(file, encoding="utf-8-sig", dtype={"stock_id": str})
+  for file in files:
+    try:
+      # 使用 utf-8-sig 自動過濾 Excel 匯出 CSV 常見的 BOM 隱藏字元
+      df = pd.read_csv(file, encoding="utf-8-sig", dtype={"stock_id": str})
 
-            # 清理欄位名稱前後空白 (防止欄位名如 'stock_id ')
-            df.columns = df.columns.str.strip()
+      if "stock_id" not in df.columns:
+        print(f"⚠️ 警告: {file} 缺少 'stock_id' 欄位，已跳過")
+        continue
 
-            if "stock_id" not in df.columns:
-                print(f"⚠️ 警告: {file} 缺少 'stock_id' 欄位，已跳過")
-                continue
+      # 基礎字串清理
+      df["stock_id"] = df["stock_id"].astype(str).str.strip()
+      df = df.fillna("")
 
-            # 2. 基礎字串清理（保留原始代號/字串）
-            df["stock_id"] = df["stock_id"].astype(str).str.strip()
-            df = df.fillna("")
+      added_count = 0
+      records = df.to_dict(orient="records")
 
-            added_count = 0
-            records = [已移除可疑連結]_dict(orient="records")
+      for record in records:
+        sid = record.get("stock_id", "")
+        if (
+            sid
+            and sid.lower() not in ("nan", "none", "nat")
+            and sid not in stock_dict
+        ):
+          stock_dict[sid] = record
+          added_count += 1
 
-            for record in records:
-                sid = record.get("stock_id", "")
-                if (
-                    sid
-                    and sid.lower() not in ("nan", "none", "nat")
-                    and sid not in stock_dict
-                ):
-                    stock_dict[sid] = record
-                    added_count += 1
+      print(
+          f"✅ 讀取成功: {file} (新加入 {added_count} 筆，累計"
+          f" {len(stock_dict)} 檔)"
+      )
 
-            print(
-                f"✅ 讀取成功: {file} (新加入 {added_count} 筆，累計"
-                f" {len(stock_dict)} 檔)"
-            )
+    except Exception as e:
+      print(f"❌ 讀取 {file} 失敗: {e}")
 
-        except Exception as e:
-            print(f"❌ 讀取 {file} 失敗: {e}")
-
-    return stock_dict
+  return stock_dict
 
 def load_stocks_from_csv(stock_input) -> list[dict]:
     """專門用來讀取單一或多個 CSV 檔案的股票清單載入器"""
