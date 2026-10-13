@@ -54,12 +54,12 @@ from utils import (
 TEST_QIANTANG_STRATEGY = [
     # st_qiantang_f1_spt_growth,      # F1: 筆張現形
     # st_qiantang_f2_volume_breakout, # F2: 出量上輕
-     st_qiantang_f3_after_shakeout,  # F3: 洗盤後
+    # st_qiantang_f3_after_shakeout,  # F3: 洗盤後
     # st_qiantang_f4_strong_rise,     # F4: 強力上
     # st_qiantang_f5_major_buy_easy,  # F5: 主外上輕
     # st_qiantang_f6_flower,          # F6: 一朵花
     # st_qiantang_f7_super_stock,     # F7: 飆股
-    #st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
+    st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
 ]
 
 CHOSEN_SOURCE = "fm"
