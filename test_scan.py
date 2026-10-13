@@ -33,11 +33,11 @@ from utils import (
 # =====================================================================
 CHOSEN_SOURCE = 'yf' 
 #CHOSEN_SOURCE = 'fm' 
-TEST_START_DATE = '2015-01-01'
+TEST_START_DATE = '2025-01-01'
 TEST_END_DATE   = '2025-09-30'  # 設為 None 則只跑單日測試
 
 STOCK_MODE = 'csv' 
-STOCK_INPUT = 'data/MID100.csv,data/TW50.csv'
+#STOCK_INPUT = 'data/MID100.csv,data/TW50.csv'
 #STOCK_INPUT = 'data/TestData/qiantang_ICDesign_test.csv'
 #STOCK_INPUT = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
