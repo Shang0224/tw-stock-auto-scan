@@ -299,7 +299,7 @@ def run_qiantang_strategy_range_scan(
             day_str=day_str,
             all_df_slice=all_df_slice,
             global_df=global_df,
-            monitor_stocks=monitor_stocks,
+            monitor_stocks=stock_records,
             strategies=strategies,
             profiles_map=BUY_PARAM_PROFILES,
         )
