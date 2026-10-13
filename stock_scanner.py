@@ -34,11 +34,11 @@ def yfinance_scan_ma240():
     tz_tw = timezone(timedelta(hours=8))
     tw_time = datetime.now(tz_tw)
     
-    #files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
-    #files_env = os.getenv('STOCK_FILES', 'data/MID100.csv')
+    #stock_data = os.getenv('STOCK_FILES', 'data/MID100.csv')
+    #stock_data = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
-    #files_env = 'data/MID100.csv,data/TW50.csv'
-    files_env = 'data/TestData/qiantang_ICDesign_test.csv'
+    #stock_data = 'data/MID100.csv,data/TW50.csv'
+    stock_data = 'data/TestData/qiantang_ICDesign_test.csv'
 
     print(f"\n抓資料前")
     
@@ -48,14 +48,31 @@ def yfinance_scan_ma240():
     print(f"⏰ [YF 排程啟動] 日期：{tw_time.strftime('%Y-%m-%d')}, 來源：{files_env}")
 
     stock_name_dict, _ = get_stock_name_dict()
-    stock_ids = parse_stock_ids(files_env)
+
+    # 1. 呼叫函數，傳入模式與數據
+    stock_records = parse_and_validate_stocks(
+        stock_source="csv", 
+        stock_data=stock_data
+    )
+    
+    #stock_ids = parse_stock_ids(files_env)
+    
+    # 2. 提煉純數字代號串列與 Log 標籤
+    stock_ids = list(stock_records.keys())    
 
     end_date = tw_time.strftime("%Y-%m-%d") 
     start_date = (tw_time - timedelta(days=500)).strftime("%Y-%m-%d")
 
     print(f"\nyf_fetch_all_stocks前")
+
+    # 1. 直接組合出帶後綴的 yfinance 代號清單 (例如 ['3880.TW', '3529.TWO'])
+    yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_records.items()]
+
+    # 2. 傳入 yf_tickers 抓取個股歷史 K 線
+    all_df = yf_fetch_all_stocks(yf_tickers, fetch_start_str, fetch_end_str)
     
-    all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
+    #all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
+    
     if all_df.empty: return
 
     # 🌟 同步抓取台股加權指數 (^TWII) 作為大盤基準
