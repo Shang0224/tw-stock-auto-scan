@@ -35,11 +35,10 @@ def yfinance_scan_ma240():
     tz_tw = timezone(timedelta(hours=8))
     tw_time = datetime.now(tz_tw)
     
-    #stock_data = os.getenv('STOCK_FILES', 'data/MID100.csv')
-    #stock_data = os.getenv('STOCK_FILES', 'data/MID100.csv')
+    stock_data = os.getenv('STOCK_FILES', 'data/MID100.csv')
 
     #stock_data = 'data/MID100.csv,data/TW50.csv'
-    stock_data = 'data/TestData/qiantang_ICDesign_test.csv'
+    #stock_data = 'data/TestData/qiantang_ICDesign_test.csv'
 
     print(f"\n抓資料前")
     
