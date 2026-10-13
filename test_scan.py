@@ -40,6 +40,14 @@ STOCK_INPUT = 'data/TestData/qiantang_ICDesign_hot.csv'
 
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['6191', '2377', '2408', '2449', '3044', '2353', '2404']
+"""
+STOCK_INPUT = [
+    {"stock_id": "3661", "yf_suffix": "TW", "name": "世芯-KY", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    {"stock_id": "3035", "yf_suffix": "TW", "name": "智原", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    {"stock_id": "3529", "yf_suffix": "TWO", "name": "力旺", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+    {"stock_id": "6643", "yf_suffix": "TWO", "name": "M31", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+]
+"""
 
 TEST_STRATEGIES = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout]
 #TEST_STRATEGIES = [st_bottom_v_turn]
