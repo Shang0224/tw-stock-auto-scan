@@ -570,8 +570,67 @@ def get_fm_trading_days(start_str, end_str):
         
     return set()
 
+def yf_fetch_all_stocks(ticker_list: list[str], start_date: str, end_date: str) -> pd.DataFrame:
+    """
+    使用 yfinance 批次抓取 K 線資料
+    
+    :param ticker_list: list[str], 帶有後綴的 Ticker 清單 (例如 ['[已移除可疑連結]', '6138.TWO', '^TWII'])
+    :return: pd.DataFrame, 其 df['stock_id'] 欄位已自動去除後綴，還原為純數字代號 (如 '2377', '6138', '^TWII')
+    """
+    all_data = []
+    print(f"📡 正在抓取 {len(ticker_list)} 檔標的數據...")
 
-def yf_fetch_all_stocks(stock_ids, start_date, end_date):
+    # yfinance 下載 end 日期預設不包含當天，需推延 1 天
+    end_date_plus_one = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    for ticker in ticker_list:
+        ticker = str(ticker).strip()
+        if not ticker:
+            continue
+
+        try:
+            # 直接呼叫匯入的 download 函式
+            df = download(
+                ticker,
+                start=start_date,
+                end=end_date_plus_one,
+                progress=False,
+                multi_level_index=False,
+                auto_adjust=True
+            )
+
+            if not df.empty:
+                df.index = df.index.strftime('%Y-%m-%d')
+                df = df.reset_index()
+
+                # 寫回 DataFrame 時去除後綴：'6138.TWO' -> '6138'；大盤 '^TWII' 則保持原樣
+                clean_id = ticker if ticker.startswith("^") else ticker.split('.')[0]
+                df['stock_id'] = clean_id
+
+                # 欄位名稱標準化
+                df.columns = [col.lower().replace(' ', '_') for col in df.columns]
+                df.rename(columns={
+                    'volume': 'Trading_Volume',
+                    'high': 'max',
+                    'low': 'min'
+                }, inplace=True)
+
+                all_data.append(df)
+
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"⚠️ 抓取 {ticker} 失敗: {e}")
+            continue
+
+    if not all_data:
+        print("❌ 未抓取到任何歷史數據！")
+        return pd.DataFrame()
+
+    return pd.concat(all_data, ignore_index=True)
+
+
+def yf_fetch_all_stocks_old(stock_ids, start_date, end_date):
     """
     將原有的 FinMind 邏輯改為使用 yfinance 取得台股資料
     
