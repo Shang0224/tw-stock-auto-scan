@@ -189,7 +189,7 @@ def run_qiantang_strategy_range_scan(
     # 1. 解析監控股票清單
     #monitor_stocks = load_stocks_from_csv(stock_input)
 
-        # 1. 呼叫函數，傳入模式與數據
+    # 1. 呼叫函數，傳入模式與數據
     stock_records = parse_and_validate_stocks(
         stock_source=stock_source, 
         stock_data=stock_data
