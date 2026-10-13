@@ -82,7 +82,16 @@ STOCK_MODE = "csv"
 STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 
 #STOCK_MODE = 'noncsv' 
-#STOCK_INPUT = ['2376', '1513', '6515', '2646', '6446']
+"""
+STOCK_INPUT = {
+    "3661": {"yf_suffix": "TW", "name": "世芯-KY", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    "3035": {"yf_suffix": "TW", "name": "智原", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    "3529": {"yf_suffix": "TWO", "name": "力旺", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+    "6643": {"yf_suffix": "TWO", "name": "M31", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+}
+"""
+
+
 
 # ==============================================================================
 # 🎛 走勢圖繪製控制開關
@@ -93,23 +102,27 @@ def scan_qiantang_strategy_day(
     day_str: str,
     all_df_slice: pd.DataFrame,
     global_df: pd.DataFrame,
-    monitor_stocks: list,
+    stocks_dict: dict[str, dict],
     strategies: list,
     profiles_map: dict = BUY_PARAM_PROFILES,
 ) -> list:
     """單日個股選股掃描核心，並於觸發時附加前瞻與極值績效"""
     day_hits = []
-    stock_meta_map = {str(s["stock_id"]): s for s in monitor_stocks}
+    
+    # 🌟 1. 直接對全市場 K 線依 stock_id 分組 (不用再轉置 stock_meta_map)
     grouped = all_df_slice.groupby("stock_id")
 
     for stock_id, group_df in grouped:
         sid = str(stock_id)
-        if sid not in stock_meta_map:
+        
+        # 🌟 2. 直接使用傳入的 stocks_dict 快速過濾與查詢
+        if sid not in stocks_dict:
             continue
+            
+        stock_info = stocks_dict[sid]
+        stock_name = stock_info.get("name", "未知股票")
 
-        meta = stock_meta_map[sid]
-        stock_name = meta.get("name", sid)
-        stock_cat = meta.get("category", "MID100")
+        stock_cat = stock_info.get("category", "MID100")
 
         df_single = group_df.sort_values("date").copy()
         if df_single.empty or len(df_single) < 5:
@@ -299,7 +312,7 @@ def run_qiantang_strategy_range_scan(
             day_str=day_str,
             all_df_slice=all_df_slice,
             global_df=global_df,
-            monitor_stocks=stock_records,
+            stocks_dict=stock_records,
             strategies=strategies,
             profiles_map=BUY_PARAM_PROFILES,
         )
