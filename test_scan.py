@@ -81,7 +81,7 @@ def run_strategy_test(source, start_date_str, end_date_str, stock_source, stock_
     )
 
     # 2. 提煉純數字代號串列與 Log 標籤
-    stock_ids = list(stock_dict.keys())
+    stock_ids = list(stock_records.keys())
     
     source_label = os.path.basename(stock_data) if stock_source == 'csv' else f"CustomList({len(stock_ids)}檔)"
 
