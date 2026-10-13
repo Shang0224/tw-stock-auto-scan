@@ -366,7 +366,7 @@ def fetch_finmind_chips_old(
     # 若完全無資料，回傳帶有 FinMind 原生欄位結構的空 DataFrame
     return pd.DataFrame(columns=required_cols)
 
-def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: str) -> pd.DataFrame:
+def fm_get_complete_stock_data(dl, stock_records: list, start_date: str, end_date: str) -> pd.DataFrame:
     """
     🌟 高階包裝函數（頂級混合架構）：
     1. 價格與還原 K 線：使用 yfinance (auto_adjust=True) 取得還原價，成交量命名為 yf_volume。
@@ -375,9 +375,12 @@ def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: s
     4. 整合合併與檢核：結合後自動交叉比對 yf_volume 與 Trading_Volume，若差異太大則輸出警告。
     """
     print(f"📡 正在取得共 {len(stock_ids)} 檔股票的混合版完整數據（yfinance 還原價 + FinMind 籌碼）...")
+
+    # 直接組合出帶後綴的 yfinance 代號清單 (例如 ['3880.TW', '3529.TWO'])
+    yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_records.items()]
     
     # 1. 抓取還原 K 線價格資料 (由 yfinance 負責)
-    df_yf = yf_fetch_all_stocks(stock_ids, start_date, end_date)
+    df_yf = yf_fetch_all_stocks(yf_tickers, start_date, end_date)
     
     if df_yf.empty:
         print("❌ 無法取得 yfinance 價格資料")
@@ -389,6 +392,9 @@ def fm_get_complete_stock_data(dl, stock_ids: list, start_date: str, end_date: s
             df_yf.rename(columns={col_candidate: 'yf_volume'}, inplace=True)
             break
 
+    # 2. 提煉純數字代號串列與 Log 標籤
+    stock_ids = list(stock_records.keys())
+    
     # 2. 抓取 FinMind 的日成交資訊（保留原始大寫的 Trading_Volume、Trading_money 等）
     fm_daily_records = []
     print("📡 正在透過 FinMind 補充取得 Trading_Volume、Trading_money、Trading_turnover 與 spread 資料...")
