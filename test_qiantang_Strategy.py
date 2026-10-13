@@ -79,7 +79,7 @@ EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 STOCK_MODE = "csv"
 #STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
-STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv,data/TestData/qiantang_ICDesign_hot.csv"
+STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 
 #STOCK_MODE = 'noncsv' 
 #STOCK_INPUT = ['2376', '1513', '6515', '2646', '6446']
