@@ -1,3 +1,5 @@
+#strategy/strat_right_side.py
+
 import pandas as pd
 
 def st_right_side_breakout(df_single, market_above_ma240=True):
