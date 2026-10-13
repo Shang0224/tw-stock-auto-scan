@@ -46,7 +46,7 @@ def yfinance_scan_ma240():
     #my_strategies = [st_near_ma240_df, st_bottom_v_turn, st_bottom_breakout] # 策略列表
     my_strategies = [st_u_bottom, st_bottom_v_turn, st_right_side_breakout] # 策略列表
         
-    print(f"⏰ [YF 排程啟動] 日期：{tw_time.strftime('%Y-%m-%d')}, 來源：{files_env}")
+    print(f"⏰ [YF 排程啟動] 日期：{tw_time.strftime('%Y-%m-%d')}, 來源：{stock_data}")
 
     stock_name_dict, _ = get_stock_name_dict()
 
@@ -66,7 +66,7 @@ def yfinance_scan_ma240():
 
     print(f"\nyf_fetch_all_stocks前")
 
-    # 1. 直接組合出帶後綴的 yfinance 代號清單 (例如 ['3880.TW', '3529.TWO'])
+    # 1. 直接組合出帶後綴的 yfinance 代號清單 (例如 ['2330.TW', '3529.TWO'])
     yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_records.items()]
 
     # 2. 傳入 yf_tickers 抓取個股歷史 K 線
