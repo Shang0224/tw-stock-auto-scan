@@ -70,7 +70,7 @@ def yfinance_scan_ma240():
     yf_tickers = [f"{sid}.{info['yf_suffix']}" for sid, info in stock_records.items()]
 
     # 2. 傳入 yf_tickers 抓取個股歷史 K 線
-    all_df = yf_fetch_all_stocks(yf_tickers, fetch_start_str, fetch_end_str)
+    all_df = yf_fetch_all_stocks(yf_tickers, start_date, end_date)
     
     #all_df = yf_fetch_all_stocks(stock_ids, start_date, end_date)  
     
