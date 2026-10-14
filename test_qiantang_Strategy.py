@@ -498,7 +498,7 @@ def run_qiantang_strategy_range_scan(
 
         print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
 
-        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/qiantang_test_report/{sub_folder_name}/dashboard_wave_plots" if os.getenv('NAS_SFTP_PATH') else None  
+        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/qiantang_test_report/{sub_folder_name}" if os.getenv('NAS_SFTP_PATH') else None  
 
         plot_files = generate_qiantang_wave_charts(
             dashboard_df=dashboard_df,
