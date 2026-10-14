@@ -277,6 +277,7 @@ def run_qiantang_strategy_range_scan(
         if trading_days_set:
             if day_str not in trading_days_set:
                 current_day += timedelta(days=1)
+                print(f"{day_str} 本日無交易****************************************************\n")
                 continue
         else:
             if current_day.weekday() >= 5:
