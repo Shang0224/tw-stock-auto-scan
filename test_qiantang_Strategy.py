@@ -576,7 +576,7 @@ def run_qiantang_strategy_range_scan(
           f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
           f' {wave_output_dir}'
       )
-
+    """
     
     # =====================================================================
     # 7. 自動備份至 NAS
@@ -597,7 +597,7 @@ def run_qiantang_strategy_range_scan(
                 print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
             except Exception as e:
                 print(f"⚠ CSV NAS 備份失敗: {e}")
-    """
+
 
 
 if __name__ == "__main__":
