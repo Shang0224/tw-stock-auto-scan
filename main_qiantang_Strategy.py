@@ -55,6 +55,7 @@ from utils import (
     #parse_stock_ids,
     preprocess_all_technical_indicators,  # 來自 utils/indicators.py
     send_qiantang_7in1_line_summary,
+    parse_and_validate_stocks,
 )
 
 # =====================================================================
