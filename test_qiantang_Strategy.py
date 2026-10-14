@@ -61,6 +61,13 @@ TEST_QIANTANG_STRATEGY = [
     # st_qiantang_f2_volume_breakout, # F2: 出量上輕
     st_qiantang_f3_after_shakeout,  # F3: 洗盤後
     st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
+
+    st_qiantang_f3_after_shakeout_20261001_1,
+    st_qiantang_f3_after_shakeout_20261001_1_1,
+    st_qiantang_f3_after_shakeout20261001_1_2,
+    st_qiantang_f3_after_shakeout_20261001_1_3,   
+    st_qiantang_f3_after_shakeout_20261001_1_3_1,
+   
     # st_qiantang_f4_strong_rise,     # F4: 強力上
     # st_qiantang_f5_major_buy_easy,  # F5: 主外上輕
     # st_qiantang_f6_flower,          # F6: 一朵花
@@ -420,6 +427,93 @@ def run_qiantang_strategy_range_scan(
     else:
         print("\nℹ [提示] EXPORT_EXCEL 為 False，已略過 Excel 報表的本地產出。")
 
+    # =====================================================================
+    # 🌟 檔案輸出控制與資料夾建立
+    # =====================================================================
+    csv_file_path = None
+    strat_tag = "_".join([s.__name__ for s in strategies]) if strategies else "qiantang"
+
+    if EXPORT_CSV:
+        # 1. 在 qiantang_test_report 下方建立以執行時間命名的資料夾
+        sub_folder_name = current_time_str
+        output_dir = os.path.abspath(os.path.join("data", "qiantang_test_report", sub_folder_name))
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 2. 輸出綜合儀表板 CSV 檔（Dashboard 的 Meta 放入全部策略的 strat_tag）
+        csv_file_name = f"dashboard_summary_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
+        csv_file_path = os.path.join(output_dir, csv_file_name)
+        dashboard_df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+
+        with open(csv_file_path, 'r', encoding='utf-8-sig') as f:
+            original_content = f.read()
+            
+        with open(csv_file_path, 'w', encoding='utf-8-sig') as f:
+            f.write(f"策略程式: ,{strat_tag}, Stock Data:,{stock_data}\n") 
+            f.write(original_content)
+        
+        print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
+
+        # 3. 將各策略獨立輸出為 CSV 檔（檔名與 Meta 均對應該「單獨策略名稱」 func_name）
+        for strat in strategies:
+            func_name = strat.__name__
+            data_list = results_by_formula.get(func_name, [])
+            sheet_df = pd.DataFrame(data_list)
+            
+            if sheet_df.empty:
+                sheet_df = pd.DataFrame(
+                    columns=[
+                        "日期", "股票代號", "名稱", "今日收盤", "今日成交量(張)", "選股公式", "操作建議",
+                        "T+3日績效", "T+5日績效", "T+10日績效", "T+20日績效", "1Y內最高績效", "1Y內最低績效"
+                    ]
+                )
+            else:
+                sheet_df = sheet_df.drop(columns=["strategy_name"], errors="ignore")
+
+            # 檔名加入該單獨策略名稱 func_name
+            strat_csv_name = f"{func_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
+            strat_csv_path = os.path.join(output_dir, strat_csv_name)
+            sheet_df.to_csv(strat_csv_path, index=False, encoding='utf-8-sig')
+
+            # 該單獨策略 CSV 的 Meta 寫入單獨的 func_name
+            with open(strat_csv_path, 'r', encoding='utf-8-sig') as f:
+                strat_orig_content = f.read()
+                
+            with open(strat_csv_path, 'w', encoding='utf-8-sig') as f:
+                f.write(f"策略公式: ,{func_name}, Stock Data:,{stock_data}\n")
+                f.write(strat_orig_content)
+
+            print(f"📁 單獨策略 CSV 檔 [{func_name}] 已成功匯出至：【{strat_csv_path}】")
+
+    else:
+        print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
+
+
+    # ==============================================================================
+    # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
+    # ==============================================================================
+    if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
+
+        # 繪圖資料夾以 "dashboard" 代替 strat_tag，並直接輸出到剛才建立的 CSV 資料夾內
+        wave_output_dir = os.path.join(output_dir, "dashboard_wave_plots")
+
+        print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
+
+        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/qiantang_test_report/{sub_folder_name}/dashboard_wave_plots" if os.getenv('NAS_SFTP_PATH') else None  
+
+        plot_files = generate_qiantang_wave_charts(
+            dashboard_df=dashboard_df,
+            global_df=global_df,
+            output_dir=wave_output_dir,
+            nas_sftp_path=nas_path,
+        )
+
+        print(
+            f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
+            f' {wave_output_dir}'
+        )
+
+    
+    """
     csv_file_path = None
     
     # 🌟 1. 自動取得當前測試策略名稱
@@ -503,6 +597,7 @@ def run_qiantang_strategy_range_scan(
                 print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
             except Exception as e:
                 print(f"⚠ CSV NAS 備份失敗: {e}")
+    """
 
 
 if __name__ == "__main__":
