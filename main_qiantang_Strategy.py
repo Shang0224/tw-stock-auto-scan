@@ -10,11 +10,13 @@ import sys
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
+from strategy.engine import scan_single_stock
+
 # 1. 匯入核心執行引擎與預處理
 from monitor.engine import (
     PARAM_PROFILES,
     preprocess_all_technical_indicators,
-    scan_single_stock_monitors,
+    #scan_single_stock_monitors,
 )
 
 # 2. 匯入 7 大多方選股策略 (來自 strategy 套件)
@@ -45,7 +47,14 @@ from utils import (
     fm_get_complete_stock_data,
     get_stock_name_dict,
     parse_monitor_stocks,
-    load_stocks_from_csv
+    load_stocks_from_csv,
+    align_and_normalize_results,
+    archive_and_cleanup,
+    fm_get_complete_stock_data,
+    get_stock_name_dict,
+    #parse_stock_ids,
+    preprocess_all_technical_indicators,  # 來自 utils/indicators.py
+    send_qiantang_7in1_line_summary,
 )
 
 # =====================================================================
@@ -62,28 +71,20 @@ STOCK_MODE = "csv"
 STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 
-# 模式 B：自訂 List[dict] 載入模式
+# 模式 B：自訂 dict[str, dict] 載入模式
 #STOCK_MODE = "noncsv"
-#STOCK_INPUT = [
-#    {"stock_id": "3706", "name": "神達", "category": "MID100"},
-#    {"stock_id": "2330", "name": "台積電", "category": "TW50"},
-#    {"stock_id": "2317", "name": "鴻海", "category": "TW50"},
-#    {"stock_id": "2337.TWO", "name": "原相", "category": "ICDesign"},
-#]
+"""
+STOCK_INPUT = {
+    "3661": {"yf_suffix": "TW", "name": "世芯-KY", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    "3035": {"yf_suffix": "TW", "name": "智原", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
+    "3529": {"yf_suffix": "TWO", "name": "力旺", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+    "6643": {"yf_suffix": "TWO", "name": "M31", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
+}
+"""
 
 # ---------------------------------------------------------------------
 
 
-# 🌟 從 utils 載入預處理指標與相關工具函式
-from utils import (
-    align_and_normalize_results,
-    archive_and_cleanup,
-    fm_get_complete_stock_data,
-    get_stock_name_dict,
-    parse_stock_ids,
-    preprocess_all_technical_indicators,  # 來自 utils/indicators.py
-    send_qiantang_7in1_line_summary,
-)
 
 def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies, profiles_map=PARAM_PROFILES):
     """單日選股掃描核心"""
@@ -103,7 +104,7 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies
         df_single = group_df.sort_values("date").copy()
 
         # 呼叫引擎執行策略檢測
-        hits = scan_single_stock_monitors(
+        hits = scan_single_stock(
             df_single=df_single,
             category=stock_cat,
             monitor_list=strategies,
@@ -305,7 +306,7 @@ if __name__ == "__main__":
         print(f"🚀 排程執行，讀取 CSV 檔案：{csv_file_path}")
     else:
         run_qiantang_strategy_excel_scan() #手動強制執行, 則執行此段, 執行那些股票由程式開頭的STOCK_INPUT決定        
-        print(f"🚀 手動強制測試")
+        print(f"🚀 手動強制測試或者自動排成未傳入檔案")
     
 
 
