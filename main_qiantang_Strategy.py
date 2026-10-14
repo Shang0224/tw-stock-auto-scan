@@ -138,19 +138,21 @@ def run_qiantang_strategy_excel_scan(
     today_str = tw_time.strftime("%Y-%m-%d")
     start_str = (tw_time.date() - timedelta(days=120)).strftime("%Y-%m-%d")
 
-    # 2. 解析股票清單與抓取名稱字典
-    if stock_source == 'csv':
-        stock_ids = load_stocks_from_csv(stock_input) #以後要改呼叫parse_monitor_ids()傳回字典物件
-        source_label = stock_input
-    else:
-        stock_ids = stock_input
-        source_label = f"CustomList({len(stock_ids)}檔)"
-    
-    if not stock_ids:
-        print(f"❌ [錯誤] 無法解析股票清單檔 ({stock_input})，請確認檔案是否存在。")
+    # 1. 呼叫函數，傳入模式與數據
+    stock_records = parse_and_validate_stocks(
+        stock_source=stock_source, 
+        stock_data=stock_data
+    )
+   
+    if not stock_records:
+        print(f"❌ [錯誤] 無照解析股票清單 ({stock_input})。")
         return
 
+    # 2. 提煉純數字代號串列與 Log 標籤
+    stock_ids = list(stock_records.keys())
+
     # 清理並提取股票代號清單 (一步到位)
+    """
     unique_stock_ids = list(
         set(
             [
@@ -162,14 +164,14 @@ def run_qiantang_strategy_excel_scan(
             ]
         )
     )
-    
+    """
     stock_name_dict, dl = get_stock_name_dict()
 
     print("🚀 【錢塘潮選股系統】啟動掃描...")
-    print(f"📡 讀取來源：{stock_input} | 批量抓取 {len(unique_stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
+    print(f"📡 讀取來源：{stock_input} | 批量抓取 {len(stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
 
     # 3. 批量抓取日 K 線與籌碼資料
-    global_df = fm_get_complete_stock_data(dl, unique_stock_ids, start_str, today_str)
+    global_df = fm_get_complete_stock_data(dl, stock_ids, start_str, today_str)
     if global_df.empty:
         print("❌ [錯誤] FinMind 數據抓取為空，結束執行。")
         return
