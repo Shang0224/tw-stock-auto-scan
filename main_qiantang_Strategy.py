@@ -67,13 +67,14 @@ TEST_END_DATE = "2025-09-30"
 
 # ---------------------------------------------------------------------
 # 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
-#STOCK_MODE = "csv"
+STOCK_MODE = "csv"
+STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv"
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
-#STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 
 # 模式 B：自訂 dict[str, dict] 載入模式
+"""
 STOCK_MODE = "noncsv"
 STOCK_INPUT = {
     "3661": {"yf_suffix": "TW", "name": "世芯-KY", "category": "ICDesign", "market": "上市", "note": "ASIC晶片設計服務與矽智財"},
@@ -81,11 +82,10 @@ STOCK_INPUT = {
     "3529": {"yf_suffix": "TWO", "name": "力旺", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
     "6643": {"yf_suffix": "TWO", "name": "M31", "category": "ICDesign", "market": "上櫃", "note": "ASIC晶片設計服務與矽智財"},
 }
+"""
 
 
 # ---------------------------------------------------------------------
-
-
 
 def scan_qiantang_strategy_day(day_str, all_df_slice, stocks_dict, strategies, profiles_map=PARAM_PROFILES):
     """單日選股掃描核心"""
