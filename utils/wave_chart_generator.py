@@ -206,9 +206,40 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          ha='center', fontsize=8, color='#1f77b4', fontweight='bold',
                          arrowprops=dict(arrowstyle='->', color='#1f77b4', lw=0.9))
 
-    # 4. 標示【高點日期】 (紅色 Red)
-    high_date_str = signals['high_date'] if 'high_date' in signals else None
-    high_pct_val = signals['high_pct'] if 'high_pct' in signals else 0.0
+    # 4. 🌟 安全取得高低點資訊（避免 DataFrame 轉 Series 產生的布林判斷歧義）
+    high_date_str = None
+    high_pct_val = 0.0
+    low_date_str = None
+    low_pct_val = 0.0
+
+    if isinstance(signals, pd.DataFrame) and not signals.empty:
+        if 'high_date' in signals.columns:
+            val = signals['high_date'].iloc
+            high_date_str = None if pd.isna(val) else str(val)
+        if 'high_pct' in signals.columns:
+            val = signals['high_pct'].iloc
+            high_pct_val = 0.0 if pd.isna(val) else float(val)
+        if 'low_date' in signals.columns:
+            val = signals['low_date'].iloc
+            low_date_str = None if pd.isna(val) else str(val)
+        if 'low_pct' in signals.columns:
+            val = signals['low_pct'].iloc
+            low_pct_val = 0.0 if pd.isna(val) else float(val)
+    elif isinstance(signals, pd.Series):
+        if 'high_date' in signals:
+            val = signals['high_date']
+            high_date_str = None if pd.isna(val) else str(val)
+        if 'high_pct' in signals:
+            val = signals['high_pct']
+            high_pct_val = 0.0 if pd.isna(val) else float(val)
+        if 'low_date' in signals:
+            val = signals['low_date']
+            low_date_str = None if pd.isna(val) else str(val)
+        if 'low_pct' in signals:
+            val = signals['low_pct']
+            low_pct_val = 0.0 if pd.isna(val) else float(val)
+
+    # 5. 標示【高點日期】 (紅色 Red)
     if high_date_str:
         h_df = df_sub[df_sub['date'] == high_date_str]
         if not h_df.empty:
@@ -224,9 +255,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffe6e6', edgecolor='#d62728', alpha=0.9),
                          arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2))
 
-    # 5. 標示【低點日期】 (綠色 Green)
-    low_date_str = signals['low_date'] if 'low_date' in signals else None
-    low_pct_val = signals['low_pct'] if 'low_pct' in signals else 0.0
+    # 6. 標示【低點日期】 (綠色 Green)
     if low_date_str:
         l_df = df_sub[df_sub['date'] == low_date_str]
         if not l_df.empty:
@@ -242,7 +271,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          bbox=dict(boxstyle='round,pad=0.3', facecolor='#e6ffe6', edgecolor='#2ca02c', alpha=0.9),
                          arrowprops=dict(arrowstyle='->', color='#2ca02c', lw=1.2))
 
-    # 6. 成交量圖表 (繪製於整數索引 x_indices 上)
+    # 7. 成交量圖表 (繪製於整數索引 x_indices 上)
     vol_colors = ['#d62728' if cl >= op else '#2ca02c' for op, cl in zip(df_sub[col_open], df_sub[col_close])]
     ax2.bar(x_indices, df_sub[col_vol], color=vol_colors, alpha=0.7)
     ax2.set_ylabel('成交量', fontsize=10)
@@ -252,7 +281,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     ax1.grid(True, linestyle=':', alpha=0.5)
     ax1.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=6, frameon=True)
 
-    # 7. 🌟 設定 X 軸刻度與日期標籤（均勻選取對應的交易日日期）
+    # 8. 🌟 設定 X 軸刻度與日期標籤（均勻選取對應的交易日日期）
     n_ticks = 10
     step = max(1, len(df_sub) // n_ticks)
     tick_positions = list(range(0, len(df_sub), step))
