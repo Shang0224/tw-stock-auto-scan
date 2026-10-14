@@ -204,7 +204,7 @@ def run_qiantang_strategy_excel_scan(
             continue
 
         # 呼叫核心檢測引擎
-        hits = scan_single_stock_monitors(
+        hits = scan_single_stock(
             df_single=sorted_df,
             category=stock_cat,
             monitor_list=strategies,
