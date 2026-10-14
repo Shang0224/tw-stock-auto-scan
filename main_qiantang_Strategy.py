@@ -86,20 +86,20 @@ STOCK_INPUT = {
 
 
 
-def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies, profiles_map=PARAM_PROFILES):
+def scan_qiantang_strategy_day(day_str, all_df_slice, stocks_dict, strategies, profiles_map=PARAM_PROFILES):
     """單日選股掃描核心"""
     day_hits = []
-    stock_meta_map = {str(s["stock_id"]): s for s in monitor_stocks}
+    
     grouped = all_df_slice.groupby("stock_id")
 
     for stock_id, group_df in grouped:
         sid = str(stock_id)
-        if sid not in stock_meta_map:
+        if sid not in stocks_dict:
             continue
 
-        meta = stock_meta_map[sid]
-        stock_name = meta.get("name", sid)
-        stock_cat = meta.get("category", "MID100")
+        stock_info = stocks_dict[sid]
+        stock_name = stock_info.get("name", "未知股票")
+        stock_cat = stock_info.get("category", "MID100")
 
         df_single = group_df.sort_values("date").copy()
 
@@ -107,7 +107,7 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, monitor_stocks, strategies
         hits = scan_single_stock(
             df_single=df_single,
             category=stock_cat,
-            monitor_list=strategies,
+            func_list=strategies,
             param_profiles=profiles_map,
         )
 
