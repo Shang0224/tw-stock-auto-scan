@@ -172,7 +172,7 @@ def run_qiantang_strategy_excel_scan(
     print(f"📡 讀取來源：{stock_data} | 批量抓取 {len(stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
 
     # 3. 批量抓取日 K 線與籌碼資料
-    global_df = fm_get_complete_stock_data(dl, stock_ids, start_str, today_str)
+    global_df = fm_get_complete_stock_data(dl, stock_records, start_str, today_str)
     if global_df.empty:
         print("❌ [錯誤] FinMind 數據抓取為空，結束執行。")
         return
