@@ -416,20 +416,6 @@ def run_qiantang_strategy_range_scan(
     else:
         print("\nℹ [提示] EXPORT_EXCEL 為 False，已略過 Excel 報表的本地產出。")
 
-    """# 條件式輸出綜合儀表板 CSV 檔
-    csv_file_path = None
-    if EXPORT_CSV:
-        source_folder_name = "qiantang_test_report"
-        os.makedirs(f"data/{source_folder_name}", exist_ok=True)
-        csv_file_name = f"dashboard_summary_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
-        csv_file_path = os.path.abspath(f"data/{source_folder_name}/{csv_file_name}")
-        
-        dashboard_df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
-        print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
-    else:
-        print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
-    """
-
     csv_file_path = None
     
     # 🌟 1. 自動取得當前測試策略名稱
@@ -446,6 +432,17 @@ def run_qiantang_strategy_range_scan(
     
         csv_file_path = os.path.abspath(f"data/{source_folder_name}/{csv_file_name}")
         dashboard_df.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+
+        # 2. 🌟 讀取剛剛寫入的檔案，並在最前面插入 stock_data 字串與一個空行
+        with open(csv_file_path, 'r', encoding='utf-8-sig') as f:
+            original_content = f.read()
+            
+        with open(csv_file_path, 'w', encoding='utf-8-sig') as f:
+            # 寫入第一列（你可以根據喜好調整格式，例如加上標籤或直接寫入 stock_data）
+            f.write(f"Stock Data: ,{stock_data}, 策略程式, {strat_tag}\n") 
+            # 接著寫入原本的 DataFrame 內容
+            f.write(original_content)
+        
         print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
     else:
         print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
