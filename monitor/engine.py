@@ -61,14 +61,14 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
         df['shares_per_trans'] = df['shares_per_trans'].fillna(0)
 
     # =========================================================================
-    # 6. 移動平均線計算 (MA5, MA10, MA20, MA60, MA120, MA240)
+    # 6. 指數移動平均線計算 (EMA5, EMA10, EMA20, EMA60, EMA120, EMA240)
     # =========================================================================
-    df['MA5'] = df['close'].rolling(window=5).mean()
-    df['MA10'] = df['close'].rolling(window=10).mean()
-    df['MA20'] = df['close'].rolling(window=20).mean()
-    df['MA60'] = df['close'].rolling(window=60).mean()
-    df['MA120'] = df['close'].rolling(window=120).mean()
-    df['MA240'] = df['close'].rolling(window=240).mean()
+    df['EMA5'] = df['close'].ewm(span=5, adjust=False).mean()
+    df['EMA10'] = df['close'].ewm(span=10, adjust=False).mean()
+    df['EMA20'] = df['close'].ewm(span=20, adjust=False).mean()
+    df['EMA60'] = df['close'].ewm(span=60, adjust=False).mean()
+    df['EMA120'] = df['close'].ewm(span=120, adjust=False).mean()
+    df['EMA240'] = df['close'].ewm(span=240, adjust=False).mean()
 
     return df
 
