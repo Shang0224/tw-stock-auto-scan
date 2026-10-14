@@ -206,7 +206,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          ha='center', fontsize=8, color='#1f77b4', fontweight='bold',
                          arrowprops=dict(arrowstyle='->', color='#1f77b4', lw=0.9))
 
-    # 4. 🌟 安全取得高低點資訊（避免 DataFrame 轉 Series 產生的布林判斷歧義）
+    # 4. 🌟 安全取得高低點資訊（加上 [0] 避免 iloc 物件未指定索引錯誤）
     high_date_str = None
     high_pct_val = 0.0
     low_date_str = None
@@ -214,28 +214,28 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
     if isinstance(signals, pd.DataFrame) and not signals.empty:
         if 'high_date' in signals.columns:
-            val = signals['high_date'].iloc
+            val = signals['high_date'].iloc[0]
             high_date_str = None if pd.isna(val) else str(val)
         if 'high_pct' in signals.columns:
-            val = signals['high_pct'].iloc
+            val = signals['high_pct'].iloc[0]
             high_pct_val = 0.0 if pd.isna(val) else float(val)
         if 'low_date' in signals.columns:
-            val = signals['low_date'].iloc
+            val = signals['low_date'].iloc[0]
             low_date_str = None if pd.isna(val) else str(val)
         if 'low_pct' in signals.columns:
-            val = signals['low_pct'].iloc
+            val = signals['low_pct'].iloc[0]
             low_pct_val = 0.0 if pd.isna(val) else float(val)
-    elif isinstance(signals, pd.Series):
-        if 'high_date' in signals:
+    elif isinstance(signals, pd.Series) and not signals.empty:
+        if 'high_date' in signals.index:
             val = signals['high_date']
             high_date_str = None if pd.isna(val) else str(val)
-        if 'high_pct' in signals:
+        if 'high_pct' in signals.index:
             val = signals['high_pct']
             high_pct_val = 0.0 if pd.isna(val) else float(val)
-        if 'low_date' in signals:
+        if 'low_date' in signals.index:
             val = signals['low_date']
             low_date_str = None if pd.isna(val) else str(val)
-        if 'low_pct' in signals:
+        if 'low_pct' in signals.index:
             val = signals['low_pct']
             low_pct_val = 0.0 if pd.isna(val) else float(val)
 
