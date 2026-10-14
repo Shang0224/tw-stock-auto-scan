@@ -169,7 +169,7 @@ def run_qiantang_strategy_excel_scan(
     stock_name_dict, dl = get_stock_name_dict()
 
     print("🚀 【錢塘潮選股系統】啟動掃描...")
-    print(f"📡 讀取來源：{stock_input} | 批量抓取 {len(stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
+    print(f"📡 讀取來源：{stock_data} | 批量抓取 {len(stock_ids)} 檔股票資料 ({start_str} ~ {today_str})...")
 
     # 3. 批量抓取日 K 線與籌碼資料
     global_df = fm_get_complete_stock_data(dl, stock_ids, start_str, today_str)
