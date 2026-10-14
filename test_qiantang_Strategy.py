@@ -439,7 +439,7 @@ def run_qiantang_strategy_range_scan(
             
         with open(csv_file_path, 'w', encoding='utf-8-sig') as f:
             # 寫入第一列（你可以根據喜好調整格式，例如加上標籤或直接寫入 stock_data）
-            f.write(f"Stock Data: ,{stock_data}, 策略程式, {strat_tag}\n") 
+            f.write(f"策略程式: ,{strat_tag}, Stock Data:,{stock_data}\n") 
             # 接著寫入原本的 DataFrame 內容
             f.write(original_content)
         
