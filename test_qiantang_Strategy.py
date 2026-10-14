@@ -21,14 +21,18 @@ from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth,      # 筆張現形
     st_qiantang_f2_volume_breakout, # 出量上輕
     st_qiantang_f3_after_shakeout,  # 洗盤後
+    st_qiantang_f3_after_shakeout_20261001,
+    st_qiantang_f3_after_shakeout_20261001_1,
+    st_qiantang_f3_after_shakeout_20261001_1_1,
+    st_qiantang_f3_after_shakeout20261001_1_2,
+    st_qiantang_f3_after_shakeout_20261001_1_3,   
+    st_qiantang_f3_after_shakeout_20261001_1_3_1,
+    st_qiantang_f3_after_shakeout_20261001_1_3_2,
+
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
     st_qiantang_f6_flower,          # 一朵花
     st_qiantang_f7_super_stock,     # 飆股
-    st_qiantang_f3_after_shakeout_20261001_1,
-    st_qiantang_f3_after_shakeout_20261001_1_3,   
-    st_qiantang_f3_after_shakeout_20261001_1_3_1,
-    st_qiantang_f3_after_shakeout_20261001_1_3_2,
 )
 
 # 3. 匯入資料抓取與工具庫 (含大盤 EMA 快查工具)
