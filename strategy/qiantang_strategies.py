@@ -1590,7 +1590,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_2(
         print('-' * 60)
 
     info = {
-        '選股公式': f'F3_洗盤後_乖離與量能雙控版 右側二次確認 (T+{delay_days}',
+        '選股公式': f'F3_洗盤後_乖離與量能雙控版 右側二次確認 (T+{delay_days})',
         '操作建議': f'洗盤結束且緊貼輕鬆線 (乖離: {details["easy_bias_t0"]*100:.1f}%, 量能: {details["vol_ratio_t0"]:.1f}倍)。右側確認通過: T+{delay_days} 報酬 {confirm_return*100:.1f}% (>= {threshold_pct*100:.1f}%)'
     } if is_hit else {}
 
