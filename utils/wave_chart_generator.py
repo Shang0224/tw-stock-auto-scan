@@ -15,7 +15,6 @@ import matplotlib.patches as patches
 plt.rcParams['font.sans-serif'] = ['Noto Sans TC', 'Noto Sans CJK JP', 'Microsoft JhengHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-
 def parse_perf_field(val):
     """
     解析 1Y內最高績效 / 1Y內最低績效 欄位字串。
@@ -117,8 +116,159 @@ def group_signals_into_waves(stock_df):
 
     return waves
 
-
 def plot_single_wave_chart(wave_info, kline_df, save_path):
+    """
+    繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點。
+    （使用 EMA 指數移動平均線、移除非交易日與週末空白）
+    """
+    stock_id = wave_info['stock_id']
+    stock_name = wave_info['stock_name']
+    signals = wave_info['signals']
+
+    s_date = wave_info['start_date']
+    e_date = wave_info['end_date']
+
+    # 確保欄位名稱相符
+    df_sub = kline_df.copy()
+    if 'stock_id' not in df_sub.columns and '股票代號' in df_sub.columns:
+        df_sub['stock_id'] = df_sub['股票代號'].astype(str)
+    else:
+        df_sub['stock_id'] = df_sub['stock_id'].astype(str)
+
+    if 'date' not in df_sub.columns and '日期' in df_sub.columns:
+        df_sub['date'] = df_sub['日期']
+
+    df_sub = df_sub[(df_sub['date'] >= s_date) & (df_sub['date'] <= e_date) & (df_sub['stock_id'] == stock_id)].sort_values('date').copy()
+
+    if df_sub.empty:
+        return False
+
+    df_sub['DateObj'] = pd.to_datetime(df_sub['date'])
+
+    # 欄位映射
+    col_open = 'open' if 'open' in df_sub.columns else '開盤'
+    col_close = 'close' if 'close' in df_sub.columns else '收盤'
+    col_high = 'max' if 'max' in df_sub.columns else ('high' if 'high' in df_sub.columns else '最高')
+    col_low = 'min' if 'min' in df_sub.columns else ('low' if 'low' in df_sub.columns else '最低')
+    col_vol = 'Trading_Volume' if 'Trading_Volume' in df_sub.columns else ('volume' if 'volume' in df_sub.columns else '成交量(張)')
+
+    # 🌟 重置索引為連續整數，消除非交易日/週末在視覺上的空白空隙
+    df_sub = df_sub.reset_index(drop=True)
+    x_indices = range(len(df_sub))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+    fig.suptitle(f"{stock_id} {stock_name} - 走勢圖 ({wave_info['rule_type']})", fontsize=16, fontweight='bold', y=0.96)
+
+    # 1. K 線圖繪製 (繪製於整數索引位置 idx 上)
+    for idx, row in df_sub.iterrows():
+        op, cl, hi, lo = row[col_open], row[col_close], row[col_high], row[col_low]
+        color = '#d62728' if cl >= op else '#2ca02c'  # 紅漲綠跌 (台股慣例)
+
+        # 上下影線
+        ax1.plot([idx, idx], [lo, hi], color=color, linewidth=1.2, zorder=2)
+        # 實體 K 棒
+        height = abs(cl - op)
+        bottom = min(op, cl)
+        rect = patches.Rectangle((idx - 0.35, bottom), 0.7, max(height, 0.05),
+                                 facecolor=color, edgecolor=color, zorder=3)
+        ax1.add_patch(rect)
+
+    # 2. 🌟 EMA 指數移動平均線與輕鬆線 (EMA5, EMA10, EMA20, EMA60, EMA240, 輕鬆線)
+    ema_configs = [
+        ('EMA5', 'EMA5', '#1f77b4', 1.0, '-'),           # 藍色細線
+        ('EMA10', 'EMA10', '#2ca02c', 1.0, '-'),         # 綠色細線
+        ('EMA20', 'EMA20', '#e377c2', 1.2, '-'),         # 粉紅線
+        ('EMA60', 'EMA60 季線', '#ff7f0e', 1.5, '--'),   # 橘色虛線
+        ('EMA240', 'EMA240 年線', '#7f7f7f', 1.5, '-.'), # 灰色點虛線
+    ]
+    for col_name, label_name, color, lw, ls in ema_configs:
+        if col_name in df_sub.columns:
+            ax1.plot(x_indices, df_sub[col_name], label=label_name, color=color, linewidth=lw, linestyle=ls, alpha=0.85)
+
+    if 'easy_line' in df_sub.columns:
+        ax1.plot(x_indices, df_sub['easy_line'], label='輕鬆線 (easy_line)', color='#9467bd', linewidth=1.5)
+
+    # 3. 標示【觸發日期與價格】 (藍色箭頭 + 文字)
+    for _, sig_row in signals.iterrows():
+        t_date_str = sig_row['日期']
+        t_df = df_sub[df_sub['date'] == t_date_str]
+        if not t_df.empty:
+            t_idx = t_df.index.item()
+            t_row = t_df.iloc[0]
+            t_date_obj = t_row['DateObj']
+            t_price = t_row[col_close]
+            t_low_p = t_row[col_low]
+
+            ax1.scatter([t_idx], [t_low_p * 0.97], marker='^', color='#1f77b4', s=120, zorder=6)
+            ax1.annotate(f"觸發\n{t_date_obj.strftime('%m/%d')}\n${t_price:.1f}",
+                         (t_idx, t_low_p * 0.97),
+                         xytext=(0, -38), textcoords='offset points',
+                         ha='center', fontsize=8, color='#1f77b4', fontweight='bold',
+                         arrowprops=dict(arrowstyle='->', color='#1f77b4', lw=0.9))
+
+    # 4. 標示【高點日期】 (紅色 Red)
+    high_date_str = signals['high_date'] if 'high_date' in signals else None
+    high_pct_val = signals['high_pct'] if 'high_pct' in signals else 0.0
+    if high_date_str:
+        h_df = df_sub[df_sub['date'] == high_date_str]
+        if not h_df.empty:
+            h_idx = h_df.index.item()
+            h_row = h_df.iloc[0]
+            h_price = h_row[col_high]
+
+            ax1.scatter([h_idx], [h_price * 1.01], marker='v', color='#d62728', s=140, zorder=7)
+            ax1.annotate(f"★ 高點\n{high_date_str}\n${h_price:.1f} (+{high_pct_val:.1f}%)",
+                         (h_idx, h_price * 1.01),
+                         xytext=(0, 26), textcoords='offset points',
+                         ha='center', fontsize=9, color='#d62728', fontweight='bold',
+                         bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffe6e6', edgecolor='#d62728', alpha=0.9),
+                         arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2))
+
+    # 5. 標示【低點日期】 (綠色 Green)
+    low_date_str = signals['low_date'] if 'low_date' in signals else None
+    low_pct_val = signals['low_pct'] if 'low_pct' in signals else 0.0
+    if low_date_str:
+        l_df = df_sub[df_sub['date'] == low_date_str]
+        if not l_df.empty:
+            l_idx = l_df.index.item()
+            l_row = l_df.iloc[0]
+            l_price = l_row[col_low]
+
+            ax1.scatter([l_idx], [l_price * 0.99], marker='^', color='#2ca02c', s=140, zorder=7)
+            ax1.annotate(f"▼ 低點\n{low_date_str}\n${l_price:.1f} ({low_pct_val:.1f}%)",
+                         (l_idx, l_price * 0.99),
+                         xytext=(0, -44), textcoords='offset points',
+                         ha='center', fontsize=9, color='#2ca02c', fontweight='bold',
+                         bbox=dict(boxstyle='round,pad=0.3', facecolor='#e6ffe6', edgecolor='#2ca02c', alpha=0.9),
+                         arrowprops=dict(arrowstyle='->', color='#2ca02c', lw=1.2))
+
+    # 6. 成交量圖表 (繪製於整數索引 x_indices 上)
+    vol_colors = ['#d62728' if cl >= op else '#2ca02c' for op, cl in zip(df_sub[col_open], df_sub[col_close])]
+    ax2.bar(x_indices, df_sub[col_vol], color=vol_colors, alpha=0.7)
+    ax2.set_ylabel('成交量', fontsize=10)
+    ax2.grid(True, linestyle=':', alpha=0.5)
+
+    ax1.set_ylabel('股價 (TWD)', fontsize=10)
+    ax1.grid(True, linestyle=':', alpha=0.5)
+    ax1.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=6, frameon=True)
+
+    # 7. 🌟 設定 X 軸刻度與日期標籤（均勻選取對應的交易日日期）
+    n_ticks = 10
+    step = max(1, len(df_sub) // n_ticks)
+    tick_positions = list(range(0, len(df_sub), step))
+    tick_labels = [df_sub.loc[i, 'DateObj'].strftime('%Y-%m') for i in tick_positions]
+
+    ax2.set_xticks(tick_positions)
+    ax2.set_xticklabels(tick_labels, rotation=30)
+
+    plt.tight_layout()
+
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    return True
+
+
+def plot_single_wave_chart_old(wave_info, kline_df, save_path):
     """
     繪製單一波段 K 線圖並標示觸發點(藍箭頭/價格)、紅標高點與綠標低點。
     """
