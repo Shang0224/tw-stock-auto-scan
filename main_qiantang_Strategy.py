@@ -126,7 +126,7 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, stocks_dict, strategies, p
 
 def run_qiantang_strategy_excel_scan(
     stock_source=STOCK_MODE,
-    stock_input=STOCK_INPUT,
+    stock_data=STOCK_INPUT,
     strategies=TEST_QIANTANG_STRATEGY,
 ):
     """執行錢塘潮多方選股掃描並產出 Excel 儀表板"""
