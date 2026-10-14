@@ -207,7 +207,7 @@ def run_qiantang_strategy_excel_scan(
         hits = scan_single_stock(
             df_single=sorted_df,
             category=stock_cat,
-            monitor_list=strategies,
+            func_list=strategies,
             param_profiles=PARAM_PROFILES,
         )
         
