@@ -435,8 +435,8 @@ def run_qiantang_strategy_range_scan(
 
     if EXPORT_CSV:
         # 1. 在 qiantang_test_report 下方建立以執行時間命名的資料夾
-        sub_folder_name = current_time_str
-        output_dir = os.path.abspath(os.path.join("data", "qiantang_test_report", sub_folder_name))
+        sub_folder_name = f"qiantang_test_report/{current_time_str}"
+        output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
         os.makedirs(output_dir, exist_ok=True)
 
         # 2. 輸出綜合儀表板 CSV 檔（Dashboard 的 Meta 放入全部策略的 strat_tag）
@@ -498,7 +498,7 @@ def run_qiantang_strategy_range_scan(
 
         print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
 
-        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/qiantang_test_report/{sub_folder_name}" if os.getenv('NAS_SFTP_PATH') else None  
+        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/{sub_folder_name}" if os.getenv('NAS_SFTP_PATH') else None  
 
         plot_files = generate_qiantang_wave_charts(
             dashboard_df=dashboard_df,
@@ -512,6 +512,26 @@ def run_qiantang_strategy_range_scan(
             f' {wave_output_dir}'
         )
 
+        
+    # =====================================================================
+    # 7. 自動備份至 NAS
+    # =====================================================================
+    if os.getenv("NAS_SFTP_PATH"):
+        if EXPORT_EXCEL and os.path.exists(file_path):
+            remote_excel_path = f"{os.getenv('NAS_SFTP_PATH')}/{sub_folder_name}/{file_name}"
+            try:
+                archive_and_cleanup(file_path, remote_excel_path)
+                print(f"📦 Excel 報告已備份至 NAS：{remote_excel_path}")
+            except Exception as e:
+                print(f"⚠ Excel NAS 備份失敗: {e}")
+
+        if EXPORT_CSV and csv_file_path and os.path.exists(csv_file_path):
+            remote_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/{sub_folder_name}/{csv_file_name}"
+            try:
+                archive_and_cleanup(csv_file_path, remote_csv_path)
+                print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
+            except Exception as e:
+                print(f"⚠ CSV NAS 備份失敗: {e}")
     
     """
     csv_file_path = None
@@ -576,7 +596,6 @@ def run_qiantang_strategy_range_scan(
           f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
           f' {wave_output_dir}'
       )
-    """
     
     # =====================================================================
     # 7. 自動備份至 NAS
@@ -597,7 +616,7 @@ def run_qiantang_strategy_range_scan(
                 print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
             except Exception as e:
                 print(f"⚠ CSV NAS 備份失敗: {e}")
-
+    """
 
 
 if __name__ == "__main__":
