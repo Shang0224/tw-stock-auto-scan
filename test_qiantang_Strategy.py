@@ -435,7 +435,7 @@ def run_qiantang_strategy_range_scan(
 
     if EXPORT_CSV:
         # 1. 在 qiantang_test_report 下方建立以執行時間命名的資料夾
-        sub_folder_name = f"qiantang_test_report/{current_time_str}"
+        sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
         output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
         os.makedirs(output_dir, exist_ok=True)
 
