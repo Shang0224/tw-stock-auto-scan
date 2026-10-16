@@ -525,13 +525,29 @@ def run_qiantang_strategy_range_scan(
             except Exception as e:
                 print(f"⚠ Excel NAS 備份失敗: {e}")
 
-        if EXPORT_CSV and csv_file_path and os.path.exists(csv_file_path):
-            remote_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/{sub_folder_name}/{csv_file_name}"
-            try:
-                archive_and_cleanup(csv_file_path, remote_csv_path)
-                print(f"📦 儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
-            except Exception as e:
-                print(f"⚠ CSV NAS 備份失敗: {e}")
+        if EXPORT_CSV:
+            # 1. 備份總表 Dashboard CSV
+            if csv_file_path and os.path.exists(csv_file_path):
+                remote_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/{sub_folder_name}/{csv_file_name}"
+                try:
+                    archive_and_cleanup(csv_file_path, remote_csv_path)
+                    print(f"📦 綜合儀表板 CSV 已成功備份至 NAS 並清理本地：{remote_csv_path}")
+                except Exception as e:
+                    print(f"⚠ 綜合儀表板 CSV NAS 備份失敗: {e}")
+
+            # 2. 🌟 迴圈備份所有「單獨策略」的 CSV 檔至 NAS
+            for strat in strategies:
+                func_name = strat.__name__
+                strat_csv_name = f"{func_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
+                strat_csv_path = os.path.join(output_dir, strat_csv_name)
+                
+                if os.path.exists(strat_csv_path):
+                    remote_strat_csv_path = f"{os.getenv('NAS_SFTP_PATH')}/{sub_folder_name}/{strat_csv_name}"
+                    try:
+                        archive_and_cleanup(strat_csv_path, remote_strat_csv_path)
+                        print(f"📦 單獨策略 CSV [{func_name}] 已成功備份至 NAS：{remote_strat_csv_path}")
+                    except Exception as e:
+                        print(f"⚠ 單獨策略 CSV [{func_name}] NAS 備份失敗: {e}")
     
     """
     csv_file_path = None
