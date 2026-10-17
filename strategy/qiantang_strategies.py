@@ -1062,6 +1062,8 @@ def st_qiantang_f3_after_shakeout_20261017_1(
     if not is_hit:
         return False, {}
 
+    print(f"st_qiantang_f3_after_shakeout_20261017_1---------{is_hit}")
+
     info = {
         '選股公式': 'F3_洗盤後_雙層融合最佳化版',
         '操作建議': (
