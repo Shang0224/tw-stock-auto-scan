@@ -941,7 +941,7 @@ def st_qiantang_f3_after_shakeout_20261017_1(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
-    delay_days: int = 2,  # 🌟 右側觀察天數：預設 3 天 (T+3)
+    delay_days: int = 1,  # 🌟 右側觀察天數：預設 3 天 (T+3)
     threshold_pct: float = -0.02,  # 🌟 觀察期最大允許跌幅：預設 -2.0%
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (均線趨勢 + 量能1.2倍 + 連續兩天站上 + 輕鬆線動能 + T+N右側二次確認)】
