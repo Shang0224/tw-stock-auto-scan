@@ -133,9 +133,9 @@ def fetch_and_process_market_data(api_client, start_date: str, end_date: str, st
 # 2. 資料結構轉換函數 (DataFrame -> 秒查 Dictionary)
 # =============================================================================
 def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
-    #"""
+    #
     #將計算完成的大盤 DataFrame 轉換為以 'YYYY-MM-DD' 為 Key 的秒查字典。
-    #"""
+    #
     df = df_market_processed.copy()
     df['date_str'] = df['date'].dt.strftime('%Y-%m-%d')
     target_cols = ['close', 'EMA20', 'EMA60', 'EMA120', 'EMA240']
