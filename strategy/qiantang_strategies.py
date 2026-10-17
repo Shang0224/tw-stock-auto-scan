@@ -3,16 +3,13 @@
 錢塘潮選股系統 - 7 大多方選股策略模組 (qiantang_strategies.py)
 說明：完全對齊 monitor/qiantang_monitor.py 之除錯訊息 (verbose) 輸出機制與回傳格式 (is_hit, info)。
 """
-
 import pandas as pd
 import numpy as np
 from strategy.config import DEBUG_VERBOSE, BUY_PARAM_PROFILES
 
-
 def is_valid(val):
     """檢查值是否非空且非 NaN"""
     return val is not None and pd.notna(val)
-
 
 # =====================================================================
 # F1. 筆張現形
@@ -939,6 +936,177 @@ def st_qiantang_f2_volume_breakout_20260930(
 # F3. 洗盤後
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
+
+# ------------------------------------------------------------------------------
+# 🔒 專屬內部工具函式：負責全套左側型態、OLS動能與右側 T+N 二次確認檢查 (含 verbose Log)
+# ------------------------------------------------------------------------------
+def _check_f3_fusion_signals(
+    df_single: pd.DataFrame, 
+    idx_today: int, 
+    cfg: dict, 
+    verbose: bool = False
+) -> tuple[bool, dict]:
+    """
+    時間軸解耦的核心模組：
+    1. 檢查 idx_today 當天 (T+0) 的左側型態與 OLS 斜率發散 (攻擊力)
+    2. 檢查最新當天 (T+N) 的右側觀察期表現 (防守力)
+    3. 當 verbose=True 時，完整印出 8 大項指標的排錯與檢驗 Log
+    """
+    today = df_single.iloc[idx_today]
+    d1 = df_single.iloc[idx_today - 1]
+    d2 = df_single.iloc[idx_today - 2]
+    d3 = df_single.iloc[idx_today - 3]
+    d4 = df_single.iloc[idx_today - 4]
+
+    close_0 = today.get('close', None)
+    easy_0 = today.get('easy_line', None)
+    ma60_0 = today.get('MA60', None)
+    vol_0 = today.get('Trading_Volume', None)
+    close_1 = d1.get('close', None)
+    easy_1 = d1.get('easy_line', None)
+
+    # 1. 基礎趨勢、股價與成交量門檻
+    cond1_trend = (close_0 > ma60_0) if (is_valid(close_0) and is_valid(ma60_0)) else False
+    cond2_price = (close_0 >= cfg["MIN_PRICE"]) if is_valid(close_0) else False
+    cond3_volume = (vol_0 >= cfg["MIN_VOLUME"]) if is_valid(vol_0) else False
+
+    # 2. 連續兩天站穩輕鬆線 (T+0 今日與 T-1 昨日)
+    cond4_today = (close_0 > easy_0) if (is_valid(close_0) and is_valid(easy_0)) else False
+    cond4_yest = (close_1 > easy_1) if (is_valid(close_1) and is_valid(easy_1)) else False
+    cond4_continuous = cond4_today and cond4_yest
+
+    # 3. 洗盤甩轎軌跡 (2, 3 或 4 日前曾跌破輕鬆線)
+    was_below_2d = (d2.get('close', 0) <= d2.get('easy_line', 0)) if (is_valid(d2.get('close')) and is_valid(d2.get('easy_line'))) else False
+    was_below_3d = (d3.get('close', 0) <= d3.get('easy_line', 0)) if (is_valid(d3.get('close')) and is_valid(d3.get('easy_line'))) else False
+    was_below_4d = (d4.get('close', 0) <= d4.get('easy_line', 0)) if (is_valid(d4.get('close')) and is_valid(d4.get('easy_line'))) else False
+    cond5_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+    # 4. 雙控機制：量能倍數與輕鬆線低乖離率
+    recent_vols = df_single['Trading_Volume'].iloc[idx_today - 5 : idx_today]
+    vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+    vol_ratio = (vol_0 / vol_ma5) if (is_valid(vol_0) and is_valid(vol_ma5) and vol_ma5 > 0) else 0.0
+    easy_bias = ((close_0 - easy_0) / easy_0 * 100.0) if (is_valid(close_0) and is_valid(easy_0) and easy_0 > 0) else 999.0
+
+    cond6_vol = (cfg["VOL_RATIO_MIN"] <= vol_ratio <= cfg["VOL_RATIO_MAX"])
+    cond6_bias = (0 < easy_bias <= cfg["EASY_BIAS_MAX"])
+    cond6_dual = cond6_vol and cond6_bias
+
+    # 5. OLS 斜率與輕鬆線 5 日動能發散 (主升段爆發力源頭)
+    easy_5d_ago = df_single.iloc[idx_today - 5].get('easy_line', None)
+    easy_gain_5d = ((easy_0 - easy_5d_ago) / easy_5d_ago * 100.0) if (is_valid(easy_0) and is_valid(easy_5d_ago) and easy_5d_ago > 0) else 0.0
+
+    easy_slice = df_single.iloc[idx_today - 4 : idx_today + 1]['easy_line'].values
+    ols_slope = 0.0
+    if len(easy_slice) == 5 and not np.isnan(easy_slice).any():
+        ols_slope, _, _, _, _ = linregress(np.arange(5), easy_slice)
+
+    cond7_gain = (easy_gain_5d >= cfg["EASY_GAIN_5D_MIN"])
+    cond7_slope = (ols_slope >= cfg["OLS_SLOPE_MIN"])
+    cond7_momentum = cond7_gain and cond7_slope
+
+    # 6. 右側 T+N 二次確認風控 (時間軸獨立：比對最新當日與 T+0 成本)
+    confirm_idx = len(df_single) - 1
+    confirm_close = df_single.iloc[confirm_idx].get('close', None)
+    t_n_return = ((confirm_close - close_0) / close_0) if (is_valid(confirm_close) and is_valid(close_0) and close_0 > 0) else -999.0
+    cond8_right_confirm = (t_n_return >= cfg["RIGHT_CONFIRM_MIN_RET"])
+
+    # 總體判定結果
+    is_hit = (
+        cond1_trend and cond2_price and cond3_volume and 
+        cond4_continuous and cond5_shakeout and cond6_dual and 
+        cond7_momentum and cond8_right_confirm
+    )
+
+    # 🔍 【Verbose 詳細控制台 Log 輸出】
+    if verbose:
+        stock_id = today.get('stock_id', '未知個股')
+        date_str = str(today.get('date', '最新日'))
+        vol_lots = vol_0 / 1000.0 if is_valid(vol_0) else 0.0
+
+        print("\n" + "=" * 60)
+        print(f"🔔 [F3_洗盤後雙層融合排錯] 股票: {stock_id} | 發動日(T+0): {date_str}")
+        print("-" * 60)
+        print(f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線趨勢過濾 : Close > MA60 (${close_0:.2f} > ${ma60_0:.2f})")
+        print(f"  [{ '✓' if cond2_price else '✕' }] 2. 最低股價門檻 : ${close_0:.2f} (>= {cfg['MIN_PRICE']}元)")
+        print(f"  [{ '✓' if cond3_volume else '✕' }] 3. 基礎成交量能 : {vol_lots:,.0f} 張 (>= {cfg['MIN_VOLUME']/1000:.0f}張)")
+        print(f"  [{ '✓' if cond4_continuous else '✕' }] 4. 連續兩天站穩 : 今日({cond4_today}) | 昨日({cond4_yest})")
+        print(f"  [{ '✓' if cond5_shakeout else '✕' }] 5. 洗盤甩轎軌跡 : 2日前跌破({was_below_2d}) | 3日前跌破({was_below_3d}) | 4日前跌破({was_below_4d})")
+        print(f"  [{ '✓' if cond6_dual else '✕' }] 6. 乖離量能雙控 : 量能 {vol_ratio:.2f}倍 ({cfg['VOL_RATIO_MIN']}~{cfg['VOL_RATIO_MAX']}倍) | 乖離 {easy_bias:.2f}% (<={cfg['EASY_BIAS_MAX']}%)")
+        print(f"  [{ '✓' if cond7_momentum else '✕' }] 7. OLS動能發散 : 輕鬆線5日漲幅 {easy_gain_5d:.2f}% (>={cfg['EASY_GAIN_5D_MIN']}%) | OLS斜率 {ols_slope:.4f} (>={cfg['OLS_SLOPE_MIN']})")
+        print(f"  [{ '✓' if cond8_right_confirm else '✕' }] 8. 右側二次確認 : T+{cfg['DELAY_DAYS']} 報酬 {t_n_return*100:.2f}% (>= {cfg['RIGHT_CONFIRM_MIN_RET']*100:.1f}%)")
+        print("-" * 60)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發雙層融合選股]' if is_hit else '⚪ [未通過條件]'}")
+        print("=" * 60 + "\n")
+
+    return is_hit, {
+        "easy_gain_5d": easy_gain_5d,
+        "vol_ratio": vol_ratio,
+        "easy_bias": easy_bias,
+        "t_n_return": t_n_return,
+        "ols_slope": ols_slope
+    }
+
+
+# ==============================================================================
+# 🎯 主策略入口：最終最佳雙層融合策略 (內部參數完全內置)
+# ==============================================================================
+def st_qiantang_f3_after_shakeout_20261017_1(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """
+    【F3_洗盤後（最終最佳雙層融合策略：均線動能發散 + 右側T+3二次確認）】
+    """
+    # 預設參數直接定義在函數內部
+    default_config = {
+        "MIN_PRICE": 5.0,              # 最低股價門檻 (元)
+        "MIN_VOLUME": 350 * 1000,      # 當日最低成交量門檻 (股數，350張)
+        "VOL_RATIO_MIN": 1.2,          # 5日量倍數下限 (1.2倍)
+        "VOL_RATIO_MAX": 2.5,          # 5日量倍數上限 (2.5倍，過濾拉高倒貨)
+        "EASY_BIAS_MAX": 4.0,          # 輕鬆線最大乖離率 (%) (貼近支撐進場)
+        "EASY_GAIN_5D_MIN": 1.5,       # 輕鬆線 5 日累積漲幅 (%) (動能向上發散門檻)
+        "OLS_SLOPE_MIN": 0.0,          # OLS 線性迴歸斜率最小值
+        "DELAY_DAYS": 3,               # 右側二次確認觀察天數 (T+3)
+        "RIGHT_CONFIRM_MIN_RET": -0.02 # 右側觀察期最低允許報酬率 (-2.0%)
+    }
+
+    cfg = {**default_config, **(profile or {})}
+    
+    req_days = 60 + cfg["DELAY_DAYS"]
+    if len(df_single) < req_days:
+        if verbose:
+            print(f"❌ [F3_洗盤後] 資料筆數不足 {req_days} 筆 (目前: {len(df_single)})")
+        return False, {}
+
+    # 1. 精準定位訊號發動日 (自動扣除右側觀察天數 DELAY_DAYS)
+    idx_today = len(df_single) - 1 - cfg["DELAY_DAYS"]
+
+    # 2. 呼叫內部專屬工具函式，傳入 verbose 參數進行逐項 Log 輸出
+    is_hit, res = _check_f3_fusion_signals(df_single, idx_today, cfg, verbose=verbose)
+    if not is_hit:
+        return False, {}
+
+    # 3. 訊號完全成立，封裝傳出資訊
+    info = {
+        '選股公式': 'F3_洗盤後_雙層融合最佳化版',
+        '操作建議': (
+            f"雙層過濾通過：均線斜率向上發散 (輕鬆線5日漲幅 {res['easy_gain_5d']:.1f}%)，"
+            f"量能 {res['vol_ratio']:.1f}倍且低乖離 ({res['easy_bias']:.1f}%)。"
+            f"右側 T+{cfg['DELAY_DAYS']} 確認無深跌 ({res['t_n_return']*100:.1f}% >= {cfg['RIGHT_CONFIRM_MIN_RET']*100:.1f}%)。"
+        ),
+        '設定參數': (
+            f"VOL={cfg['VOL_RATIO_MIN']}~{cfg['VOL_RATIO_MAX']}x, "
+            f"BIAS<={cfg['EASY_BIAS_MAX']}%, "
+            f"EASY_GAIN_5D>={cfg['EASY_GAIN_5D_MIN']}%, "
+            f"RIGHT_CONFIRM=T+{cfg['DELAY_DAYS']} >= {cfg['RIGHT_CONFIRM_MIN_RET']*100:.1f}%"
+        )
+    }
+
+    return True, info
+
+
+
 
 def st_qiantang_f3_after_shakeout(
     df_single: pd.DataFrame, profile: dict = None, verbose: bool = DEBUG_VERBOSE
