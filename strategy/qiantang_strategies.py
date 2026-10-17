@@ -1071,6 +1071,8 @@ def st_qiantang_f3_after_shakeout_20261017_1(
         "RIGHT_CONFIRM_MIN_RET": -0.02 # 右側觀察期最低允許報酬率 (-2.0%)
     }
 
+    print("st_qiantang_f3_after_shakeout_20261017_1--------------------")
+
     cfg = {**default_config, **(profile or {})}
     
     req_days = 60 + cfg["DELAY_DAYS"]
