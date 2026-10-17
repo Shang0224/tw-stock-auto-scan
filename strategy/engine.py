@@ -124,6 +124,16 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
       .apply(_calc_slope_20, raw=False)
   )
 
+  # 季線 (MA60) 與年線 (MA240) 扣抵位置 % [(目前收盤價 - 扣抵價) / 扣抵價 * 100]
+  close_shift60 = df['close'].shift(60)
+  close_shift240 = df['close'].shift(240)
+  df['ma60_deduct_bias'] = (
+      (df['close'] - close_shift60) / close_shift60
+  ) * 100
+  df['ma240_deduct_bias'] = (
+      (df['close'] - close_shift240) / close_shift240
+  ) * 100
+
   # 均線多頭排列布林標記 (MA5 > MA20 > MA60 > MA240)
   df['is_bull_alignment'] = (
       (df['MA5'] > df['MA20'])
@@ -137,11 +147,22 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   ma_mean = ma_matrix.mean(axis=1)
   df['ma_tangle_ratio'] = (ma_std / ma_mean) * 100
 
-  # (3) 成交量能與金額擴充
+  # (3) 觸發當日 K 線型態特徵 (純 FinMind 標準欄位: open, max, min, close)
+  high_low_range = (df['max'] - df['min']).replace(0, np.nan)
+  body = (df['close'] - df['open']).abs()
+  upper_shadow = df['max'] - df[['open', 'close']].max(axis=1)
+
+  df['body_ratio'] = ((body / high_low_range) * 100.0).fillna(0.0)
+  df['upper_shadow_ratio'] = ((upper_shadow / high_low_range) * 100.0).fillna(
+      0.0
+  )
+  df['is_red_k'] = df['close'] >= df['open']
+  
+  # (4) 成交量能與金額擴充
   df['vol_ma5'] = df['Trading_Volume'].rolling(5).mean()
   df['amount_100m'] = df['trading_amount'] / 100000000.0
 
-  # (4) 長線 52 週 (240日) 位階與打底沉澱天數
+  # (5) 長線 52 週 (240日) 位階與打底沉澱天數
   df['high_52w'] = df['max'].rolling(window=240, min_periods=30).max()
   df['low_52w'] = df['min'].rolling(window=240, min_periods=30).min()
   df['dist_to_52w_high_pct'] = (
