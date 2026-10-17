@@ -11,6 +11,89 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import numpy as np
 
+def fetch_and_process_market_data(
+    api_client, start_date: str, end_date: str, stock_id: str = "TAIEX"
+) -> pd.DataFrame:
+  """擷取大盤 (TAIEX) 歷史數據並計算多週期 EMA 與 MA (SMA) 均線，回傳 pd.DataFrame。
+
+  支援 FinMind DataLoader (taiwan_stock_daily) 及通用 API 介面。
+  """
+  # 優先呼叫 FinMind DataLoader 的原生 API 方法 taiwan_stock_daily
+  df_market = api_client.taiwan_stock_daily(
+      stock_id=stock_id, start_date=start_date, end_date=end_date
+  )
+
+  if df_market is None or df_market.empty:
+    raise ValueError(
+        f"無法擷取大盤代號 [{stock_id}] 的資料，請檢查 API 狀態或日期區間。"
+    )
+
+  df = df_market.copy()
+
+  # 確保按日期升冪排序
+  df["date"] = pd.to_datetime(df["date"])
+  df = df.sort_values("date").reset_index(drop=True)
+
+  # 確保數值型別正確
+  df["close"] = df["close"].astype(float)
+
+  # =========================================================================
+  # 1. 原始計算：多週期大盤趨勢 EMA 均線 (20, 60, 120, 240 日)
+  # =========================================================================
+  df["EMA20"] = df["close"].ewm(span=20, adjust=False).mean()
+  df["EMA60"] = df["close"].ewm(span=60, adjust=False).mean()
+  df["EMA120"] = df["close"].ewm(span=120, adjust=False).mean()
+  df["EMA240"] = df["close"].ewm(span=240, adjust=False).mean()
+
+  # =========================================================================
+  # 🌟 2. 長線回測新增大盤指標 (全數附加於原始 EMA 計算後方)
+  # =========================================================================
+  # (1) 簡單移動平均線 (SMA: MA20, MA60, MA120, MA240)
+  df["MA20"] = df["close"].rolling(window=20, min_periods=1).mean()
+  df["MA60"] = df["close"].rolling(window=60, min_periods=1).mean()
+  df["MA120"] = df["close"].rolling(window=120, min_periods=1).mean()
+  df["MA240"] = df["close"].rolling(window=240, min_periods=1).mean()
+
+  # (2) 大盤當日漲跌幅 (%)
+  df["taiex_change_pct"] = df["close"].pct_change() * 100.0
+
+  # (3) 大盤季線 (MA60 & EMA60) 乖離率 (%)
+  df["taiex_ma60_bias_pct"] = ((df["close"] - df["MA60"]) / df["MA60"]) * 100.0
+  df["taiex_ema60_bias_pct"] = (
+      (df["close"] - df["EMA60"]) / df["EMA60"]
+  ) * 100.0
+
+  return df
+
+
+# =============================================================================
+# 2. 資料結構轉換函數 (DataFrame -> 秒查 Dictionary)
+# =============================================================================
+def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
+  """將計算完成的大盤 DataFrame 轉換為以 'YYYY-MM-DD' 為 Key 的秒查字典。"""
+  df = df_market_processed.copy()
+  df["date_str"] = df["date"].dt.strftime("%Y-%m-%d")
+
+  # 🌟 包含原始 EMA 欄位，並擴充 SMA MA、當日漲跌幅與季線乖離率
+  target_cols = [
+      "close",
+      "EMA20",
+      "EMA60",
+      "EMA120",
+      "EMA240",
+      "MA20",
+      "MA60",
+      "MA120",
+      "MA240",
+      "taiex_change_pct",
+      "taiex_ma60_bias_pct",
+      "taiex_ema60_bias_pct",
+  ]
+
+  # 轉為字典結構以利 O(1) 複雜度查詢
+  return df.set_index("date_str")[target_cols].to_dict(orient="index")
+
+"""
 # =============================================================================
 # 1. 底層數據處理函數 (保留未來繪圖、分析與 DataFrame 匯出的靈活性)
 # =============================================================================
@@ -58,7 +141,7 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
     
     # 轉為字典結構以利 O(1) 複雜度查詢
     return df.set_index('date_str')[target_cols].to_dict(orient='index')
-
+"""
 
 # =============================================================================
 # 3. 高階封裝函數 (主程式直接呼叫此函數即可，一步到位)
