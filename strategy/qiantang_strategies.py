@@ -1085,8 +1085,9 @@ def st_qiantang_f3_after_shakeout_20261017_1(
     # 2. 呼叫內部專屬工具函式，傳入 verbose 參數進行逐項 Log 輸出
     is_hit, res = _check_f3_fusion_signals(df_single, idx_today, cfg, verbose=verbose)
     if not is_hit:        
-        print(f"st_qiantang_f3_after_shakeout_20261017_1-------{is_hit}-------------")
         return False, {}
+
+    print(f"st_qiantang_f3_after_shakeout_20261017_1-------{is_hit}-------------")
 
     # 3. 訊號完全成立，封裝傳出資訊
     info = {
