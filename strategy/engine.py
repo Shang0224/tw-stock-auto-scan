@@ -153,9 +153,7 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   upper_shadow = df['max'] - df[['open', 'close']].max(axis=1)
 
   df['body_ratio'] = ((body / high_low_range) * 100.0).fillna(0.0)
-  df['upper_shadow_ratio'] = ((upper_shadow / high_low_range) * 100.0).fillna(
-      0.0
-  )
+  df['upper_shadow_ratio'] = ((upper_shadow / high_low_range) * 100.0).fillna(0.0)
   df['is_red_k'] = df['close'] >= df['open']
   
   # (4) 成交量能與金額擴充
