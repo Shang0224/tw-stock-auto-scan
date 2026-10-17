@@ -1029,7 +1029,7 @@ def _check_f3_fusion_signals(
 # ==============================================================================
 # 🎯 主策略入口：完全對齊 _1_3_2 的架構規範
 # ==============================================================================
-def st_qiantang_f3_after_shakeout_20261017_01(
+def st_qiantang_f3_after_shakeout_20261017_1(
     df_single: pd.DataFrame, 
     profile: dict = None, 
     verbose: bool = DEBUG_VERBOSE
