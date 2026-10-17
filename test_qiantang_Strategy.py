@@ -12,9 +12,9 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 # 1. 匯入核心執行引擎與預處理
-from strategy.engine import scan_single_stock
+from strategy.engine import scan_single_stock, preprocess_all_technical_indicators
 from strategy.config import BUY_PARAM_PROFILES
-from monitor.engine import preprocess_all_technical_indicators
+#from monitor.engine import preprocess_all_technical_indicators
 
 # 2. 匯入 7 大多方選股策略與優化策略
 from strategy.qiantang_strategies import (
