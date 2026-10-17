@@ -1000,7 +1000,8 @@ def _check_f3_fusion_signals(
     if len(easy_slice) == 5 and not np.isnan(easy_slice).any():
         ols_slope, _, _, _, _ = linregress(np.arange(5), easy_slice)
 
-    if not (easy_gain_5d >= cfg["EASY_GAIN_5D_MIN"] and ols_slope >= cfg["OLS_SLOPE_MIN"]):
+    #if not (easy_gain_5d >= cfg["EASY_GAIN_5D_MIN"] and ols_slope >= cfg["OLS_SLOPE_MIN"]):
+    if not ols_slope >= cfg["OLS_SLOPE_MIN"]: #取消5日輕鬆線漲幅1.5%
         return False, {}
 
     # 6. 右側 T+N 二次確認風控 (事後歷史資料驗證：比對 idx_today + delay_days 與 idx_today 的真實價差)
