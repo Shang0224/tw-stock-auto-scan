@@ -98,11 +98,11 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
 # 1. 底層數據處理函數 (保留未來繪圖、分析與 DataFrame 匯出的靈活性)
 # =============================================================================
 def fetch_and_process_market_data(api_client, start_date: str, end_date: str, stock_id: str = "TAIEX") -> pd.DataFrame:
-    """
-    擷取大盤 (TAIEX) 歷史數據並計算多週期 EMA 均線，回傳 pd.DataFrame。
-    
-    支援 FinMind DataLoader (taiwan_stock_daily) 及通用 API 介面。
-    """
+    #"""
+    #擷取大盤 (TAIEX) 歷史數據並計算多週期 EMA 均線，回傳 pd.DataFrame。
+    #
+    #支援 FinMind DataLoader (taiwan_stock_daily) 及通用 API 介面。
+    #"""
     # 🌟 修正：優先呼叫 FinMind DataLoader 的原生 API 方法 taiwan_stock_daily
     df_market = api_client.taiwan_stock_daily(stock_id=stock_id, start_date=start_date, end_date=end_date)
         
