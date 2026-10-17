@@ -104,6 +104,7 @@ def fetch_and_process_market_data(api_client, start_date: str, end_date: str, st
     #支援 FinMind DataLoader (taiwan_stock_daily) 及通用 API 介面。
     #"""
     # 🌟 修正：優先呼叫 FinMind DataLoader 的原生 API 方法 taiwan_stock_daily
+    
     df_market = api_client.taiwan_stock_daily(stock_id=stock_id, start_date=start_date, end_date=end_date)
         
     if df_market is None or df_market.empty:
