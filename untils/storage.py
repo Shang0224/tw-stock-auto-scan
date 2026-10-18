@@ -35,14 +35,14 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
         sftp = ssh.open_sftp()
        
         remote_dir = os.path.dirname(remote_path)
-        #print(f"remote_path：{remote_path}  remote_dir: {remote_dir}")
+        print(f"remote_path：{remote_path}  remote_dir: {remote_dir}")
 
         # 5. 確保遠端目錄存在
         try:
-            sftp.stat(remote_target_dir)
+            sftp.stat(remote_dir)
         except IOError:
             # 🌟 若遠端資料夾不存在，自動幫忙建立目錄
-            sftp.mkdir(remote_target_dir)
+            sftp.mkdir(remote_dir)
         
         
         try:
