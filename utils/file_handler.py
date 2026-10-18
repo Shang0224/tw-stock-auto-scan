@@ -329,6 +329,9 @@ def cleanup_local_file(file_path):
 
 def archive_and_cleanup(local_file_path, remote_path):
     """【流程組合】負責高階的 備份 + 清理 聯動流程 (遠端路徑由外部決定)"""
+
+    print("archive_and_cleanup\n")
+    
     if not local_file_path or not os.path.exists(local_file_path):
         print("ℹ️ 今日無產出報表檔案，無需上傳 NAS。")
         return
