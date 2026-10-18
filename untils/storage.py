@@ -44,14 +44,14 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
             # 🌟 若遠端資料夾不存在，自動幫忙建立目錄
             sftp.mkdir(remote_target_dir)
         
-        """
+        
         try:
             sftp.chdir(remote_dir)
         except IOError:            
             # 如果目錄不存在，可以選擇直接報錯或自動建立
             # 這裡我們選擇拋出異常，確保你的路徑設定是正確的
             raise FileNotFoundError(f"❌ 遠端目錄不存在：{remote_dir}")
-        """     
+             
 
         # 6. 執行上傳
         print(f"🚀 開始上傳：{os.path.basename(local_path)} -> {remote_path}")
