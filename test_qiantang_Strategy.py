@@ -516,7 +516,7 @@ def run_qiantang_strategy_range_scan(
             m_close = market_info.get("close", 0)
             m_ema = market_info.get(MARKET_FILTER_KEY, 0)
             m_slope = market_info.get("EMA60_slope", 0)  # 🌟 1. 取出大盤 EMA60 斜率    
-            print(f"EMA60_slope : {EMA60_slope}\n")
+            print(f"EMA60_slope : {m_slope}\n")
             # 🌟 2. 雙重防線：當大盤 <= EMA60 季線 或 斜率 <= 0 (走平/向下) 時，當天跳過不選股
             if m_close <= m_ema or m_slope <= 0:
                 current_day += timedelta(days=1)
