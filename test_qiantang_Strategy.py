@@ -316,17 +316,9 @@ def scan_qiantang_strategy_day(
                     / 1000.0
                 )
             ),
-            "融資當日增減(張)": int(
-                round(float(latest_row.get("margin_diff_shares", 0)) / 1000.0)
-            ),
-            "融券餘額(張)": int(
-                round(
-                    float(latest_row.get("ShortSaleTodayBalance", 0)) / 1000.0
-                )
-            ),
-            "融券當日增減(張)": int(
-                round(float(latest_row.get("short_diff_shares", 0)) / 1000.0)
-            ),
+            "融資當日增減(張)": latest_row.get("margin_diff_shares", 0),
+            "融券餘額(張)": latest_row.get("ShortSaleTodayBalance", 0),
+            "融券當日增減(張)": latest_row.get("short_diff_shares", 0),
         }
 
         # -----------------------------------------------------------------
