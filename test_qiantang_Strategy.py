@@ -114,6 +114,22 @@ STOCK_INPUT = {
 # ==============================================================================
 GENERATE_WAVE_CHARTS = True  # 選股完成後是否自動繪製波段 K 線走勢圖
 
+# -----------------------------------------------------------------
+# 型態安全工具函式 (攔截 NaN，自動補 0 維持整數欄位)
+# -----------------------------------------------------------------
+def safe_lots_from_shares(val) -> int:
+  """三大法人專用：原生為「股」，除以 1000 轉為「張」"""
+  if pd.isna(val) or val is None:
+    return 0
+  return int(round(float(val) / 1000.0))
+
+
+def safe_lots_from_lots(val) -> int:
+  """信用交易專用：原生即為「張」，不除以 1000"""
+  if pd.isna(val) or val is None:
+    return 0
+  return int(round(float(val)))
+
 def scan_qiantang_strategy_day(
     day_str: str,
     all_df_slice: pd.DataFrame,
@@ -126,6 +142,7 @@ def scan_qiantang_strategy_day(
   """單日個股選股掃描核心，並於觸發時附加全方位技術面、大盤環境、前瞻與極值績效"""
   day_hits = []
 
+    
   # 1. 直接對全市場 K 線依 stock_id 分組
   grouped = all_df_slice.groupby("stock_id")
 
@@ -173,7 +190,7 @@ def scan_qiantang_strategy_day(
       extreme_perf = calculate_one_year_extremes(
           stock_id=sid, trigger_date_str=day_str, global_df=global_df
       )
-
+       
       for hit in hits:
         strat_func_name = hit.get("strategy_name", "")
         formula_label = hit.get("選股公式", strat_func_name)
@@ -281,44 +298,17 @@ def scan_qiantang_strategy_day(
             "今日成交量(張)": int(
                 round(float(latest_row.get("Trading_Volume", 0)) / 1000.0)
             ),
-            "外資買超(張)": int(
-                round(float(latest_row.get("Foreign_Investor", 0)) / 1000.0)
-            ),
-            "投信買超(張)": int(
-                round(float(latest_row.get("Investment_Trust", 0)) / 1000.0)
-            ),
-            "自營商買超(張)": int(
-                round(float(latest_row.get("Dealer_self", 0)) / 1000.0)
-            ),
-            "主力買超(張)": int(
-                round(float(latest_row.get("major_net", 0)) / 1000.0)
-            ),
-            "外資近5日累計(張)": int(
-                round(
-                    float(latest_row.get("foreign_5d_shares_sum", 0)) / 1000.0
-                )
-            ),
-            "投信近5日累計(張)": int(
-                round(
-                    float(latest_row.get("trust_5d_shares_sum", 0)) / 1000.0
-                )
-            ),
-            "主力近5日累計(張)": int(
-                round(
-                    float(latest_row.get("major_5d_shares_sum", 0)) / 1000.0
-                )
-            ),
-            "融資餘額(張)": int(
-                round(
-                    float(
-                        latest_row.get("MarginPurchaseTodayBalance", 0)
-                    )
-                    / 1000.0
-                )
-            ),
-            "融資當日增減(張)": latest_row.get("margin_diff_shares", 0),
-            "融券餘額(張)": latest_row.get("ShortSaleTodayBalance", 0),
-            "融券當日增減(張)": latest_row.get("short_diff_shares", 0),
+            "外資買超(張)": safe_lots_from_shares(latest_row.get("Foreign_Investor")),
+            "投信買超(張)": safe_lots_from_shares(latest_row.get("Investment_Trust")),
+            "自營商買超(張)": safe_lots_from_shares(latest_row.get("Dealer_self")),
+            "主力買超(張)": safe_lots_from_shares(latest_row.get("major_net")),
+            "外資近5日累計(張)": safe_lots_from_shares(latest_row.get("foreign_5d_shares_sum")),
+            "投信近5日累計(張)": safe_lots_from_shares(latest_row.get("trust_5d_shares_sum")),
+            "主力近5日累計(張)": safe_lots_from_shares(latest_row.get("major_5d_shares_sum")),
+            "融資餘額(張)": safe_lots_from_lots(latest_row.get("MarginPurchaseTodayBalance")),
+            "融資當日增減(張)": safe_lots_from_lots(latest_row.get("margin_diff_shares")),
+            "融券餘額(張)": safe_lots_from_lots(latest_row.get("ShortSaleTodayBalance")),
+            "融券當日增減(張)": safe_lots_from_lots(latest_row.get("short_diff_shares")),
         }
 
         # -----------------------------------------------------------------
