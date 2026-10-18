@@ -506,10 +506,26 @@ def run_qiantang_strategy_range_scan(
         current_day += timedelta(days=1)
         continue
 
+
+    # =================================================================
+    # 🛡 關卡 2：大盤趨勢第一道防線 (雙重確認：價格 > EMA60 且 斜率 > 0)
+    # =================================================================
+    if USE_MARKET_FILTER:
+        market_info = market_dict.get(day_str)
+        if market_info:
+            m_close = market_info.get("close", 0)
+            m_ema = market_info.get(MARKET_FILTER_KEY, 0)
+            m_slope = market_info.get("EMA60_slope", 0)  # 🌟 1. 取出大盤 EMA60 斜率    
+
+            # 🌟 2. 雙重防線：當大盤 <= EMA60 季線 或 斜率 <= 0 (走平/向下) 時，當天跳過不選股
+            if m_close <= m_ema or m_slope <= 0:
+                current_day += timedelta(days=1)
+                continue
+    """
     # =================================================================
     # 🛡 關卡 2：大盤趨勢第一道防線 (當日大盤未站上趨勢防線則暫停選股)
     # =================================================================
-    if USE_MARKET_FILTER:
+      if USE_MARKET_FILTER:
       market_info = market_dict.get(day_str)
       if market_info:
         m_close = market_info.get("close", 0)
@@ -519,7 +535,7 @@ def run_qiantang_strategy_range_scan(
         if m_close <= m_ema:
           current_day += timedelta(days=1)
           continue
-
+    """
     # =================================================================
     # 🎯 階段 3：切割截至當日為止的歷史數據並執行選股
     # =================================================================
