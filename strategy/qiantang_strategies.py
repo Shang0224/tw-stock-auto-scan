@@ -1193,7 +1193,164 @@ def st_qiantang_f3_after_shakeout_20261017_1(
 
   return is_hit, info
 
+def st_qiantang_f3_after_shakeout_20261018_1(
+    df_single: pd.DataFrame, 
+    profile: dict = None, 
+    verbose: bool = DEBUG_VERBOSE
+) -> tuple[bool, dict]:
+    """【F3_洗盤後（旗艦雙線斜率共振優化版）】
+    
+    核心選股邏輯：
+    1. 趨勢過濾：今日收盤價 > MA60（季線多頭架構）
+    2. 雙線斜率共振：
+       - MA60 季線 OLS 斜率 >= 0.05（中期生命線穩定向上護航）
+       - 輕鬆線 OLS 斜率 >= 0.5（短線扣抵具備加速度攻擊動能）
+    3. 強勢高位突破：距 52 週高點 >= -15.0%（確保上方無解套賣壓天花板）
+    4. 輕鬆線乖離控管：輕鬆線乖離率 <= 12.0%（防短線急拉過熱拉回衝擊）
+    5. 洗盤甩轎軌跡：今日與昨日連續站穩輕鬆線，且 T-2、T-3 或 T-4 曾跌破輕鬆線
+    6. 量能與價格底線：成交量 >= 350 張 且 >= 前 5 日均量的 1.2 倍，收盤價 >= 5 元
+    """
+    # ==========================================
+    # 策略核心參數設定區 (變數統一置於函數最前段)
+    # ==========================================
+    min_ma60_slope    = 0.05       # 條件 1: 季線 MA60 斜率下限 (中期生命線向上)
+    min_ols_slope     = 0.5        # 條件 2: 輕鬆線 OLS 斜率下限 (短線扣抵加速度)
+    min_52w_high_dist = -15.0      # 條件 3: 距 52 週高點距離 (%) 下限 (強勢高位無賣壓)
+    max_easy_bias     = 0.12       # 條件 4: 輕鬆線乖離率上限 (12.0%, 防過熱拉回)
+    volume_multiplier = 1.2        # 條件 5: 相對量能放大倍數 (5日均量之 1.2 倍)
+    min_safety_volume = 350 * 1000 # 條件 6: 成交股數底線 (350張 = 350,000股)
+    min_close_price   = 5.0        # 條件 7: 價格底線 (5元)
 
+    profile = profile or {}
+
+    # 確保資料筆數至少有 60 筆以上，以計算 MA60 季線與 52 週高點
+    if len(df_single) < 60:
+        if verbose:
+            print(f"❌ [洗盤後] 資料筆數不足 60 筆，無法計算 MA60 季線 (目前: {len(df_single)})")
+        return False, {}
+
+    df_single = df_single.copy()
+    
+    # 計算 60 日均線 (MA60 季線)
+    df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+    # 取得歷史資料列 (0:當日/今日, 1:昨日, 2:前日, 3:大前日, 4:四日前)
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+    d3 = df_single.iloc[-4]
+    d4 = df_single.iloc[-5]
+
+    # ==========================================
+    # 欄位嚴格取值區 (遵循 FinMind 標準，缺失時拋出 KeyError)
+    # ==========================================
+    close_0 = today['close']
+    easy_0  = today['easy_line']
+    vol_0   = today['Trading_Volume']
+    ma60_0  = today['MA60']
+
+    close_1 = d1['close']
+    easy_1  = d1['easy_line']
+
+    # ------------------------------------------
+    # 1. 基礎趨勢與價格底線
+    # ------------------------------------------
+    cond1_trend = close_0 > ma60_0
+    cond2_price_ok = close_0 >= min_close_price
+
+    # ------------------------------------------
+    # 2. 雙線斜率共振計算 (取近 5 日資料進行 OLS 線性迴歸)
+    # ------------------------------------------
+    x = np.arange(5)
+    
+    # (A) 輕鬆線 OLS 斜率 (月線短線攻擊動能)
+    easy_series = df_single['easy_line'].iloc[-5:].values
+    ols_slope = linregress(x, easy_series).slope
+    cond3_ols_slope_ok = ols_slope >= min_ols_slope
+
+    # (B) MA60 季線 OLS 斜率 (中期生命線護航)
+    ma60_series = df_single['MA60'].iloc[-5:].values
+    ma60_slope = linregress(x, ma60_series).slope
+    cond4_ma60_slope_ok = ma60_slope >= min_ma60_slope
+
+    # ------------------------------------------
+    # 3. 距 52 週高點距離 (%) 計算 (取 240 日內最高價)
+    # ------------------------------------------
+    lookback_240 = min(len(df_single), 240)
+    high_52w = df_single['close'].iloc[-lookback_240:].max()
+    dist_52w_high = ((close_0 - high_52w) / high_52w) * 100.0
+    cond5_52w_high_ok = dist_52w_high >= min_52w_high_dist
+
+    # ------------------------------------------
+    # 4. 輕鬆線乖離率控管
+    # ------------------------------------------
+    easy_bias = (close_0 - easy_0) / easy_0
+    cond6_bias_ok = 0.0 < easy_bias <= max_easy_bias
+
+    # ------------------------------------------
+    # 5. 連續站穩與洗盤甩轎軌跡
+    # ------------------------------------------
+    cond7_continuous = (close_0 > easy_0) and (close_1 > easy_1)
+    was_below_2d = d2['close'] <= d2['easy_line']
+    was_below_3d = d3['close'] <= d3['easy_line']
+    was_below_4d = d4['close'] <= d4['easy_line']
+    cond8_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+    # ------------------------------------------
+    # 6. 量能雙控 (成交量 >= 350張 且 >= 5日均量 1.2 倍)
+    # ------------------------------------------
+    recent_vols = df_single['Trading_Volume'].iloc[-6:-1]
+    vol_ma5 = recent_vols.mean()
+    cond9_vol_ok = (vol_0 >= min_safety_volume) and (vol_0 >= vol_ma5 * volume_multiplier)
+
+    # ------------------------------------------
+    # 總體過濾結果：同時滿足所有旗艦雙線共振條件
+    # ------------------------------------------
+    is_hit = (
+        cond1_trend
+        and cond2_price_ok
+        and cond3_ols_slope_ok
+        and cond4_ma60_slope_ok
+        and cond5_52w_high_ok
+        and cond6_bias_ok
+        and cond7_continuous
+        and cond8_shakeout
+        and cond9_vol_ok
+    )
+
+    # ==========================================
+    # 除錯與詳細 Log 輸出區 (對齊系統卡牌風格)
+    # ==========================================
+    if verbose:
+        stock_id = today['stock_id']
+        date_str = str(today['date'])
+        vol_lots = vol_0 / 1000.0
+        vol_target = (vol_ma5 * volume_multiplier) / 1000.0
+
+        print('\n' + '=' * 60)
+        print(f'🔔 [F3_洗盤後旗艦雙線共振版] 股票: {stock_id} | 日期: {date_str}')
+        print('-' * 60)
+        print(f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線多頭趨勢 : Close ({close_0:.2f}) > MA60 ({ma60_0:.2f})")
+        print(f"  [{ '✓' if cond4_ma60_slope_ok else '✕' }] 2. MA60 季線斜率 : {ma60_slope:.3f} (門檻 >= {min_ma60_slope})")
+        print(f"  [{ '✓' if cond3_ols_slope_ok else '✕' }] 3. 輕鬆線 OLS 斜率 : {ols_slope:.3f} (門檻 >= {min_ols_slope})")
+        print(f"  [{ '✓' if cond5_52w_high_ok else '✕' }] 4. 距 52 週高點距離 : {dist_52w_high:.2f}% (門檻 >= {min_52w_high_dist:.1f}%)")
+        print(f"  [{ '✓' if cond6_bias_ok else '✕' }] 5. 輕鬆線乖離控管 : {easy_bias * 100:.2f}% (門檻 <= {max_easy_bias * 100:.1f}%)")
+        print(f"  [{ '✓' if cond7_continuous and cond8_shakeout else '✕' }] 6. 洗盤甩轎軌跡 : 連續兩天站上 且 2~4日前曾跌破輕鬆線")
+        print(f"  [{ '✓' if cond9_vol_ok else '✕' }] 7. 帶量 1.2 倍突破 : {vol_lots:,.0f} 張 (>=350張 且 >= {vol_target:,.0f}張)")
+        print('-' * 60)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發洗盤後旗艦雙線共振版]' if is_hit else '⚪ [未觸發]'}")
+        print('=' * 60 + '\n')
+
+    # 回傳結果字典
+    info = {
+        '選股公式': 'F3_洗盤後_旗艦雙線斜率共振版',
+        '操作建議': (
+            f'雙線斜率共振向上 (季線斜率:{ma60_slope:.3f}, 輕鬆線斜率:{ols_slope:.3f})，'
+            f'股價位居 52 週高點強勢區 ({dist_52w_high:.1f}%) 且洗盤沉澱完成，具備強烈主升段飆股特徵。'
+        )
+    } if is_hit else {}
+
+    return is_hit, info
 
 
 def st_qiantang_f3_after_shakeout(
