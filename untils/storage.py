@@ -29,7 +29,9 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
     """
     透過 Tailscale 內網 IP 上傳檔案至 NAS。
     """
-    # 1. 基礎檢查：參數與本地檔案是否存在
+    print("upload_to_nas\n")
+    
+    # 1. 基礎檢查：參數與本地檔案是否存在    
     if not all([host, port, username, password]):
         raise ValueError("❌ 錯誤：NAS 連線資訊不完整，請檢查環境變數 (Secrets)。")
     
