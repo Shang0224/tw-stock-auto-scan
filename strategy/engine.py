@@ -176,25 +176,34 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   )
 
   # =========================================================================
-  # 7. 三大法人與信用交易籌碼特徵 (直接採用 FinMind 原生欄位，單位: 股)
+  # 7. 三大法人與信用交易籌碼預處理 (極簡防衛架構, 直接採用 FinMind 原生欄位，單位: 股)
   # =========================================================================
-  if 'Foreign_Investor' in df.columns:
-    df['foreign_5d_shares_sum'] = (
-        df['Foreign_Investor'].rolling(5, min_periods=1).sum()
+  # 1. 三大法人 (流量)：先補 0.0 再計算近 5 日滾動累計 (單位: 股)
+  if "Foreign_Investor" in df.columns:
+    df["foreign_5d_shares_sum"] = (
+      df["Foreign_Investor"].fillna(0.0).rolling(5, min_periods=1).sum()
     )
-    df['trust_5d_shares_sum'] = (
-      df['Investment_Trust'].rolling(5, min_periods=1).sum()
+    df["trust_5d_shares_sum"] = (
+      df["Investment_Trust"].fillna(0.0).rolling(5, min_periods=1).sum()
     )
-    df['dealer_5d_shares_sum'] = (
-        df['Dealer_self'].rolling(5, min_periods=1).sum()
+    df["major_5d_shares_sum"] = (
+      df["major_net"].fillna(0.0).rolling(5, min_periods=1).sum()
     )
-    df['major_5d_shares_sum'] = df['major_net'].rolling(5, min_periods=1).sum()
 
-  if 'MarginPurchaseTodayBalance' in df.columns:
-    df['margin_diff_shares'] = (
-        df['MarginPurchaseTodayBalance'].diff().fillna(0.0)
+  # 2. 融資融券 (存量)：先 ffill 避開單日 API 漏抓陷阱，再補 0.0 (單位: 張)  
+  if "MarginPurchaseTodayBalance" in df.columns:
+    df["MarginPurchaseTodayBalance"] = (
+      df["MarginPurchaseTodayBalance"].ffill().fillna(0.0)
     )
-    df['short_diff_shares'] = df['ShortSaleTodayBalance'].diff().fillna(0.0)
+    df["ShortSaleTodayBalance"] = (
+      df["ShortSaleTodayBalance"].ffill().fillna(0.0)
+    )
+
+  # 3. 計算當日增減 (單位: 張，不會產生假的 -5000 張爆砍訊號)
+  df["margin_diff_shares"] = (
+      df["MarginPurchaseTodayBalance"].diff().fillna(0.0)
+  )
+  df["short_diff_shares"] = df["ShortSaleTodayBalance"].diff().fillna(0.0)
     
   return df
 
