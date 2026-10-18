@@ -175,6 +175,27 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
       in_consolidation.astype(int).rolling(window=60, min_periods=1).sum()
   )
 
+  # =========================================================================
+  # 7. 三大法人與信用交易籌碼特徵 (直接採用 FinMind 原生欄位，單位: 股)
+  # =========================================================================
+  if 'Foreign_Investor' in df.columns:
+    df['foreign_5d_shares_sum'] = (
+        df['Foreign_Investor'].rolling(5, min_periods=1).sum()
+    )
+    df['trust_5d_shares_sum'] = (
+      df['Investment_Trust'].rolling(5, min_periods=1).sum()
+    )
+    df['dealer_5d_shares_sum'] = (
+        df['Dealer_self'].rolling(5, min_periods=1).sum()
+    )
+    df['major_5d_shares_sum'] = df['major_net'].rolling(5, min_periods=1).sum()
+
+  if 'MarginPurchaseTodayBalance' in df.columns:
+    df['margin_diff_shares'] = (
+        df['MarginPurchaseTodayBalance'].diff().fillna(0.0)
+    )
+    df['short_diff_shares'] = df['ShortSaleTodayBalance'].diff().fillna(0.0)
+    
   return df
 
 def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame:
