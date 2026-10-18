@@ -114,7 +114,7 @@ STOCK_INPUT = {
 # ==============================================================================
 # 🎛 走勢圖繪製控制開關
 # ==============================================================================
-GENERATE_WAVE_CHARTS = True  # 選股完成後是否自動繪製波段 K 線走勢圖
+GENERATE_WAVE_CHARTS = False  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 # -----------------------------------------------------------------
 # 型態安全工具函式 (攔截 NaN，自動補 0 維持整數欄位)
@@ -1073,33 +1073,7 @@ def run_qiantang_strategy_range_scan_old(
 
     else:
         print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
-
-
-    # ==============================================================================
-    # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
-    # ==============================================================================
-    if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
-
-        # 繪圖資料夾以 "dashboard" 代替 strat_tag，並直接輸出到剛才建立的 CSV 資料夾內
-        wave_output_dir = os.path.join(output_dir, "dashboard_wave_plots")
-
-        print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
-
-        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/{sub_folder_name}" if os.getenv('NAS_SFTP_PATH') else None  
-
-        plot_files = generate_qiantang_wave_charts(
-            dashboard_df=dashboard_df,
-            global_df=global_df,
-            output_dir=wave_output_dir,
-            nas_sftp_path=nas_path,
-        )
-
-        print(
-            f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
-            f' {wave_output_dir}'
-        )
-
-        
+       
     # =====================================================================
     # 7. 自動備份至 NAS
     # =====================================================================
@@ -1220,7 +1194,30 @@ def run_qiantang_strategy_range_scan_old(
             except Exception as e:
                 print(f"⚠ CSV NAS 備份失敗: {e}")
     """
+    
+    # ==============================================================================
+    # SECTION 8. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
+    # ==============================================================================
+    if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
 
+        # 繪圖資料夾以 "dashboard" 代替 strat_tag，並直接輸出到剛才建立的 CSV 資料夾內
+        wave_output_dir = os.path.join(output_dir, "dashboard_wave_plots")
+
+        print(f'\n📈 正在根據波段規則繪製股票 K 線走勢圖...')
+
+        nas_path = f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/{sub_folder_name}" if os.getenv('NAS_SFTP_PATH') else None  
+
+        plot_files = generate_qiantang_wave_charts(
+            dashboard_df=dashboard_df,
+            global_df=global_df,
+            output_dir=wave_output_dir,
+            nas_sftp_path=nas_path,
+        )
+
+        print(
+            f'✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:'
+            f' {wave_output_dir}'
+        )
 
 if __name__ == "__main__":
     print("test_qiantang_Strategy.py")
