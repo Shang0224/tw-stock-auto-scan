@@ -57,7 +57,9 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
 
         # 3. 開啟 SFTP
         sftp = ssh.open_sftp()
-       
+        
+        print("sftp = ssh.open_sftp()\n")
+        
         # 使用 posixpath 確保跨平台相容 Linux NAS 路徑
         remote_dir = posixpath.dirname(remote_path)
         print(f"遠端目標路徑：{remote_path} | 遠端目錄：{remote_dir}")
