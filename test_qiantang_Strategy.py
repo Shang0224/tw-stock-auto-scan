@@ -274,6 +274,59 @@ def scan_qiantang_strategy_day(
             "大盤季線乖離率(%)": round(
                 float(m_info.get("taiex_ma60_bias_pct", 0)), 2
             ),
+            
+            # -----------------------------------------------------------------
+            # 📌 基礎量能與三大法人/資券動向 (報表層統一除以 1000 輸出張數)
+            # -----------------------------------------------------------------
+            "今日成交量(張)": int(
+                round(float(latest_row.get("Trading_Volume", 0)) / 1000.0)
+            ),
+            "外資買超(張)": int(
+                round(float(latest_row.get("Foreign_Investor", 0)) / 1000.0)
+            ),
+            "投信買超(張)": int(
+                round(float(latest_row.get("Investment_Trust", 0)) / 1000.0)
+            ),
+            "自營商買超(張)": int(
+                round(float(latest_row.get("Dealer_self", 0)) / 1000.0)
+            ),
+            "主力買超(張)": int(
+                round(float(latest_row.get("major_net", 0)) / 1000.0)
+            ),
+            "外資近5日累計(張)": int(
+                round(
+                    float(latest_row.get("foreign_5d_shares_sum", 0)) / 1000.0
+                )
+            ),
+            "投信近5日累計(張)": int(
+                round(
+                    float(latest_row.get("trust_5d_shares_sum", 0)) / 1000.0
+                )
+            ),
+            "主力近5日累計(張)": int(
+                round(
+                    float(latest_row.get("major_5d_shares_sum", 0)) / 1000.0
+                )
+            ),
+            "融資餘額(張)": int(
+                round(
+                    float(
+                        latest_row.get("MarginPurchaseTodayBalance", 0)
+                    )
+                    / 1000.0
+                )
+            ),
+            "融資當日增減(張)": int(
+                round(float(latest_row.get("margin_diff_shares", 0)) / 1000.0)
+            ),
+            "融券餘額(張)": int(
+                round(
+                    float(latest_row.get("ShortSaleTodayBalance", 0)) / 1000.0
+                )
+            ),
+            "融券當日增減(張)": int(
+                round(float(latest_row.get("short_diff_shares", 0)) / 1000.0)
+            ),
         }
 
         # -----------------------------------------------------------------
