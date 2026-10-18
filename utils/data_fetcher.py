@@ -45,6 +45,8 @@ def fetch_and_process_market_data(
   df["EMA120"] = df["close"].ewm(span=120, adjust=False).mean()
   df["EMA240"] = df["close"].ewm(span=240, adjust=False).mean()
 
+  df["EMA60_slope"] = df["EMA60"].diff(5)
+
   # =========================================================================
   # 🌟 2. 長線回測新增大盤指標 (全數附加於原始 EMA 計算後方)
   # =========================================================================
@@ -79,6 +81,7 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
       "close",
       "EMA20",
       "EMA60",
+      "EMA60_slope",  # 🌟 加上這行
       "EMA120",
       "EMA240",
       "MA20",
