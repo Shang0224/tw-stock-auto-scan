@@ -61,10 +61,10 @@ from utils import (
 TEST_QIANTANG_STRATEGY = [
     # st_qiantang_f1_spt_growth,      # F1: 筆張現形
     # st_qiantang_f2_volume_breakout, # F2: 出量上輕
-    st_qiantang_f3_after_shakeout,  # F3: 洗盤後    
+    #st_qiantang_f3_after_shakeout,  # F3: 洗盤後    
     st_qiantang_f3_after_shakeout_20261018_1,
     #st_qiantang_f3_after_shakeout_20261017_1,
-    st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
+    #st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
 
     #st_qiantang_f3_after_shakeout_20261001_1,
     #st_qiantang_f3_after_shakeout_20261001_1_1,
@@ -80,7 +80,7 @@ TEST_QIANTANG_STRATEGY = [
 ]
 
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2021-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
@@ -516,7 +516,7 @@ def run_qiantang_strategy_range_scan(
             m_close = market_info.get("close", 0)
             m_ema = market_info.get(MARKET_FILTER_KEY, 0)
             m_slope = market_info.get("EMA60_slope", 0)  # 🌟 1. 取出大盤 EMA60 斜率    
-
+            print(f"EMA60_slope : {EMA60_slope}\n")
             # 🌟 2. 雙重防線：當大盤 <= EMA60 季線 或 斜率 <= 0 (走平/向下) 時，當天跳過不選股
             if m_close <= m_ema or m_slope <= 0:
                 current_day += timedelta(days=1)
