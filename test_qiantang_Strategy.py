@@ -1020,11 +1020,20 @@ def run_qiantang_strategy_range_scan_old(
     csv_file_path = None
     strat_tag = "_".join([s.__name__ for s in strategies]) if strategies else "qiantang"
 
+    # =====================================================================
+    # 🌟 統一定義輸出資料夾名稱與絕對路徑 (供 CSV、Excel 與繪圖模組共用)
+    # =====================================================================
+    sub_folder_name = (
+      f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
+    )
+    output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
+    os.makedirs(output_dir, exist_ok=True)
+
     if EXPORT_CSV:
         # 1. 在 qiantang_test_report 下方建立以執行時間命名的資料夾
-        sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
-        output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
-        os.makedirs(output_dir, exist_ok=True)
+        #sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
+        #output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
+        #os.makedirs(output_dir, exist_ok=True)
 
         # 2. 輸出綜合儀表板 CSV 檔（Dashboard 的 Meta 放入全部策略的 strat_tag）
         csv_file_name = f"dashboard_summary_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
