@@ -85,7 +85,7 @@ TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
 # 🌟 大盤趨勢濾網控制開關
-USE_MARKET_FILTER = True        # 是否啟用大盤趨勢濾網 (True: 啟用防守 / False: 關閉防守)
+USE_MARKET_FILTER = False        # 是否啟用大盤趨勢濾網 (True: 啟用防守 / False: 關閉防守)
 MARKET_FILTER_KEY = "EMA60"     # 大盤門檻指標 (預設季線 EMA60)
 
 # 🌟 檔案輸出控制開關
@@ -1023,9 +1023,10 @@ def run_qiantang_strategy_range_scan_old(
     # =====================================================================
     # 🌟 統一定義輸出資料夾名稱與絕對路徑 (供 CSV、Excel 與繪圖模組共用)
     # =====================================================================
-    sub_folder_name = (
-      f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
-    )
+    mkt_tag = "有大盤濾網" if USE_MARKET_FILTER else "無大盤濾網"
+
+    sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}_{mkt_tag}"
+    
     output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
     os.makedirs(output_dir, exist_ok=True)
 
