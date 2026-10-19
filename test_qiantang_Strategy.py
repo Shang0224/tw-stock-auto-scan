@@ -648,13 +648,23 @@ def run_qiantang_strategy_range_scan(
       "_".join([s.__name__ for s in strategies]) if strategies else "qiantang"
   )
 
+  # =====================================================================
+  # 🌟 統一定義輸出資料夾名稱與絕對路徑 (供 CSV、Excel 與繪圖模組共用)
+  # =====================================================================
+  mkt_tag = "有大盤濾網" if USE_MARKET_FILTER else "無大盤濾網"
+
+  sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}_{mkt_tag}"
+    
+  output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
+  os.makedirs(output_dir, exist_ok=True)
+    
   if EXPORT_CSV:
     # 1. 建立輸出資料夾
-    sub_folder_name = (
-        f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
-    )
-    output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
-    os.makedirs(output_dir, exist_ok=True)
+    #sub_folder_name = (
+    #    f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
+    #)
+    #output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
+    #os.makedirs(output_dir, exist_ok=True)
 
     # 2. 輸出綜合儀表板 CSV 檔
     csv_file_name = (
@@ -707,31 +717,6 @@ def run_qiantang_strategy_range_scan(
   else:
     print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
 
-  # ==============================================================================
-  # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
-  # ==============================================================================
-  if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
-    wave_output_dir = os.path.join(output_dir, "dashboard_wave_plots")
-    print("\n📈 正在根據波段規則繪製股票 K 線走勢圖...")
-
-    nas_path = (
-        f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/{sub_folder_name}"
-        if os.getenv("NAS_SFTP_PATH")
-        else None
-    )
-
-    plot_files = generate_qiantang_wave_charts(
-        dashboard_df=dashboard_df,
-        global_df=global_df,
-        output_dir=wave_output_dir,
-        nas_sftp_path=nas_path,
-    )
-
-    print(
-        f"✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:"
-        f" {wave_output_dir}"
-    )
-
   # =====================================================================
   # 8. 自動備份至 NAS 伺服器
   # =====================================================================
@@ -779,6 +764,31 @@ def run_qiantang_strategy_range_scan(
             )
           except Exception as e:
             print(f"⚠ 單獨策略 CSV [{func_name}] NAS 備份失敗: {e}")
+
+  # ==============================================================================
+  # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
+  # ==============================================================================
+  if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
+    wave_output_dir = os.path.join(output_dir, "dashboard_wave_plots")
+    print("\n📈 正在根據波段規則繪製股票 K 線走勢圖...")
+
+    nas_path = (
+        f"{os.getenv('NAS_SFTP_PATH').rstrip('/')}/{sub_folder_name}"
+        if os.getenv("NAS_SFTP_PATH")
+        else None
+    )
+
+    plot_files = generate_qiantang_wave_charts(
+        dashboard_df=dashboard_df,
+        global_df=global_df,
+        output_dir=wave_output_dir,
+        nas_sftp_path=nas_path,
+    )
+
+    print(
+        f"✅ 成功產出 {len(plot_files)} 張波段走勢圖，儲存於:"
+        f" {wave_output_dir}"
+    )
 
 
 def run_qiantang_strategy_range_scan_old(
