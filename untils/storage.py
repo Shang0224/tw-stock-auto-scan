@@ -25,7 +25,7 @@ def ensure_remote_dir(sftp, remote_dir):
             print(f"📁 遠端目錄不存在，自動建立：{dir_to_check}")
             sftp.mkdir(dir_to_check)
 
-def upload_to_nas(host, port, username, password, local_path, remote_path):
+def upload_to_nas_new(host, port, username, password, local_path, remote_path):
     """
     透過 Tailscale 內網 IP 上傳檔案至 NAS。
     """
@@ -93,7 +93,7 @@ def upload_to_nas(host, port, username, password, local_path, remote_path):
         print("🔌 已斷開 SSH 連線。")
 
 
-def upload_to_nas_old(host, port, username, password, local_path, remote_path):
+def upload_to_nas(host, port, username, password, local_path, remote_path):
     """
     透過 Tailscale 內網 IP 上傳檔案至 NAS。
     """
@@ -126,15 +126,6 @@ def upload_to_nas_old(host, port, username, password, local_path, remote_path):
        
         remote_dir = os.path.dirname(remote_path)
         print(f"remote_path：{remote_path}  remote_dir: {remote_dir}\n")
-
-        # 5. 確保遠端目錄存在
-        try:
-            sftp.stat(remote_dir)
-        except IOError:
-            # 🌟 若遠端資料夾不存在，自動幫忙建立目錄
-            sftp.mkdir(remote_dir)
-            print(f"sftp.mkdir(remote_dir) : {remote_dir}\n")
-        
         
         try:
             sftp.chdir(remote_dir)
