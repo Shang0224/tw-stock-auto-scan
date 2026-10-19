@@ -114,7 +114,7 @@ STOCK_INPUT = {
 # ==============================================================================
 # 🎛 走勢圖繪製控制開關
 # ==============================================================================
-GENERATE_WAVE_CHARTS = False  # 選股完成後是否自動繪製波段 K 線走勢圖
+GENERATE_WAVE_CHARTS = True  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 # -----------------------------------------------------------------
 # 型態安全工具函式 (攔截 NaN，自動補 0 維持整數欄位)
@@ -668,7 +668,7 @@ def run_qiantang_strategy_range_scan(
       original_content = f.read()
 
     with open(csv_file_path, "w", encoding="utf-8-sig") as f:
-      f.write(f"策略程式: ,{strat_tag}, Stock Data:,{stock_data}\n")
+      f.write(f"策略程式: ,{strat_tag}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
       f.write(original_content)
 
     print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
@@ -696,7 +696,7 @@ def run_qiantang_strategy_range_scan(
         strat_orig_content = f.read()
 
       with open(strat_csv_path, "w", encoding="utf-8-sig") as f:
-        f.write(f"策略公式: ,{func_name}, Stock Data:,{stock_data}\n")
+        f.write(f"策略公式: ,{func_name}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
         f.write(strat_orig_content)
 
       print(
