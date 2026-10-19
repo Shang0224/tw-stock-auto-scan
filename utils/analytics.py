@@ -137,6 +137,25 @@ def calculate_one_year_extremes(
       (lowest_before_peak - close_t0) / close_t0
   ) * 100.0
 
+
+  # 4. 自動判定走勢類別標籤 (Category_Tag: Cat1 ~ Cat4)
+  # 判斷最低點日期是否早於最高點日期 (Date_min < Date_max，即先甩轎/跌破)
+  is_pullback_first = days_to_min < days_to_max
+
+  if max_perf_pct >= 50.0 and (not is_pullback_first or min_perf_pct >= -10.0):
+    category_tag = "Cat1_飆股"
+  elif 20.0 <= max_perf_pct < 50.0 and (
+      not is_pullback_first or min_perf_pct >= -10.0
+  ):
+    category_tag = "Cat2_溫和上漲"
+  elif min_perf_pct < -10.0 and (is_pullback_first or max_perf_pct < 20.0):
+    category_tag = "Cat3_深跌陷阱"
+  elif max_perf_pct < 20.0 and min_perf_pct >= -10.0:
+    category_tag = "Cat4_窄幅橫盤"
+  else:
+    category_tag = "Cat4_窄幅橫盤"
+    
+  """
   # 4. 自動判定走勢類別標籤 (Category_Tag: Cat 1 ~ Cat 4)
   # - Cat 1 飆股：1Y 最高報酬 >= +50% 且未跌破 -20% 毀滅性崩跌
   # - Cat 2 小漲：1Y 最高報酬在 +15% ~ +50% 之間
@@ -150,6 +169,7 @@ def calculate_one_year_extremes(
     category_tag = "Cat2_小漲"
   else:
     category_tag = "Cat4_盤整"
+  """
 
   extremes_dict = {
       # -----------------------------------------------------------------
