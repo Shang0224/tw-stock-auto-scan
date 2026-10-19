@@ -326,8 +326,73 @@ def ensure_remote_sftp_dir(remote_dir_path):
         except Exception:
             pass
 
-
 def generate_qiantang_wave_charts(dashboard_df, global_df, output_dir, nas_sftp_path=None):
+    """
+    走勢圖生成與 NAS 備份總控入口 (已補強防護與例外處理)
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    generated_files = []
+
+    for stock_id, stock_signals in dashboard_df.groupby('股票代號'):
+        try:
+            waves = group_signals_into_waves(stock_signals)
+        except Exception as e:
+            print(f"⚠ [警告] 股票 {stock_id} 波段歸類失敗: {e}")
+            continue
+
+        for wave in waves:
+            c_low_pct = wave.get('c_low_pct')
+            c_low_date = wave.get('c_low_date')
+            c_high_date = wave.get('c_high_date')
+
+            is_pullback_first = (
+                c_low_pct is not None and c_low_pct <= -10 and
+                c_low_date is not None and c_high_date is not None and
+                str(c_low_date) < str(c_high_date)
+            )
+
+            # 🌟 防護修正：加上 c_low_pct is not None 避免與 float 比較引發 TypeError
+            if is_pullback_first:
+                tag = f"先回檔{c_low_pct}%"
+            elif c_low_pct is not None and c_low_pct < -10.0:
+                tag = f"後回檔{c_low_pct}%"
+            else:
+                tag = ""
+
+            filename = f"{wave['stock_id']}_{wave['stock_name']}_{wave['first_trigger_str']}_{tag}走勢圖.png"
+            save_path = os.path.join(output_dir, filename)
+
+            # 🌟 防護修正：包裹 try...except 避免單張圖錯誤卡死整支程式
+            try:
+                success = plot_single_wave_chart(wave, global_df, save_path)
+                if success:
+                    generated_files.append(save_path)
+            except Exception as e:
+                print(f"⚠ [警告] 繪製走勢圖 {filename} 失敗: {e}")
+
+    # 若傳入 NAS SFTP 路徑，逐一推送圖片至 NAS
+    if nas_sftp_path and generated_files:
+        folder_name = os.path.basename(os.path.normpath(output_dir))
+        target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
+
+        ensure_remote_sftp_dir(target_nas_dir)
+
+        try:
+            from utils import archive_and_cleanup
+            success_count = 0
+            for img_path in generated_files:
+                fname = os.path.basename(img_path)
+                remote_img_path = f"{target_nas_dir}/{fname}"
+                archive_and_cleanup(img_path, remote_img_path)
+                success_count += 1
+            print(f"☁️ [純 SFTP 上傳] 已成功同步上傳 {success_count} 張走勢圖至 NAS: {target_nas_dir}")
+        except Exception as e:
+            print(f"⚠ 走勢圖 NAS SFTP 備份失敗: {e}")
+
+    return generated_files
+
+
+def generate_qiantang_wave_charts_old(dashboard_df, global_df, output_dir, nas_sftp_path=None):
     """
     走勢圖生成與 NAS 備份總控入口。
     以去重三類邏輯進行波段繪圖，檔案帶有先回檔/後回檔標籤（若適用）。
