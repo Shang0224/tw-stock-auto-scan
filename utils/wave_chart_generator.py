@@ -48,11 +48,11 @@ def group_signals_into_waves(stock_df):
 
     # 解析高低點績效與日期
     high_low_parsed = [parse_perf_field(v) for v in s_df['1Y內最高績效']]
-    s_df['high_pct'] = [p for p in high_low_parsed]
+    s_df['high_pct'] = [p[0] for p in high_low_parsed]
     s_df['high_date'] = [p[1] for p in high_low_parsed]
 
     low_parsed = [parse_perf_field(v) for v in s_df['1Y內最低績效']]
-    s_df['low_pct'] = [p for p in low_parsed]
+    s_df['low_pct'] = [p[0] for p in low_parsed]
     s_df['low_date'] = [p[1] for p in low_parsed]
 
     processed_indices = set()
