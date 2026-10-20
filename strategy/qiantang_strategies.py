@@ -1345,7 +1345,7 @@ def st_qiantang_f3_after_shakeout_20261020_1(
         f' ({easy_slope:.3f}) > 0 且 5日漲幅 ({easy_growth*100:.2f}%) >= 1.5%'
     )
     print(
-        f"  [{ '✓' if cond7_52w_high_ok else '✕' }] 6. 🌟 強勢高位過濾 : 距 52W'
+        f"  [{ '✓' if cond7_52w_high_ok else '✕' }] 6. 🌟 強勢高位過濾 : 距 52W"
         f' 高點 {dist_52w:.1f}% (>= -15.0%)'
     )
     print(
