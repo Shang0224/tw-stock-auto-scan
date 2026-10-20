@@ -142,15 +142,17 @@ def calculate_one_year_extremes(
   # 判斷最低點日期是否早於最高點日期 (Date_min < Date_max，即先甩轎/跌破)
   is_pullback_first = days_to_min < days_to_max
 
-  if max_perf_pct >= 50.0 and (not is_pullback_first or min_perf_pct >= -10.0):
+  PULLBACK_LIMIT_PCT = -15.0
+    
+  if max_perf_pct >= 50.0 and (not is_pullback_first or min_perf_pct >= PULLBACK_LIMIT_PCT):
     category_tag = "Cat1_飆股"
   elif 20.0 <= max_perf_pct < 50.0 and (
-      not is_pullback_first or min_perf_pct >= -10.0
+      not is_pullback_first or min_perf_pct >= PULLBACK_LIMIT_PCT
   ):
     category_tag = "Cat2_溫和上漲"
-  elif min_perf_pct < -10.0 and (is_pullback_first or max_perf_pct < 20.0):
+  elif min_perf_pct < PULLBACK_LIMIT_PCT and (is_pullback_first or max_perf_pct < 20.0):
     category_tag = "Cat3_深跌陷阱"
-  elif max_perf_pct < 20.0 and min_perf_pct >= -10.0:
+  elif max_perf_pct < 20.0 and min_perf_pct >= PULLBACK_LIMIT_PCT:
     category_tag = "Cat4_窄幅橫盤"
   else:
     category_tag = "Cat4_窄幅橫盤"
