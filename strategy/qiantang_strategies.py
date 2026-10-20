@@ -1193,6 +1193,186 @@ def st_qiantang_f3_after_shakeout_20261017_1(
 
   return is_hit, info
 
+
+def st_qiantang_f3_after_shakeout_20261020_1(
+    df_single: pd.DataFrame,
+    delay_days: int = 3,  # 🌟 彈性右側觀察天數 (預設 T+3 觀察期)
+    threshold_pct: float = -0.02,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%)
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+) -> tuple[bool, dict]:
+  """【F3_洗盤後 (策略一修正版：強勢高位 + T+3 右側二次確認 旗艦融合版)】
+
+  核心條件架構：
+  1. 趨勢過濾：觸發當日收盤價 > MA60 (季線多頭格局)
+  2. 價格過濾：收盤價 >= 5 元
+  3. 量能過濾：成交量 >= 350 張，且 >= 前 5 日均量的 1.2 倍
+  4. 連續確認：今日與昨日皆站上輕鬆線 (close > easy_line)
+  5. 洗盤甩轎軌跡：在 2日前、3日前或 4日前曾跌破輕鬆線，確認籌碼甩轎沉澱
+  6. 輕鬆線動能：輕鬆線 OLS 斜率 > 0 且 5 日累計漲幅 >= 1.5%
+  7. 🌟 融入條件 A（強勢高位）：距 52 週高點距離 >= -15.0% (封殺中低位階解套賣壓)
+  8. 🌟 融入條件 B（右側確認）：觸發後第 3 日 (T+3) 報酬率 >= -2.0%
+  (未遭急跌重挫才建倉)
+  """
+  profile = profile or {}
+
+  # 最小資料長度：60日季線基底 + 5日甩轎/動能 + delay_days 右側觀察期
+  min_required_len = 60 + 5 + delay_days
+  if len(df_single) < min_required_len:
+    if verbose:
+      print(
+          f'❌ [策略一修正版] 資料筆數不足 {min_required_len} 筆'
+          f' (目前: {len(df_single)})'
+      )
+    return False, {}
+
+  df_single = df_single.copy()
+
+  # 確保計算 MA60 季線
+  if 'MA60' not in df_single.columns:
+    df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+  # =========================================================================
+  # 1. 訊號觸發當日 (T0) 與觀察期位置判定
+  # =========================================================================
+  # 回測資料最後一筆為 T+delay_days，往前推 delay_days 即為觸發當日 pos_idx
+  pos_idx = len(df_single) - 1 - delay_days
+
+  row_t0 = df_single.iloc[pos_idx]  # T0 (訊號觸發當日)
+  row_tm1 = df_single.iloc[pos_idx - 1]  # T-1 (昨日)
+  row_tm2 = df_single.iloc[pos_idx - 2]  # T-2
+  row_tm3 = df_single.iloc[pos_idx - 3]  # T-3
+  row_tm4 = df_single.iloc[pos_idx - 4]  # T-4
+
+  # 欄位取值 (無預設值，遵循 FinMind 欄位規範)
+  close_t0 = row_t0['close']
+  easy_t0 = row_t0['easy_line']
+  ma60_t0 = row_t0['MA60']
+  vol_t0 = row_t0['Trading_Volume']
+
+  close_tm1 = row_tm1['close']
+  easy_tm1 = row_tm1['easy_line']
+
+  # =========================================================================
+  # 2. 原策略一 核心邏輯檢驗
+  # =========================================================================
+  # 條件 1: 季線趨勢過濾 (收盤價 > MA60)
+  cond1_trend = close_t0 > ma60_t0
+
+  # 條件 2: 價格門檻 (>= 5 元)
+  cond2_price_ok = close_t0 >= 5.0
+
+  # 條件 3: 量能雙控 (>= 350張 且 >= 5日均量 1.2 倍)
+  recent_vols = df_single['Trading_Volume'].iloc[pos_idx - 5 : pos_idx]
+  vol_ma5 = recent_vols.mean()
+  cond3_base_vol = vol_t0 >= 350 * 1000
+  cond3_vol_up = vol_t0 >= vol_ma5 * 1.2
+  cond3_vol_ok = cond3_base_vol and cond3_vol_up
+
+  # 條件 4: 連續站穩輕鬆線 (今日與昨日均在輕鬆線上)
+  cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+  # 條件 5: 洗盤甩轎軌跡 (T-2, T-3 或 T-4 曾跌破輕鬆線)
+  was_below_2d = row_tm2['close'] <= row_tm2['easy_line']
+  was_below_3d = row_tm3['close'] <= row_tm3['easy_line']
+  was_below_4d = row_tm4['close'] <= row_tm4['easy_line']
+  cond5_shakeout = was_below_2d or was_below_3d or was_below_4d
+
+  # 條件 6: 輕鬆線動能 (取近 5 天計算 OLS 斜率 > 0 且 5日累計漲幅 >= 1.5%)
+  easy_5d = df_single['easy_line'].iloc[pos_idx - 4 : pos_idx + 1].values
+  easy_slope = linregress(np.arange(5), easy_5d).slope
+  easy_5d_ago = df_single['easy_line'].iloc[pos_idx - 4]
+  easy_growth = (easy_t0 - easy_5d_ago) / easy_5d_ago
+  cond6_easy_momentum = (easy_slope > 0) and (easy_growth >= 0.015)
+
+  # =========================================================================
+  # 3. 🌟 融入條件 A：強勢高位過濾 (距 52 週高點 >= -15.0%)
+  # =========================================================================
+  # 回溯最長 240 個交易日計算歷史最高價
+  lookback_240 = min(pos_idx + 1, 240)
+  high_52w = df_single['close'].iloc[pos_idx + 1 - lookback_240 : pos_idx + 1].max()
+  dist_52w = ((close_t0 - high_52w) / high_52w) * 100.0
+  cond7_52w_high_ok = dist_52w >= -15.0
+
+  # =========================================================================
+  # 4. 🌟 融入條件 B：T+3 右側二次確認 (觀察期報酬率 >= -2.0%)
+  # =========================================================================
+  row_future = df_single.iloc[-1]  # T+delay_days (最後一筆)
+  close_future = row_future['close']
+  ret_delay = (close_future - close_t0) / close_t0
+  cond8_right_confirm_ok = ret_delay >= threshold_pct
+
+  # =========================================================================
+  # 5. 總體條件過濾與結果回傳
+  # =========================================================================
+  is_hit = (
+      cond1_trend
+      and cond2_price_ok
+      and cond3_vol_ok
+      and cond4_continuous
+      and cond5_shakeout
+      and cond6_easy_momentum
+      and cond7_52w_high_ok
+      and cond8_right_confirm_ok
+  )
+
+  if verbose:
+    stock_id = str(row_t0.get('stock_id', ''))
+    date_str = str(row_t0.get('date', ''))
+    print('\n' + '=' * 60)
+    print(
+        f'🔔 [F3_策略一修正版 (強勢高位+右側 confirmation)] 股票: {stock_id} |'
+        f' 訊號日: {date_str}'
+    )
+    print('-' * 60)
+    print(
+        f"  [{ '✓' if cond1_trend else '✕' }] 1. 季線趨勢過濾 : Close > MA60"
+        f' ({close_t0:.2f} > {ma60_t0:.2f})'
+    )
+    print(
+        f"  [{ '✓' if cond3_vol_ok else '✕' }] 2. 帶量 1.2 倍 : {vol_t0/1000:,.0f}"
+        f' 張 (>=350張 且 >= {(vol_ma5*1.2)/1000:,.0f}張)'
+    )
+    print(
+        f"  [{ '✓' if cond4_continuous else '✕' }] 3. 連續兩天站上 : 今日與昨日均站穩輕鬆線"
+    )
+    print(
+        f"  [{ '✓' if cond5_shakeout else '✕' }] 4. 洗盤甩轎軌跡 :"
+        f' 2日前({was_below_2d}) | 3日前({was_below_3d}) | 4日前({was_below_4d})'
+    )
+    print(
+        f"  [{ '✓' if cond6_easy_momentum else '✕' }] 5. 輕鬆線動能 : OLS斜率"
+        f' ({easy_slope:.3f}) > 0 且 5日漲幅 ({easy_growth*100:.2f}%) >= 1.5%'
+    )
+    print(
+        f"  [{ '✓' if cond7_52w_high_ok else '✕' }] 6. 🌟 強勢高位過濾 : 距 52W'
+        f' 高點 {dist_52w:.1f}% (>= -15.0%)'
+    )
+    print(
+        f"  [{ '✓' if cond8_right_confirm_ok else '✕' }] 7. 🌟 右側二次確認 :"
+        f' T+{delay_days} 報酬 {ret_delay*100:.2f}% (>= {threshold_pct*100:.1f}%)'
+    )
+    print('-' * 60)
+    print(
+        f"🎯 最終觸發結果: {'🔥 [觸發旗艦融合版]' if is_hit else '⚪ [未觸發]'}"
+    )
+    print('=' * 60 + '\n')
+
+  info = {
+      '選股公式': 'F3_洗盤後_強勢高位與右側 confirmation 旗艦融合版',
+      '股票代號': str(row_t0.get('stock_id', '')),
+      '訊號日期': str(row_t0.get('date', '')),
+      '觸發價格': close_t0,
+      '距52W高點': f'{dist_52w:.1f}%',
+      'T+3觀察期報酬': f'{ret_delay*100:.2f}%',
+      '操作建議': (
+          f'強勢波段發動，短線站穩輕鬆線且右側沉澱安全 (52W位階:'
+          f' {dist_52w:.1f}%, T+3報酬: {ret_delay*100:.2f}%)'
+      ),
+  } if is_hit else {}
+
+  return is_hit, info
+
 def st_qiantang_f3_after_shakeout_20261018_1(
     df_single: pd.DataFrame, 
     profile: dict = None, 
