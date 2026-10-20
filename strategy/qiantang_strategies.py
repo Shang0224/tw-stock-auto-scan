@@ -1193,6 +1193,270 @@ def st_qiantang_f3_after_shakeout_20261017_1(
 
   return is_hit, info
 
+def st_qiantang_f3_after_shakeout_20261020_2(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 3,  # 🌟 彈性右側觀察天數 (預設 T+3 觀察期)
+    threshold_pct: float = -0.02,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%)
+    max_upper_shadow_pct: float = 45.0,  # 🌟 當日上影線比例上限 (預設 <= 45.0%)
+) -> tuple[bool, dict]:
+  """【F3_洗盤後 (1020_2 強勢高位 + 防線四籌碼共振 + 當日上影線<=45% + T+3右側確認 進階版)】
+
+  核心選股與風控邏輯：
+  1. 趨勢過濾：今日收盤價 > MA60（季線多頭格局）
+  2. 價格門檻：收盤價 >= 5.0 元
+  3. 量能雙控：成交量 >= 350 張，且 >= 前 5 日均量的 1.2 倍
+  4. 連續站穩：今日與昨日皆站上輕鬆線 (close > easy_line)
+  5. 洗盤甩轎：T-2、T-3 或 T-4 曾跌破輕鬆線，確認籌碼甩轎沉澱完成
+  6. 輕鬆線動能：輕鬆線 OLS 斜率 > 0 且 5 日累計漲幅 >= 1.5%
+  7. 強勢高位：距 52 週高點距離 >= -15.0% (封殺中低位階解套賣壓)
+  8. 🌟 防線四 (籌碼面共振)：(外資近5日累計 + 投信近5日累計) > 0 或 當日主力買超 > 0
+  9. 🌟 防線二精選 (當日上影線過濾)：當日上影線比例 <= 45.0% (防止買在主力避雷針倒貨當天)
+  10. 右側 Confirmation：觸發後第 delay_days 日 (T+3) 觀察期報酬率 >= threshold_pct
+  (預設 -2.0%)
+  """
+  profile = profile or {}
+
+  min_required_len = 60 + 5 + delay_days
+  if len(df_single) < min_required_len:
+    if verbose:
+      print(
+          f'❌ [策略一 1020_2] 資料筆數不足 {min_required_len} 筆'
+          f' (目前: {len(df_single)})'
+      )
+    return False, {}
+
+  df_single = df_single.copy()
+  if 'MA60' not in df_single.columns:
+    df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+  def _check_1020_2_base_signal(pos_idx: int) -> tuple[bool, dict]:
+    row_t0 = df_single.iloc[pos_idx]
+    row_tm1 = df_single.iloc[pos_idx - 1]
+    row_tm2 = df_single.iloc[pos_idx - 2]
+    row_tm3 = df_single.iloc[pos_idx - 3]
+    row_tm4 = df_single.iloc[pos_idx - 4]
+
+    close_t0 = row_t0['close']
+    easy_t0 = row_t0['easy_line']
+    ma60_t0 = row_t0['MA60']
+    vol_t0 = row_t0['Trading_Volume']
+
+    close_tm1 = row_tm1['close']
+    easy_tm1 = row_tm1['easy_line']
+
+    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    recent_vols = df_single['Trading_Volume'].iloc[pos_idx - 5 : pos_idx]
+    vol_ma5 = recent_vols.mean()
+    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+
+    # 1. 趨勢與價格
+    cond1_trend = close_t0 > ma60_t0
+    cond2_price_ok = close_t0 >= 5.0
+
+    # 2. 量能與站穩輕鬆線
+    cond3_vol_ok = (vol_lots_t0 >= 350) and (
+        vol_lots_t0 >= vol_ma5_lots * 1.2
+    )
+    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+    # 3. 洗盤甩轎軌跡
+    was_below_tm2 = row_tm2['close'] <= row_tm2['easy_line']
+    was_below_tm3 = row_tm3['close'] <= row_tm3['easy_line']
+    was_below_tm4 = row_tm4['close'] <= row_tm4['easy_line']
+    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
+
+    # 4. 輕鬆線動能 (OLS斜率 > 0 且 5日漲幅 >= 1.5%)
+    easy_5d = df_single['easy_line'].iloc[pos_idx - 4 : pos_idx + 1].values
+    easy_slope = linregress(np.arange(5), easy_5d).slope
+    easy_5d_ago = df_single['easy_line'].iloc[pos_idx - 4]
+    easy_growth = (
+        (easy_t0 - easy_5d_ago) / easy_5d_ago if easy_5d_ago > 0 else 0
+    )
+    cond6_easy_momentum = (easy_slope > 0) and (easy_growth >= 0.015)
+
+    # 5. 強勢高位 (距 52 週高點 >= -15.0%)
+    lookback_240 = min(pos_idx + 1, 240)
+    high_52w = df_single['close'].iloc[pos_idx + 1 - lookback_240 : pos_idx + 1].max()
+    dist_52w = ((close_t0 - high_52w) / high_52w) * 100.0
+    cond7_52w_high_ok = dist_52w >= -15.0
+
+    # 6. 🌟 防線四：籌碼面共振 ((外資近5日+投信近5日) > 0 或 主力買超 > 0)
+    foreign_5d = row_t0.get('外資近5日累計(張)', 0)
+    trust_5d = row_t0.get('投信近5日累計(張)', 0)
+    major_buy = row_t0.get('主力買超(張)', 0)
+    cond8_chip_ok = ((foreign_5d + trust_5d) > 0) or (major_buy > 0)
+
+    # 7. 🌟 防線二精選：當日上影線比例 <= 45.0%
+    upper_shadow_pct = row_t0.get('上影線比例(%)', None)
+    if upper_shadow_pct is None or pd.isna(upper_shadow_pct):
+      open_t0 = row_t0['open']
+      high_t0 = row_t0['high']
+      low_t0 = row_t0['low']
+      total_range = high_t0 - low_t0
+      upper_shadow = high_t0 - max(close_t0, open_t0)
+      upper_shadow_pct = (
+          (upper_shadow / total_range * 100.0) if total_range > 0 else 0.0
+      )
+    cond9_upper_shadow_ok = upper_shadow_pct <= max_upper_shadow_pct
+
+    base_hit = (
+        cond1_trend
+        and cond2_price_ok
+        and cond3_vol_ok
+        and cond4_continuous
+        and cond5_shakeout
+        and cond6_easy_momentum
+        and cond7_52w_high_ok
+        and cond8_chip_ok
+        and cond9_upper_shadow_ok
+    )
+
+    stock_id = (
+        str(row_t0['stock_id'])
+        if 'stock_id' in row_t0
+        else (str(row_t0['股票代號']) if '股票代號' in row_t0 else '')
+    )
+    date_t0_str = (
+        str(row_t0['date'])
+        if 'date' in row_t0
+        else (str(row_t0['日期']) if '日期' in row_t0 else '')
+    )
+
+    details = {
+        'close_t0': close_t0,
+        'easy_t0': easy_t0,
+        'ma60_t0': ma60_t0,
+        'vol_lots_t0': vol_lots_t0,
+        'vol_ma5_lots': vol_ma5_lots,
+        'easy_slope': easy_slope,
+        'easy_growth': easy_growth,
+        'dist_52w': dist_52w,
+        'foreign_5d': foreign_5d,
+        'trust_5d': trust_5d,
+        'major_buy': major_buy,
+        'upper_shadow_pct': upper_shadow_pct,
+        'date_t0_str': date_t0_str,
+        'stock_id': stock_id,
+        'cond1_trend': cond1_trend,
+        'cond2_price_ok': cond2_price_ok,
+        'cond3_vol_ok': cond3_vol_ok,
+        'cond4_continuous': cond4_continuous,
+        'cond5_shakeout': cond5_shakeout,
+        'cond6_easy_momentum': cond6_easy_momentum,
+        'cond7_52w_high_ok': cond7_52w_high_ok,
+        'cond8_chip_ok': cond8_chip_ok,
+        'cond9_upper_shadow_ok': cond9_upper_shadow_ok,
+        'was_below_tm2': was_below_tm2,
+        'was_below_tm3': was_below_tm3,
+        'was_below_tm4': was_below_tm4,
+    }
+    return base_hit, details
+
+  t0_pos = -(1 + delay_days)
+  t_confirm_pos = -1
+
+  base_hit, details = _check_1020_2_base_signal(t0_pos)
+
+  row_confirm = df_single.iloc[t_confirm_pos]
+  close_confirm = row_confirm['close']
+  close_t0 = details['close_t0']
+
+  confirm_return = (
+      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999
+  )
+  cond10_right_confirm_ok = confirm_return >= threshold_pct
+
+  is_hit = base_hit and cond10_right_confirm_ok
+
+  if verbose:
+    date_confirm_str = (
+        str(row_confirm['date'])
+        if 'date' in row_confirm
+        else (str(row_confirm['日期']) if '日期' in row_confirm else '')
+    )
+    stock_id = details['stock_id']
+    date_t0_str = details['date_t0_str']
+
+    c1_m = '✓' if details['cond1_trend'] else '✕'
+    c2_m = '✓' if details['cond2_price_ok'] else '✕'
+    c3_m = '✓' if details['cond3_vol_ok'] else '✕'
+    c4_m = '✓' if details['cond4_continuous'] else '✕'
+    c5_m = '✓' if details['cond5_shakeout'] else '✕'
+    c6_m = '✓' if details['cond6_easy_momentum'] else '✕'
+    c7_m = '✓' if details['cond7_52w_high_ok'] else '✕'
+    c8_m = '✓' if details['cond8_chip_ok'] else '✕'
+    c9_m = '✓' if details['cond9_upper_shadow_ok'] else '✕'
+    c10_m = '✓' if cond10_right_confirm_ok else '✕'
+
+    print('\n' + '=' * 60)
+    print(
+        f'🔔 [F3_策略一修正版 (1020_2 防線四籌碼共振+上影線過濾)] 股票: {stock_id} |'
+        f' 觸發日: {date_t0_str} -> 確認日: {date_confirm_str}'
+    )
+    print('-' * 60)
+    print(
+        f"  [{c1_m}] 1. 季線趨勢過濾 : Close > MA60 (MA60:"
+        f' {details["ma60_t0"]:.2f}, 價: ${close_t0:.2f})'
+    )
+    print(
+        f"  [{c2_m}] 2. 收盤價 >= 5元 : ${close_t0:.2f}"
+    )
+    print(
+        f"  [{c3_m}] 3. 帶量 1.2 倍 : {details['vol_lots_t0']:,.0f} 張 (>=350張"
+        f" 且 >= {details['vol_ma5_lots']*1.2:,.0f}張)"
+    )
+    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(
+        f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({details['was_below_tm2']}) |"
+        f" T-3({details['was_below_tm3']}) | T-4({details['was_below_tm4']})"
+    )
+    print(
+        f"  [{c6_m}] 6. 輕鬆線動能 : OLS斜率 ({details['easy_slope']:.3f}) > 0 且"
+        f" 5日漲幅 ({details['easy_growth']*100:.2f}%) >= 1.5%"
+    )
+    print(
+        f"  [{c7_m}] 7. 強勢高位過濾 : 距 52W 高點 {details['dist_52w']:.1f}%"
+        ' (>= -15.0%)'
+    )
+    print(
+        f"  [{c8_m}] 8. 🌟 防線四(籌碼共振): (外資5日:{details['foreign_5d']:.0f} +"
+        f" 投信5日:{details['trust_5d']:.0f}) > 0 或"
+        f" 主力買超:{details['major_buy']:.0f} > 0"
+    )
+    print(
+        f"  [{c9_m}] 9. 🌟 防線二(上影線)  : 當日上影線"
+        f" {details['upper_shadow_pct']:.1f}% (<= {max_upper_shadow_pct:.1f}%)"
+    )
+    print(
+        f"  [{c10_m}] 10. 🌟 右側二次確認 (T+{delay_days} 報酬 >= "
+        f"{threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}% (T+{delay_days}價: ${close_confirm:.2f})"
+    )
+    print('-' * 60)
+    print(
+        f"🎯 最終觸發結果:"
+        f" {'🔥 [觸發 1020_2 籌碼共振進化版]' if is_hit else '⚪ [未觸發]'}"
+    )
+    print('=' * 60 + '\n')
+
+  info = {
+      '選股公式': f'F3_洗盤後_1020_2防線四籌碼共振與上影線過濾 (T+{delay_days})',
+      '股票代號': details['stock_id'],
+      '訊號日期': details['date_t0_str'],
+      '觸發價格': close_t0,
+      '距52W高點': f"{details['dist_52w']:.1f}%",
+      '上影線比例': f"{details['upper_shadow_pct']:.1f}%",
+      'T+3觀察期報酬': f'{confirm_return*100:.2f}%',
+      '操作建議': (
+          f'強勢高位 (52W: {details["dist_52w"]:.1f}%) 且籌碼共振與上影線安全 '
+          f'(上影線: {details["upper_shadow_pct"]:.1f}%, T+{delay_days}報酬:'
+          f' {confirm_return*100:.1f}%)'
+      ),
+  } if is_hit else {}
+
+  return is_hit, info
+
 
 def st_qiantang_f3_after_shakeout_20261020_1(
     df_single: pd.DataFrame,
