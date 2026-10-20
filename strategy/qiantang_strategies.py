@@ -1285,10 +1285,12 @@ def st_qiantang_f3_after_shakeout_20261020_3(
 
     # 5. 🌟 方案 C：距 52 週高點 >= -10.0% 且 打底沉澱天數 >= 20 天
     lookback_240 = min(pos_idx + 1, 240)
-    high_52w = df_single['close'].iloc[pos_idx + 1 - lookback_240 : pos_idx + 1].max()
-    dist_52w = ((close_t0 - high_52w) / high_52w) * 100.0
+    #high_52w = df_single['close'].iloc[pos_idx + 1 - lookback_240 : pos_idx + 1].max()
+    high_52w = row_t0.get('high_52w', 0)
+    #dist_52w = ((close_t0 - high_52w) / high_52w) * 100.0
+    dist_52w = row_t0.get('dist_to_52w_high_pct', 0)
 
-    consolidation_days = row_t0.get('打底沉澱天數', 0)
+    consolidation_days = row_t0.get('base_consolidation_days', 0)
     cond7_pos_c = (dist_52w >= min_52w_high_dist) and (
         consolidation_days >= min_consolidation_days
     )
