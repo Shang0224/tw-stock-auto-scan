@@ -203,6 +203,28 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                          arrowprops=dict(arrowstyle='->', color='#1f77b4', lw=0.9))
 
     # 4. 安全取得高低點資訊
+        # 4. 🌟 安全取得高低點資訊 (直接從 wave_info 取得純值，徹底防範 .iloc 轉型 Bug)
+    high_date_str = wave_info.get('c_high_date')
+    low_date_str = wave_info.get('c_low_date')
+
+    high_pct_val = 0.0
+    low_pct_val = 0.0
+
+    c_low_pct = wave_info.get('c_low_pct')
+    if c_low_pct is not None:
+        try:
+            low_pct_val = float(c_low_pct)
+        except (ValueError, TypeError):
+            low_pct_val = 0.0
+
+    if isinstance(signals, pd.DataFrame) and not signals.empty and 'high_pct' in signals.columns:
+        val = signals['high_pct'].iloc[0]
+        high_pct_val = 0.0 if pd.isna(val) else float(val)
+    elif isinstance(signals, pd.Series) and not signals.empty and 'high_pct' in signals.index:
+        val = signals['high_pct']
+        high_pct_val = 0.0 if pd.isna(val) else float(val)
+        
+    """
     high_date_str = None
     high_pct_val = 0.0
     low_date_str = None
@@ -221,6 +243,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         if 'low_pct' in signals.columns:
             val = signals['low_pct'].iloc
             low_pct_val = 0.0 if pd.isna(val) else float(val)
+    """
 
     # 5. 標示【1Y 高點日期】 (紅色 Red)
     if high_date_str:
