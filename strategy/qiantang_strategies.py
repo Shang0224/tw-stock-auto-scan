@@ -1283,9 +1283,14 @@ def st_qiantang_f3_after_shakeout_20261020_2(
     cond7_52w_high_ok = dist_52w >= -15.0
 
     # 6. 🌟 防線四：籌碼面共振 ((外資近5日+投信近5日) > 0 或 主力買超 > 0)
+    """
     foreign_5d = row_t0.get('外資近5日累計(張)', 0)
     trust_5d = row_t0.get('投信近5日累計(張)', 0)
     major_buy = row_t0.get('主力買超(張)', 0)
+    """
+    foreign_5d = row_t0.get('foreign_5d_shares_sum', 0)
+    trust_5d = row_t0.get('trust_5d_shares_sum', 0)
+    major_buy = row_t0.get('major_net', 0)
     cond8_chip_ok = ((foreign_5d + trust_5d) > 0) or (major_buy > 0)
 
     # 7. 🌟 防線二精選：當日上影線比例 <= 45.0%
