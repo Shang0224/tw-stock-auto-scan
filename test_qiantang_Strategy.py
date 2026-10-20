@@ -31,7 +31,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout_20261017_1,
     st_qiantang_f3_after_shakeout_20261018_1,
     st_qiantang_f3_after_shakeout_20261020_1,
-    st_qiantang_f3_after_shakeout_20261020_,
+    st_qiantang_f3_after_shakeout_20261020_2,
 
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
