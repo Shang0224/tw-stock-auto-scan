@@ -1292,8 +1292,8 @@ def st_qiantang_f3_after_shakeout_20261020_2(
     upper_shadow_pct = row_t0.get('上影線比例(%)', None)
     if upper_shadow_pct is None or pd.isna(upper_shadow_pct):
       open_t0 = row_t0['open']
-      high_t0 = row_t0['high']
-      low_t0 = row_t0['low']
+      high_t0 = row_t0['max']
+      low_t0 = row_t0['min']
       total_range = high_t0 - low_t0
       upper_shadow = high_t0 - max(close_t0, open_t0)
       upper_shadow_pct = (
