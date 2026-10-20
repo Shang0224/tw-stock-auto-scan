@@ -62,8 +62,8 @@ from utils import (
 # =====================================================================
 # 💡 目前僅單獨測試：st_qiantang_f3_after_shakeout_20261001_1
 TEST_QIANTANG_STRATEGY = [
-    #st_qiantang_f1_spt_growth,      # F1: 筆張現形
-    #st_qiantang_f2_volume_breakout, # F2: 出量上輕
+    st_qiantang_f1_spt_growth,      # F1: 筆張現形
+    st_qiantang_f2_volume_breakout, # F2: 出量上輕
     #st_qiantang_f3_after_shakeout,  # F3: 洗盤後
     st_qiantang_f3_after_shakeout_20261020_2,
     st_qiantang_f3_after_shakeout_20261020_3,
