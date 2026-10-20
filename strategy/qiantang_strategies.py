@@ -1193,6 +1193,257 @@ def st_qiantang_f3_after_shakeout_20261017_1(
 
   return is_hit, info
 
+def st_qiantang_f3_after_shakeout_20261020_3(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 5,  # 🌟 右側雙時間視窗，觀察期至 T+5
+    threshold_t3: float = -0.015,  # 🌟 T+3 觀察期報酬率 >= -1.5%
+    threshold_t5: float = -0.020,  # 🌟 T+5 觀察期報酬率 >= -2.0%
+    min_easy_slope: float = 0.35,  # 🌟 方案 A: 輕鬆線 OLS 斜率 >= 0.35
+    min_ma60_slope: float = 0.05,  # 🌟 方案 A: MA60 季線 OLS 斜率 >= 0.05
+    min_52w_high_dist: float = -10.0,  # 🌟 方案 C: 距 52 週高點 >= -10.0% (強勢高位)
+    min_consolidation_days: int = 20,  # 🌟 方案 C: 打底沉澱天數 >= 20 天
+) -> tuple[bool, dict]:
+  """【F3_洗盤後 (20261020_3 A+B+C 終極防護進化版)】
+
+  策略完整邏輯：
+  1. 基礎洗盤與量能過濾：
+     - Close > MA60, Close >= 5.0 元, 成交量 >= 350張 且 >= 5日均量 * 1.2 倍
+     - 今日與昨日均站穩輕鬆線, T-2/T-3/T-4 曾跌破輕鬆線 (洗盤甩轎)
+  2. 🌟 方案 A【雙重斜率加強】：輕鬆線 OLS 斜率 >= 0.35 且 MA60 季線 OLS 斜率 >= 0.05
+  3. 🌟 方案 C【強勢高位與打底】：距 52 週高點 >= -10.0% 且 打底沉澱天數 >= 20 天
+  4. 🌟 方案 B【右側雙時間視窗 Confirmation】：T+3 報酬 >= -1.5% 且 T+5 報酬 >= -2.0%
+  """
+  profile = profile or {}
+
+  min_required_len = 60 + 5 + delay_days
+  if len(df_single) < min_required_len:
+    if verbose:
+      print(
+          f'❌ [策略 20261020_3] 資料筆數不足 {min_required_len} 筆'
+          f' (目前: {len(df_single)})'
+      )
+    return False, {}
+
+  df_single = df_single.copy()
+  if 'MA60' not in df_single.columns:
+    df_single['MA60'] = df_single['close'].rolling(window=60).mean()
+
+  def _check_20261020_3_base_signal(pos_idx: int) -> tuple[bool, dict]:
+    row_t0 = df_single.iloc[pos_idx]
+    row_tm1 = df_single.iloc[pos_idx - 1]
+    row_tm2 = df_single.iloc[pos_idx - 2]
+    row_tm3 = df_single.iloc[pos_idx - 3]
+    row_tm4 = df_single.iloc[pos_idx - 4]
+
+    close_t0 = row_t0['close']
+    easy_t0 = row_t0['easy_line']
+    ma60_t0 = row_t0['MA60']
+    vol_t0 = row_t0['Trading_Volume']
+
+    close_tm1 = row_tm1['close']
+    easy_tm1 = row_tm1['easy_line']
+
+    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    recent_vols = df_single['Trading_Volume'].iloc[pos_idx - 5 : pos_idx]
+    vol_ma5 = recent_vols.mean()
+    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+
+    # 1. 趨勢與價格
+    cond1_trend = close_t0 > ma60_t0
+    cond2_price_ok = close_t0 >= 5.0
+
+    # 2. 量能與站穩輕鬆線
+    cond3_vol_ok = (vol_lots_t0 >= 350) and (
+        vol_lots_t0 >= vol_ma5_lots * 1.2
+    )
+    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+    # 3. 洗盤甩轎軌跡
+    was_below_tm2 = row_tm2['close'] <= row_tm2['easy_line']
+    was_below_tm3 = row_tm3['close'] <= row_tm3['easy_line']
+    was_below_tm4 = row_tm4['close'] <= row_tm4['easy_line']
+    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
+
+    # 4. 🌟 方案 A：輕鬆線與 MA60 季線雙重 OLS 斜率加強
+    easy_5d = df_single['easy_line'].iloc[pos_idx - 4 : pos_idx + 1].values
+    easy_slope = linregress(np.arange(5), easy_5d).slope
+    easy_5d_ago = df_single['easy_line'].iloc[pos_idx - 4]
+    easy_growth = (
+        (easy_t0 - easy_5d_ago) / easy_5d_ago if easy_5d_ago > 0 else 0
+    )
+
+    ma60_5d = df_single['MA60'].iloc[pos_idx - 4 : pos_idx + 1].values
+    ma60_slope = linregress(np.arange(5), ma60_5d).slope
+
+    cond6_slope_a = (
+        (easy_slope >= min_easy_slope)
+        and (ma60_slope >= min_ma60_slope)
+        and (easy_growth >= 0.015)
+    )
+
+    # 5. 🌟 方案 C：距 52 週高點 >= -10.0% 且 打底沉澱天數 >= 20 天
+    lookback_240 = min(pos_idx + 1, 240)
+    high_52w = df_single['close'].iloc[pos_idx + 1 - lookback_240 : pos_idx + 1].max()
+    dist_52w = ((close_t0 - high_52w) / high_52w) * 100.0
+
+    consolidation_days = row_t0.get('打底沉澱天數', 0)
+    cond7_pos_c = (dist_52w >= min_52w_high_dist) and (
+        consolidation_days >= min_consolidation_days
+    )
+
+    base_hit = (
+        cond1_trend
+        and cond2_price_ok
+        and cond3_vol_ok
+        and cond4_continuous
+        and cond5_shakeout
+        and cond6_slope_a
+        and cond7_pos_c
+    )
+
+    stock_id = (
+        str(row_t0['stock_id'])
+        if 'stock_id' in row_t0
+        else (str(row_t0['股票代號']) if '股票代號' in row_t0 else '')
+    )
+    date_t0_str = (
+        str(row_t0['date'])
+        if 'date' in row_t0
+        else (str(row_t0['日期']) if '日期' in row_t0 else '')
+    )
+
+    details = {
+        'close_t0': close_t0,
+        'easy_t0': easy_t0,
+        'ma60_t0': ma60_t0,
+        'vol_lots_t0': vol_lots_t0,
+        'vol_ma5_lots': vol_ma5_lots,
+        'easy_slope': easy_slope,
+        'ma60_slope': ma60_slope,
+        'easy_growth': easy_growth,
+        'dist_52w': dist_52w,
+        'consolidation_days': consolidation_days,
+        'date_t0_str': date_t0_str,
+        'stock_id': stock_id,
+        'cond1_trend': cond1_trend,
+        'cond2_price_ok': cond2_price_ok,
+        'cond3_vol_ok': cond3_vol_ok,
+        'cond4_continuous': cond4_continuous,
+        'cond5_shakeout': cond5_shakeout,
+        'cond6_slope_a': cond6_slope_a,
+        'cond7_pos_c': cond7_pos_c,
+        'was_below_tm2': was_below_tm2,
+        'was_below_tm3': was_below_tm3,
+        'was_below_tm4': was_below_tm4,
+    }
+    return base_hit, details
+
+  # 定位觸發日 (Day T0) 與 右側確認日
+  t0_pos = -(1 + delay_days)  # 觸發日 (例如 delay_days=5 時為 -6)
+  t3_pos = -(1 + delay_days - 3)  # T+3 觀察日
+  t5_pos = -1  # T+5 觀察日 (最新一筆)
+
+  base_hit, details = _check_20261020_3_base_signal(t0_pos)
+
+  # 取得 T+3 與 T+5 收盤價
+  row_t3 = df_single.iloc[t3_pos]
+  row_t5 = df_single.iloc[t5_pos]
+
+  close_t0 = details['close_t0']
+  close_t3 = row_t3['close']
+  close_t5 = row_t5['close']
+
+  ret_t3 = (close_t3 - close_t0) / close_t0 if close_t0 > 0 else -999.0
+  ret_t5 = (close_t5 - close_t0) / close_t0 if close_t0 > 0 else -999.0
+
+  # 🌟 方案 B：右側 Confirmation 雙時間視窗 (T+3 >= -1.5% 且 T+5 >= -2.0%)
+  cond8_right_b = (ret_t3 >= threshold_t3) and (ret_t5 >= threshold_t5)
+
+  is_hit = base_hit and cond8_right_b
+
+  if verbose:
+    date_t5_str = (
+        str(row_t5['date'])
+        if 'date' in row_t5
+        else (str(row_t5['日期']) if '日期' in row_t5 else '')
+    )
+    stock_id = details['stock_id']
+    date_t0_str = details['date_t0_str']
+
+    c1_m = '✓' if details['cond1_trend'] else '✕'
+    c2_m = '✓' if details['cond2_price_ok'] else '✕'
+    c3_m = '✓' if details['cond3_vol_ok'] else '✕'
+    c4_m = '✓' if details['cond4_continuous'] else '✕'
+    c5_m = '✓' if details['cond5_shakeout'] else '✕'
+    c6_m = '✓' if details['cond6_slope_a'] else '✕'
+    c7_m = '✓' if details['cond7_pos_c'] else '✕'
+    c8_m = '✓' if cond8_right_b else '✕'
+
+    print('\n' + '=' * 60)
+    print(
+        f'🔔 [F3_策略一 (20261020_3 A+B+C 終極組合)] 股票: {stock_id} | 觸發日:'
+        f' {date_t0_str} -> T+5確認日: {date_t5_str}'
+    )
+    print('-' * 60)
+    print(
+        f"  [{c1_m}] 1. 季線趨勢過濾 : Close > MA60 (MA60:"
+        f' {details["ma60_t0"]:.2f}, 價: ${close_t0:.2f})'
+    )
+    print(
+        f"  [{c2_m}] 2. 收盤價 >= 5元 : ${close_t0:.2f}"
+    )
+    print(
+        f"  [{c3_m}] 3. 帶量 1.2 倍 : {details['vol_lots_t0']:,.0f} 張 (>=350張"
+        f" 且 >= {details['vol_ma5_lots']*1.2:,.0f}張)"
+    )
+    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(
+        f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({details['was_below_tm2']}) |"
+        f" T-3({details['was_below_tm3']}) | T-4({details['was_below_tm4']})"
+    )
+    print(
+        f"  [{c6_m}] 6. 🌟 方案 A 雙重斜率 : 輕鬆線OLS"
+        f" ({details['easy_slope']:.3f} >= {min_easy_slope}) | MA60斜率"
+        f' ({details["ma60_slope"]:.3f} >= {min_ma60_slope})'
+    )
+    print(
+        f"  [{c7_m}] 7. 🌟 方案 C 位階沉澱 : 52W位階 ({details['dist_52w']:.1f}%"
+        f" >= {min_52w_high_dist}%) | 打底 ({details['consolidation_days']}天"
+        f' >= {min_consolidation_days}天)'
+    )
+    print(
+        f"  [{c8_m}] 8. 🌟 方案 B 雙視窗確認 : T+3報酬 ({ret_t3*100:.2f}% >="
+        f" {threshold_t3*100:.1f}%) | T+5報酬 ({ret_t5*100:.2f}% >="
+        f' {threshold_t5*100:.1f}%)'
+    )
+    print('-' * 60)
+    print(
+        f"🎯 最終觸發結果:"
+        f" {'🔥 [觸發 A+B+C 終極組合版]' if is_hit else '⚪ [未觸發]'}"
+    )
+    print('=' * 60 + '\n')
+
+  info = {
+      '選股公式': 'F3_洗盤後_20261020_3_ABC終極組合版',
+      '股票代號': details['stock_id'],
+      '訊號日期': details['date_t0_str'],
+      '觸發價格': close_t0,
+      '輕鬆線斜率': f"{details['easy_slope']:.3f}",
+      'MA60斜率': f"{details['ma60_slope']:.3f}",
+      '距52W高點': f"{details['dist_52w']:.1f}%",
+      '打底天數': details['consolidation_days'],
+      'T+3報酬': f'{ret_t3*100:.2f}%',
+      'T+5報酬': f'{ret_t5*100:.2f}%',
+      '操作建議': (
+          f'極致強勢極品 (52W位階: {details["dist_52w"]:.1f}%, 打底:'
+          f' {details["consolidation_days"]}天, T+3/T+5右側安全)'
+      ),
+  } if is_hit else {}
+
+  return is_hit, info
+
 def st_qiantang_f3_after_shakeout_20261020_2(
     df_single: pd.DataFrame,
     profile: dict = None,
