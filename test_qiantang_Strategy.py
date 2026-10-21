@@ -34,6 +34,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout_20261020_2,
     st_qiantang_f3_after_shakeout_20261020_3,
     st_qiantang_f3_after_shakeout_20261001_1_1_1, #MACD精進版
+    st_qiantang_f3_after_shakeout_20261001_1_1_2, #大盤年線過熱過濾, ols斜率>1.0強勢股豁免
 
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
@@ -73,9 +74,11 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_20261017_1,
     #st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
     st_qiantang_f3_after_shakeout_20261001_1_1_1, #MACD精進版
+    st_qiantang_f3_after_shakeout_20261001_1_1_2, #大盤年線過熱過濾, ols斜率>1.0強勢股豁免
+        
     
     #st_qiantang_f3_after_shakeout_20261001_1,
-    #st_qiantang_f3_after_shakeout_20261001_1_1,
+    st_qiantang_f3_after_shakeout_20261001_1_1,
     #st_qiantang_f3_after_shakeout20261001_1_2,
     #st_qiantang_f3_after_shakeout_20261001_1_3,       
     #st_qiantang_f3_after_shakeout_20261001_1_3_1,
@@ -88,7 +91,7 @@ TEST_QIANTANG_STRATEGY = [
 ]
 
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2021-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
@@ -108,9 +111,9 @@ EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 # 模式 A：CSV 檔案載入模式
 STOCK_MODE = "csv"
 
-#STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
+STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
-STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
+#STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 
 #STOCK_MODE = 'noncsv' 
 """
