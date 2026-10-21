@@ -937,6 +937,87 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
+def st_qiantang_f3_after_shakeout_20261001_1_1_1(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = False
+) -> tuple[bool, dict]:
+    """
+    【F3_洗盤後 20261001_1_1 精準優化版】
+    改進點：
+    1. 消除 MACD 滯後：將「OSC 翻紅(OSC>0)」改為「OSC 綠柱收斂勾頭(OSC_0 > OSC_1 且 OSC_1 < OSC_2)」，提早 2~3 天進場。
+    2. 輕鬆線低乖離控制：要求 0% < 乖離率 <= 5.0%，確保買在靠近輕鬆線支撐的起漲點。
+    3. K 棒型態過濾：要求當日為紅 K (Close > Open) 且 上影線比例 <= 30%。
+    4. 健康量能爆發：1.2 <= 今日成交量 / 5日均量 <= 2.5，過濾低量假突破與爆天量出貨。
+    """
+    if len(df_single) < 35:
+        return False, {}
+
+    # 1. 計算 MACD (12, 26, 9)
+    exp1 = df_single['close'].ewm(span=12, adjust=False).mean()
+    exp2 = df_single['close'].ewm(span=26, adjust=False).mean()
+    dif = exp1 - exp2
+    dem = dif.ewm(span=9, adjust=False).mean()
+    osc = (dif - dem) * 2
+
+    df_temp = df_single.copy()
+    df_temp['OSC'] = osc
+
+    today = df_temp.iloc[-1]
+    d1 = df_temp.iloc[-2]
+    d2 = df_temp.iloc[-3]
+    d3 = df_temp.iloc[-4]
+    d4 = df_temp.iloc[-5]
+
+    close_0 = today.get('close', 0)
+    open_0 = today.get('open', 0)
+    high_0 = today.get('high', 0)
+    low_0 = today.get('low', 0)
+    easy_0 = today.get('easy_line', 0)
+    vol_0 = today.get('Trading_Volume', 0)
+    ma60_0 = today.get('MA60', 0)
+    osc_0 = today.get('OSC', 0)
+    osc_1 = d1.get('OSC', 0)
+    osc_2 = d2.get('OSC', 0)
+
+    # 5日均量
+    recent_vols = df_temp['Trading_Volume'].iloc[-6:-1]
+    vol_ma5 = recent_vols.mean() if len(recent_vols) > 0 else 0
+
+    # 條件 1：趨勢 + 價格
+    cond1_trend = (close_0 > ma60_0) and (close_0 >= 5.0)
+
+    # 條件 2：洗盤甩轎軌跡 (前 2~4 日曾跌破輕鬆線)
+    was_below = (d2.get('close', 0) <= d2.get('easy_line', 0)) or \
+                (d3.get('close', 0) <= d3.get('easy_line', 0)) or \
+                (d4.get('close', 0) <= d4.get('easy_line', 0))
+
+    # 條件 3：【優化】MACD 綠柱提前勾頭，不等待過0軸 (提早卡位)
+    cond3_macd_hook = (osc_0 > osc_1) and (osc_1 <= osc_2)
+
+    # 條件 4：【優化】輕鬆線低乖離防守 (0% < 乖離率 <= 5.0%)
+    bias_pct = ((close_0 - easy_0) / easy_0) * 100.0 if easy_0 > 0 else 999.0
+    cond4_low_bias = (0.0 < bias_pct <= 5.0)
+
+    # 條件 5：【優化】K 棒品質 (紅 K + 上影線 <= 30%)
+    body_len = abs(close_0 - open_0)
+    total_len = high_0 - low_0
+    upper_shadow_pct = ((high_0 - max(close_0, open_0)) / total_len) * 100.0 if total_len > 0 else 0.0
+    cond5_kbar_ok = (close_0 > open_0) and (upper_shadow_pct <= 30.0)
+
+    # 條件 6：【優化】量能黃金比例 (1.2 ~ 2.5 倍 5日均量)
+    vol_ratio = (vol_0 / vol_ma5) if vol_ma5 > 0 else 0.0
+    cond6_vol_ok = (vol_0 >= 350 * 1000) and (1.2 <= vol_ratio <= 2.5)
+
+    is_hit = cond1_trend and was_below and cond3_macd_hook and cond4_low_bias and cond5_kbar_ok and cond6_vol_ok
+
+    info = {
+        '選股公式': 'F3_洗盤後_20261001_1_1_精準優化版',
+        '操作建議': '利用 MACD 綠柱勾頭提早卡位，搭配輕鬆線低乖離 (<5%) 與紅 K 實體過濾，降低拉回風險。'
+    } if is_hit else {}
+
+    return is_hit, info
+
 def st_qiantang_f3_after_shakeout_20261017_1(
     df_single: pd.DataFrame,
     profile: dict = None,
