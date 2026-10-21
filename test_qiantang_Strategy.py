@@ -67,16 +67,17 @@ TEST_QIANTANG_STRATEGY = [
     st_qiantang_f3_after_shakeout,  # F3: 洗盤後
     #st_qiantang_f3_after_shakeout_20261020_2,
     st_qiantang_f3_after_shakeout_20261020_3,
-    #st_qiantang_f3_after_shakeout_20261020_1,
-    st_qiantang_f3_after_shakeout_20261018_1,
-    st_qiantang_f3_after_shakeout_20261017_1,
-    st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
-
+    st_qiantang_f3_after_shakeout_20261020_1,
+    #st_qiantang_f3_after_shakeout_20261018_1,
+    #st_qiantang_f3_after_shakeout_20261017_1,
+    #st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
+    st_qiantang_f3_after_shakeout_20261001_1_1_1 #MACD精進版
+    
     #st_qiantang_f3_after_shakeout_20261001_1,
-    st_qiantang_f3_after_shakeout_20261001_1_1,
-    st_qiantang_f3_after_shakeout20261001_1_2,
-    st_qiantang_f3_after_shakeout_20261001_1_3,       
-    st_qiantang_f3_after_shakeout_20261001_1_3_1,
+    #st_qiantang_f3_after_shakeout_20261001_1_1,
+    #st_qiantang_f3_after_shakeout20261001_1_2,
+    #st_qiantang_f3_after_shakeout_20261001_1_3,       
+    #st_qiantang_f3_after_shakeout_20261001_1_3_1,
    
     # st_qiantang_f4_strong_rise,     # F4: 強力上
     # st_qiantang_f5_major_buy_easy,  # F5: 主外上輕
@@ -93,6 +94,11 @@ DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 # 🌟 大盤趨勢濾網控制開關
 USE_MARKET_FILTER = True        # 是否啟用大盤趨勢濾網 (True: 啟用防守 / False: 關閉防守)
 MARKET_FILTER_KEY = "EMA60"     # 大盤門檻指標 (預設季線 EMA60)
+
+# ==============================================================================
+# 🎛 走勢圖繪製控制開關
+# ==============================================================================
+GENERATE_WAVE_CHARTS = False  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 # 🌟 檔案輸出控制開關
 EXPORT_EXCEL = False            # 是否輸出與上傳 Excel 報告
@@ -115,10 +121,6 @@ STOCK_INPUT = {
 }
 """
 
-# ==============================================================================
-# 🎛 走勢圖繪製控制開關
-# ==============================================================================
-GENERATE_WAVE_CHARTS = False  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 # -----------------------------------------------------------------
 # 型態安全工具函式 (攔截 NaN，自動補 0 維持整數欄位)
