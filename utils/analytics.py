@@ -70,8 +70,134 @@ def calculate_forward_horizon_returns(
 
   return perf_dict
 
-
 def calculate_one_year_extremes(
+    stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
+) -> dict:
+  """計算進場後未來 1 年 (約 240 個交易日) 內的「極值、登頂軌跡風險與 Cat 1~4 自動走勢標籤」
+
+  包含：1Y內最高/最低價、極值報酬率與達到天數、創高前最大回撤 % (Max Drawdown Before Peak)、
+  創低前最大漲幅 % (Max Gain Before Trough)、MAE/MFE 波動指標，並自動判定走勢類別標籤 
+  (Cat 1 飆股 / Cat 2 溫和小漲 / Cat 3 深跌陷阱 / Cat 4 窄幅橫盤)。
+  """
+  if global_df is None or global_df.empty:
+    return {}
+
+  # 1. 取出觸發日及未來 240 個交易日 (約 1 年) 的 K 線資料
+  df_future = (
+      global_df[
+          (global_df["stock_id"].astype(str) == str(stock_id))
+          & (global_df["date"] >= trigger_date_str)
+      ]
+      .sort_values("date")
+      .reset_index(drop=True)
+  )
+
+  if df_future.empty or len(df_future) < 2:
+    return {
+        "1Y內最高績效": "N/A",
+        "1Y內最低績效": "N/A",
+        "走勢類別標籤": "資料不足",
+    }
+
+  # 買進基準價 (Day T 收盤價)
+  close_t0 = float(df_future["close"].iloc[0])
+  if close_t0 <= 0:
+    return {}
+
+  # 未來觀察視窗 (排除 Day T 當天，往後取最多 240 個交易日)
+  df_window = df_future.iloc[1:241].copy().reset_index(drop=True)
+
+  # 2. 定位未來 1 年內最高點與最低點
+  max_idx = df_window["max"].idxmax()
+  min_idx = df_window["min"].idxmin()
+
+  row_max = df_window.iloc[max_idx]
+  row_min = df_window.iloc[min_idx]
+
+  max_price_1y = float(row_max["max"])
+  min_price_1y = float(row_min["min"])
+
+  max_date_1y = str(row_max["date"]).split(" ")[0]
+  min_date_1y = str(row_min["date"]).split(" ")[0]
+
+  # 交易日天數差距 (從 Day T+1 開始算起第幾天達到極值)
+  days_to_max = int(max_idx) + 1
+  days_to_min = int(min_idx) + 1
+
+  # 極值報酬率 (%)
+  max_perf_pct = ((max_price_1y - close_t0) / close_t0) * 100.0
+  min_perf_pct = ((min_price_1y - close_t0) / close_t0) * 100.0
+
+  # 3. 計算【創高前最大回撤 % (Max Drawdown Before Peak)】
+  df_before_peak = df_window.iloc[: max_idx + 1]
+  lowest_before_peak = float(df_before_peak["min"].min())
+  mdd_before_peak_pct = (
+      (lowest_before_peak - close_t0) / close_t0
+  ) * 100.0
+
+  # 4. 判定最低點是否先於最高點發生 (is_pullback_first)
+  is_pullback_first = days_to_min < days_to_max
+  PULLBACK_LIMIT_PCT = -15.0  # 2131 版深跌門檻
+
+  gain_before_trough_pct = None
+
+  if is_pullback_first:
+    # 🌟 僅在 is_pullback_first 為 True 時，才去計算「創低前的最高漲幅 %」
+    df_before_trough = df_window.iloc[: min_idx + 1]
+    highest_before_trough = float(df_before_trough["max"].max())
+    gain_before_trough_pct = (
+        (highest_before_trough - close_t0) / close_t0
+    ) * 100.0
+
+    if min_perf_pct < PULLBACK_LIMIT_PCT:
+      # 最低點先發生且跌破 -15%：依「創低前的最高漲幅」認定走勢分類
+      if gain_before_trough_pct >= 50.0:
+        category_tag = "Cat1_飆股"
+      elif gain_before_trough_pct >= 20.0:
+        category_tag = "Cat2_溫和上漲"
+      else:
+        category_tag = "Cat3_深跌陷阱"
+    else:
+      # 未跌破 -15%：依 1Y 最高漲幅分類
+      if max_perf_pct >= 50.0:
+        category_tag = "Cat1_飆股"
+      elif max_perf_pct >= 20.0:
+        category_tag = "Cat2_溫和上漲"
+      else:
+        category_tag = "Cat4_窄幅橫盤"
+  else:
+    # 🌟 最高點先於最低點發生 (is_pullback_first 為 False)
+    if max_perf_pct >= 50.0:
+      category_tag = "Cat1_飆股"
+    elif max_perf_pct >= 20.0:
+      category_tag = "Cat2_溫和上漲"
+    elif min_perf_pct < PULLBACK_LIMIT_PCT:
+      category_tag = "Cat3_深跌陷阱"
+    else:
+      category_tag = "Cat4_窄幅橫盤"
+
+  extremes_dict = {
+      "1Y內最高績效": f"{max_perf_pct:+.2f}% ({max_date_1y})",
+      "1Y內最低績效": f"{min_perf_pct:+.2f}% ({min_date_1y})",
+      "1Y最高價": round(max_price_1y, 2),
+      "1Y最高天數": days_to_max,
+      "1Y最低價": round(min_price_1y, 2),
+      "1Y最低天數": days_to_min,
+      "創高前最大回撤(%)": round(mdd_before_peak_pct, 2),
+      "創低前最大漲幅(%)": (
+          round(gain_before_trough_pct, 2)
+          if gain_before_trough_pct is not None
+          else "N/A"
+      ),
+      "最大波段浮盈_MFE(%)": round(max_perf_pct, 2),
+      "最大波段浮虧_MAE(%)": round(min_perf_pct, 2),
+      "走勢類別標籤": category_tag,
+  }
+
+  return extremes_dict
+
+
+def calculate_one_year_extremes_old(
     stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
 ) -> dict:
   """計算進場後未來 1 年 (約 240 個交易日) 內的「極值、登頂軌跡風險與 Cat 1~4 自動走勢標籤」
@@ -143,19 +269,28 @@ def calculate_one_year_extremes(
   is_pullback_first = days_to_min < days_to_max
 
   PULLBACK_LIMIT_PCT = -15.0
-    
-  if max_perf_pct >= 50.0 and (not is_pullback_first or min_perf_pct >= PULLBACK_LIMIT_PCT):
-    category_tag = "Cat1_飆股"
-  elif 20.0 <= max_perf_pct < 50.0 and (
-      not is_pullback_first or min_perf_pct >= PULLBACK_LIMIT_PCT
-  ):
-    category_tag = "Cat2_溫和上漲"
-  elif min_perf_pct < PULLBACK_LIMIT_PCT and (is_pullback_first or max_perf_pct < 20.0):
-    category_tag = "Cat3_深跌陷阱"
-  elif max_perf_pct < 20.0 and min_perf_pct >= PULLBACK_LIMIT_PCT:
-    category_tag = "Cat4_窄幅橫盤"
+   
+  if is_pullback_first:
+    # 第一種情況：最低點先發生 (is_pullback_first == True)
+    if min_perf_pct < PULLBACK_LIMIT_PCT:
+        category_tag = "Cat3_深跌陷阱"
+    elif max_perf_pct >= 50.0:
+        category_tag = "Cat1_飆股"
+    elif max_perf_pct >= 20.0:
+        category_tag = "Cat2_溫和上漲"
+    else:
+        category_tag = "Cat4_窄幅橫盤"
   else:
-    category_tag = "Cat4_窄幅橫盤"
+    # 第二種情況：最高點先發生 (is_pullback_first == False)
+    # 往前找最高點前的最低點 (mdd_before_peak_pct)
+    if mdd_before_peak_pct < PULLBACK_LIMIT_PCT:
+        category_tag = "Cat3_深跌陷阱"
+    elif max_perf_pct >= 50.0:
+        category_tag = "Cat1_飆股"
+    elif max_perf_pct >= 20.0:
+        category_tag = "Cat2_溫和上漲"
+    else:
+        category_tag = "Cat4_窄幅橫盤"
     
   """
   # 4. 自動判定走勢類別標籤 (Category_Tag: Cat 1 ~ Cat 4)
