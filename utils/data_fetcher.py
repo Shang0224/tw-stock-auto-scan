@@ -59,6 +59,9 @@ def fetch_and_process_market_data(
   # (2) 大盤當日漲跌幅 (%)
   df["taiex_change_pct"] = df["close"].pct_change() * 100.0
 
+  # (3) 大盤年線 (MA240) 乖離率 (%)
+  df["taiex_ma20_bias_pct"] = ((df["close"] - df["MA20"]) / df["MA20"]) * 100.0
+    
   # (3) 大盤季線 (MA60 & EMA60) 乖離率 (%)
   df["taiex_ma60_bias_pct"] = ((df["close"] - df["MA60"]) / df["MA60"]) * 100.0
   df["taiex_ema60_bias_pct"] = (
