@@ -62,21 +62,21 @@ from utils import (
 # =====================================================================
 # 💡 目前僅單獨測試：st_qiantang_f3_after_shakeout_20261001_1
 TEST_QIANTANG_STRATEGY = [
-    st_qiantang_f1_spt_growth,      # F1: 筆張現形
-    st_qiantang_f2_volume_breakout, # F2: 出量上輕
-    #st_qiantang_f3_after_shakeout,  # F3: 洗盤後
-    st_qiantang_f3_after_shakeout_20261020_2,
+    #st_qiantang_f1_spt_growth,      # F1: 筆張現形
+    #st_qiantang_f2_volume_breakout, # F2: 出量上輕
+    st_qiantang_f3_after_shakeout,  # F3: 洗盤後
+    #st_qiantang_f3_after_shakeout_20261020_2,
     st_qiantang_f3_after_shakeout_20261020_3,
-    st_qiantang_f3_after_shakeout_20261020_1,
-    #st_qiantang_f3_after_shakeout_20261018_1,
-    #st_qiantang_f3_after_shakeout_20261017_1,
-    #st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
+    #st_qiantang_f3_after_shakeout_20261020_1,
+    st_qiantang_f3_after_shakeout_20261018_1,
+    st_qiantang_f3_after_shakeout_20261017_1,
+    st_qiantang_f3_after_shakeout_20261001_1_3_2, # F3: 洗盤後優化版 (唯一開啟)
 
     #st_qiantang_f3_after_shakeout_20261001_1,
-    #st_qiantang_f3_after_shakeout_20261001_1_1,
-    #st_qiantang_f3_after_shakeout20261001_1_2,
-    #st_qiantang_f3_after_shakeout_20261001_1_3,       
-    #st_qiantang_f3_after_shakeout_20261001_1_3_1,
+    st_qiantang_f3_after_shakeout_20261001_1_1,
+    st_qiantang_f3_after_shakeout20261001_1_2,
+    st_qiantang_f3_after_shakeout_20261001_1_3,       
+    st_qiantang_f3_after_shakeout_20261001_1_3_1,
    
     # st_qiantang_f4_strong_rise,     # F4: 強力上
     # st_qiantang_f5_major_buy_easy,  # F5: 主外上輕
@@ -86,7 +86,7 @@ TEST_QIANTANG_STRATEGY = [
 ]
 
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2015-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2021-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD)
 DAYS_BEFORE = 365               # 歷史技術指標計算緩衝天數
 
