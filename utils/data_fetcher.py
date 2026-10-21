@@ -65,6 +65,11 @@ def fetch_and_process_market_data(
       (df["close"] - df["EMA60"]) / df["EMA60"]
   ) * 100.0
 
+  # (3) 大盤年線 (MA240) 乖離率 (%)
+  df["taiex_ma240_bias_pct"] = ((df["close"] - df["MA240"]) / df["MA240"]) * 100.0
+
+  # (3) 大盤季線（MA60）與年線 (MA240) 乖離率 (%)
+  df["taiex_ma60_ma240_bias_pct"] = ((df["MA60"] - df["MA240"]) / df["MA240"]) * 100.0
   return df
 
 
@@ -91,6 +96,8 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
       "taiex_change_pct",
       "taiex_ma60_bias_pct",
       "taiex_ema60_bias_pct",
+      "taiex_ma240_bias_pct",
+      "taiex_ma60_ma240_bias_pct"
   ]
 
   # 轉為字典結構以利 O(1) 複雜度查詢
