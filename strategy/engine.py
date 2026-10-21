@@ -204,6 +204,13 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
       df["MarginPurchaseTodayBalance"].diff().fillna(0.0)
   )
   df["short_diff_shares"] = df["ShortSaleTodayBalance"].diff().fillna(0.0)
+
+  # 🌟 新增：全量計算 MACD (12, 26, 9) 指標
+  exp1 = df['close'].ewm(span=12, adjust=False).mean()
+  exp2 = df['close'].ewm(span=26, adjust=False).mean()
+  df['DIF'] = exp1 - exp2
+  df['DEM'] = df['DIF'].ewm(span=9, adjust=False).mean()
+  df['OSC'] = (df['DIF'] - df['DEM']) * 2.0  # MACD 柱狀體
     
   return df
 
