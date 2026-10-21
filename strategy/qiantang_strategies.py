@@ -937,7 +937,7 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
-def st_qiantang_f3_after_shakeout_20261001_1_1_2(
+def st_qiantang_f3_after_shakeout_20261001_1_1_1(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = True,
@@ -947,9 +947,9 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     max_market_ma240_bias: float = 0.12,  # 🌟 大盤年線乖離率上限 (12.0%)
     min_exempt_ols_slope: float = 1.0,  # 🌟 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
 ) -> tuple[bool, dict]:
-  """【F3_洗盤後 (20261001_1_1 MACD綠翻紅 + 年線風控/OLS斜率豁免 + T+2右側確認升級版)】
+  """【F3_洗盤後 (20261001_1_1_1 MACD綠翻紅 + 個股/大盤年線雙風控 + OLS強勢斜率豁免 + T+2右側確認進化版)】
 
-  核心架構： 1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元 2.
+  核心邏輯： 1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元 2.
   量能過濾：成交量 >= 350 張 且 大於前 5 日均量 3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1)
   收盤價均站上輕鬆線 4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line) 5.
   MACD 動能過濾：MACD 柱狀體 (OSC) 由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0) 6. 🌟【個股年線風控
@@ -987,24 +987,26 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     row_tm3 = df_single.iloc[pos_idx - 3]
     row_tm4 = df_single.iloc[pos_idx - 4]
 
-    # 基礎欄位擷取
-    close_t0 = row_t0["close"]
-    easy_t0 = row_t0["easy_line"]
-    vol_t0 = row_t0["Trading_Volume"]
-    ma60_t0 = row_t0["MA60"]
-    ma240_t0 = row_t0["MA240"]
-    osc_t0 = row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
+    # 基礎欄位擷取 (強制轉為 float 避免形態例外)
+    close_t0 = float(row_t0["close"])
+    easy_t0 = float(row_t0["easy_line"])
+    vol_t0 = float(row_t0["Trading_Volume"])
+    ma60_t0 = float(row_t0["MA60"])
+    ma240_t0 = float(row_t0["MA240"])
+    osc_t0 = float(
+        row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
+    )
 
-    close_tm1 = row_tm1["close"]
-    easy_tm1 = row_tm1["easy_line"]
-    osc_tm1 = row_tm1.get(
-        "osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0))
+    close_tm1 = float(row_tm1["close"])
+    easy_tm1 = float(row_tm1["easy_line"])
+    osc_tm1 = float(
+        row_tm1.get("osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0)))
     )
 
     # 成交量張數換算與 5 日均量
     vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
     recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
-    vol_ma5 = recent_vols.mean()
+    vol_ma5 = float(recent_vols.mean())
     vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
 
     # 1. 季線趨勢過濾 (收盤價 > MA60)
@@ -1020,9 +1022,9 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
 
     # 5. 洗盤甩轎軌跡 (T-2、T-3 或 T-4 曾跌破輕鬆線)
-    was_below_tm2 = row_tm2["close"] <= row_tm2["easy_line"]
-    was_below_tm3 = row_tm3["close"] <= row_tm3["easy_line"]
-    was_below_tm4 = row_tm4["close"] <= row_tm4["easy_line"]
+    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
+    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
+    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
     cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
 
     # 6. MACD 動能過濾 (OSC 由綠翻紅: T0 OSC > 0 且 T-1 OSC <= 0)
@@ -1035,7 +1037,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     if easy_ols_slope is None or pd.isna(easy_ols_slope):
       easy_5d = df_single["easy_line"].iloc[pos_idx - 4 : pos_idx + 1].values
       if len(easy_5d) == 5 and not np.isnan(easy_5d).any():
-        easy_ols_slope = linregress(np.arange(5), easy_5d).slope
+        easy_ols_slope = float(linregress(np.arange(5), easy_5d).slope)
       else:
         easy_ols_slope = 0.0
     else:
@@ -1068,11 +1070,12 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
           if abs(market_bias_val) > 1.0
           else market_bias_val * 100.0
       )
-      cond9_market_ma240_ok = market_bias_pct <= (
+      threshold_val = (
           max_market_ma240_bias * 100.0
           if max_market_ma240_bias <= 1.0
           else max_market_ma240_bias
       )
+      cond9_market_ma240_ok = market_bias_pct <= threshold_val
     else:
       market_bias_pct = 0.0
       cond9_market_ma240_ok = True
@@ -1132,7 +1135,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
 
   # 取得觀察確認日 (Day T+2) 數據
   row_confirm = df_single.iloc[t_confirm_pos]
-  close_confirm = row_confirm["close"]
+  close_confirm = float(row_confirm["close"])
   close_t0 = details["close_t0"]
 
   # 右側二次確認過濾 (T+2 報酬率 >= threshold_pct，預設 -2.0%)
@@ -1144,7 +1147,9 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
   # 綜合所有條件判定
   is_hit = base_hit and cond8_right_confirm_ok
 
-  # Console 詳細 Log 輸出
+  # =========================================================================
+  # 🌟 控制台 Console Log (完全相容 Python < 3.12 語法)
+  # =========================================================================
   if verbose:
     date_confirm_str = str(
         row_confirm.get("date", row_confirm.get("日期", ""))
@@ -1161,6 +1166,10 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     c7_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
     c8_m = "✓" if cond8_right_confirm_ok else "✕"
     c9_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
+
+    ma240_normal_str = "✓" if details["is_ma240_normal_ok"] else "✕"
+    ols_exempt_str = "✓" if details["is_ols_exempt_ok"] else "✕"
+    result_str = "🔥 [大盤風控通過+OLS豁免建倉]" if is_hit else "⚪ [未通過過濾]"
 
     print("\n" + "=" * 65)
     print(
@@ -1189,10 +1198,9 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     )
     print(
         f"  [{c7_m}] 7. 🌟 個股年線乖離 & OLS豁免 :"
-        f" 乖離率={details['ma240_bias']*100:.2f}% (門檻<=25%)"
-        f" | OLS斜率={details['easy_ols_slope']:.4f} (豁免門檻>=1.0) ->"
-        f" [常態過濾:{'✓' if details['is_ma240_normal_ok'] else '✕'} |"
-        f" 飆股豁免:{'✓' if details['is_ols_exempt_ok'] else '✕']}"
+        f" 乖離率={details['ma240_bias']*100:.2f}% (門檻<=25%) |"
+        f" OLS斜率={details['easy_ols_slope']:.4f} (豁免門檻>=1.0) ->"
+        f" [常態過濾:{ma240_normal_str} | 飆股豁免:{ols_exempt_str}]"
     )
     print(
         f"  [{c9_m}] 8. 🌟 大盤年線風控 : 乖離率={details['market_bias_pct']:.2f}%"
@@ -1203,10 +1211,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
         f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
     )
     print("-" * 65)
-    print(
-        f"🎯 最終觸發結果:"
-        f" {'🔥 [大盤風控通過+OLS豁免建倉]' if is_hit else '⚪ [未通過過濾]'}"
-    )
+    print(f"🎯 最終觸發結果: {result_str}")
     print("=" * 65 + "\n")
 
   info = (
