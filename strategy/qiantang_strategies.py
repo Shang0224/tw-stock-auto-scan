@@ -994,11 +994,11 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_1(
     vol_t0 = row_t0["Trading_Volume"]
     ma60_t0 = row_t0["MA60"]
     ma240_t0 = row_t0["MA240"]
-    osc_t0 = row_t0.get("OSC", row_t0.get("macd_osc", 0.0))
+    osc_t0 = row_t0.get("osc", row_t0.get("macd_osc", 0.0))
 
     close_tm1 = row_tm1["close"]
     easy_tm1 = row_tm1["easy_line"]
-    osc_tm1 = row_tm1.get("OSC", row_tm1.get("macd_osc", 0.0))
+    osc_tm1 = row_tm1.get("osc", row_tm1.get("macd_osc", 0.0))
 
     # 成交量張數換算
     vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
