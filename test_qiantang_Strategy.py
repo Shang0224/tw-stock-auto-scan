@@ -294,8 +294,21 @@ def scan_qiantang_strategy_day(
             "大盤當日漲跌幅(%)": round(
                 float(m_info.get("taiex_change_pct", 0)), 2
             ),
+            
+            "大盤月線乖離率(%)": round(
+                float(m_info.get("taiex_ma20_bias_pct", 0)), 2
+            ),
+            
             "大盤季線乖離率(%)": round(
                 float(m_info.get("taiex_ma60_bias_pct", 0)), 2
+            ),
+
+            "大盤年線乖離率(%)": round(
+                float(m_info.get("taiex_ma240_bias_pct", 0)), 2
+            ),
+
+            "大盤季線與年線乖離率(%)": round(
+                float(m_info.get("taiex_ma60_ma240_bias_pct", 0)), 2
             ),
             
             # -----------------------------------------------------------------
