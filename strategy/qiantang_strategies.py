@@ -1279,7 +1279,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
     min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
     max_ma240_deduction_pos: float = 25.0,  # 🌟 【新增防線一】年線扣抵位置上限 (25.0%)
-    market_info:dict, #當日大盤資料
+    market_info:dict = None, #當日大盤資料
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261022_1_1_5 黃金雙防線版)】
 
