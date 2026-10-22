@@ -2377,7 +2377,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
   t0_pos = -(1 + delay_days)  # 觸發日相對位置
   t_confirm_pos = -1  # 最新一筆資料為觀察確認日 (T+2)
 
-  base_hit, details = _check_f3_base_signal(t0_pos)
+  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
 
   # 取得觀察確認日 (Day T+2) 數據
   row_confirm = df_single.iloc[t_confirm_pos]
