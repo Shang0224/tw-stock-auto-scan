@@ -3,7 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-PULLBACK_LIMIT_PCT = -10.0  # 2131 版深跌門檻
+PULLBACK_LIMIT_PCT = -15.0  # 2131 版深跌門檻
 
 def calculate_forward_horizon_returns(
     stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
