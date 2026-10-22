@@ -185,7 +185,8 @@ def scan_qiantang_strategy_day(
 
     # 4. 查閱當日大盤環境數據
     m_info = market_dict.get(day_str, {}) if market_dict else {}
-      
+
+    print(f"{stock_id}/{stock_name}")    
     # 3. 呼叫引擎執行策略檢測
     hits = scan_single_stock(
         df_single=df_single,
