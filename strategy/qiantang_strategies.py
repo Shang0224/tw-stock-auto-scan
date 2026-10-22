@@ -2572,12 +2572,17 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_1(
     cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
 
     # --- 🌟 7. 個股年線乖離率過濾 (<= 25.0%) ---
+    ma240_bias = float(row_t0["ma240_bias"])
+      
+    cond7_ma240_bias_ok = ma240_bias <= max_ma240_bias * 100
+    """
     if ma240_t0 > 0:
       ma240_bias = (close_t0 - ma240_t0) / ma240_t0
-      cond7_ma240_bias_ok = ma240_bias <= max_ma240_bias
+      
     else:
       ma240_bias = 0.0
       cond7_ma240_bias_ok = False
+    """
 
     # 基礎條件綜合判定
     base_hit = (
@@ -2700,7 +2705,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_1(
         f" 且 T-1 OSC ({details['osc_tm1']:.3f}) <= 0"
     )
     print(
-        f"  [{c7_mark}] 7. 🌟 個股年線乖離率 : {ma240_bias * 100:.2f}% (門檻"
+        f"  [{c7_mark}] 7. 🌟 個股年線乖離率 : {ma240_bias:.2f}% (門檻"
         f" <= {max_ma240_bias * 100:.1f}%，MA240: ${ma240_t0:.2f})"
     )
     print(
