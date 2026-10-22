@@ -937,7 +937,7 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
-def st_qiantang_f3_after_shakeout_20261022_1_1_5(
+def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = True,
