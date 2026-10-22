@@ -88,7 +88,7 @@ TEST_QIANTANG_STRATEGY = [
         
     
     #st_qiantang_f3_after_shakeout_20261001_1,
-    st_qiantang_f3_after_shakeout_20261001_1_1,
+    #st_qiantang_f3_after_shakeout_20261001_1_1,
     #st_qiantang_f3_after_shakeout20261001_1_2,
     #st_qiantang_f3_after_shakeout_20261001_1_3,       
     #st_qiantang_f3_after_shakeout_20261001_1_3_1,
