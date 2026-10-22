@@ -98,6 +98,7 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
       "MA120",
       "MA240",
       "taiex_change_pct",
+      "taiex_ma20_bias_pct",
       "taiex_ma60_bias_pct",
       "taiex_ema60_bias_pct",
       "taiex_ma240_bias_pct",
