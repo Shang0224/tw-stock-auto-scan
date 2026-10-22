@@ -10,18 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-matplotlib.use('Agg')
-
-# 設定 Matplotlib 中文字型
-plt.rcParams['font.sans-serif'] = [
-    'Noto Sans TC',
-    'Noto Sans CJK JP',
-    'Microsoft JhengHei',
-    'DejaVu Sans',
-]
-plt.rcParams['axes.unicode_minus'] = False
-
-
 def parse_perf_field(val):
   """解析 1Y內最高績效 / 1Y內最低績效 欄位字串。
 
@@ -135,6 +123,17 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
   標題呈現標準股票資訊與「(觸發 N 次)」，乾淨無雜訊。
   """
+  matplotlib.use('Agg')
+
+  # 設定 Matplotlib 中文字型
+  plt.rcParams['font.sans-serif'] = [
+      'Noto Sans TC',
+      'Noto Sans CJK JP',
+      'Microsoft JhengHei',
+      'DejaVu Sans',
+  ]
+  plt.rcParams['axes.unicode_minus'] = False
+    
   stock_id = wave_info['stock_id']
   stock_name = wave_info['stock_name']
   signals = wave_info['signals']
