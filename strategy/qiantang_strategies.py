@@ -1382,7 +1382,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     )
     """
       
-    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2),
+    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2)
       
     threshold_val = (
       max_market_ma240_bias * 100.0
@@ -1424,7 +1424,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
         "ma240_bias": ma240_bias,
         "easy_ols_slope": easy_ols_slope,
         "market_bias_pct": market_bias_pct,
-        "ma240_deduction_val": ma240_deduction_val,
+        "ma240_deduction_pos": ma240_deduction_pos,
         "vol_lots_t0": vol_lots_t0,
         "vol_ma5_lots": vol_ma5_lots,
         "osc_t0": osc_t0,
