@@ -16,6 +16,8 @@ from strategy.engine import scan_single_stock, preprocess_all_technical_indicato
 from strategy.config import BUY_PARAM_PROFILES
 #from monitor.engine import preprocess_all_technical_indicators
 
+from utils.analytics import PULLBACK_LIMIT_PCT
+
 # 2. 匯入 7 大多方選股策略與優化策略
 from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth,      # 筆張現形
@@ -589,9 +591,9 @@ def run_qiantang_strategy_range_scan(
   # =====================================================================
   # 🌟 統一定義輸出資料夾名稱與絕對路徑 (供 CSV、Excel 與繪圖模組共用)
   # =====================================================================
-  mkt_tag = "有大盤濾網" if USE_MARKET_FILTER else "無大盤濾網"
+  mkt_tag = "大盤濾網" if USE_MARKET_FILTER else "無大盤濾網"
 
-  sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}_{mkt_tag}"
+  sub_folder_name = f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}_{mkt_tag}_{PULLBACK_LIMIT_PCT}"
     
   output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
   os.makedirs(output_dir, exist_ok=True)
