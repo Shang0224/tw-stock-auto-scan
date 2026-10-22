@@ -1573,7 +1573,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
     if verbose:
-      print(f"❌ [策略 20261001_1_1_4] 資料筆數不足 {min_required_len} 筆")
+      print(f"❌ [策略 20261001_1_1_4] 資料有 {len(df_single)} 筆, 不足 {min_required_len} 筆")
     return False, {}
 
   df_single = df_single.copy()
@@ -1769,7 +1769,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
     if verbose:
-      print(f"❌ [策略 20261001_1_1_3] 資料筆數不足 {min_required_len} 筆")
+      print(f"❌ [策略 20261001_1_1_3] 資料有 {len(df_single)} 筆, 不足 {min_required_len} 筆")
     return False, {}
 
   df_single = df_single.copy()
