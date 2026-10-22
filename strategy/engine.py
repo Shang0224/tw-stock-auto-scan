@@ -235,6 +235,7 @@ def scan_single_stock(
     category: str,
     func_list: list,
     param_profiles: dict = BUY_PARAM_PROFILES
+    market_info: dict
 ) -> list:
     """
     【核心底層】單一股票的監控策略檢測元件
@@ -259,8 +260,10 @@ def scan_single_stock(
         
         if 'profile' in sig_params:
             is_hit, info = run_func(df_single, profile=profile)
+        else if 'market_info' in sig_params:
+            is_hit, info = run_func(df_single, market_info=market_info)      
         else:
-            is_hit, info = run_func(df_single)
+            is_hit, info = run_func(df_single, market_info=market_info)
 
         if is_hit:
             res_info = info if isinstance(info, dict) else {"detail": str(info)}
