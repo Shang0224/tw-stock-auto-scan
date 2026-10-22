@@ -234,7 +234,7 @@ def scan_single_stock(
     df_single: pd.DataFrame,
     category: str,
     func_list: list,
-    param_profiles: dict = BUY_PARAM_PROFILES
+    param_profiles: dict = BUY_PARAM_PROFILES,
     market_info: dict
 ) -> list:
     """
