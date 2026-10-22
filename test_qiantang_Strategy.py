@@ -183,12 +183,16 @@ def scan_qiantang_strategy_day(
     if df_single.empty or len(df_single) < 5:
       continue
 
+    # 4. 查閱當日大盤環境數據
+    m_info = market_dict.get(day_str, {}) if market_dict else {}
+      
     # 3. 呼叫引擎執行策略檢測
     hits = scan_single_stock(
         df_single=df_single,
         category=stock_cat,
         func_list=strategies,
         param_profiles=profiles_map,
+        market_info=m_info
     )
 
     if hits:
@@ -199,7 +203,7 @@ def scan_qiantang_strategy_day(
       vol_lots = int(vol_today / 1000)
 
       # 4. 查閱當日大盤環境數據
-      m_info = market_dict.get(day_str, {}) if market_dict else {}
+      #m_info = market_dict.get(day_str, {}) if market_dict else {}
       m_close = float(m_info.get("close", 0))
       m_ma60 = float(m_info.get("MA60", 0))
 
