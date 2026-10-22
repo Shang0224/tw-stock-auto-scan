@@ -1518,7 +1518,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     )
     print(
         f"  [{c10_m}] 9. 🌟 【防線一】年線扣抵位置 :"
-        f" {details['ma240_deduction_val']:.2f}% (門檻 <="
+        f" {details['ma240_deduction_pos']:.2f}% (門檻 <="
         f" {max_ma240_deduction_pos:.1f}%)"
     )
     print(
