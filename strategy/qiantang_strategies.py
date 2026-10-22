@@ -2225,13 +2225,15 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261001_1_1_1 MACD綠翻紅 + 個股/大盤年線雙風控 + OLS強勢斜率豁免 + T+2右側確認進化版)】
 
-  核心邏輯： 1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元 2.
-  量能過濾：成交量 >= 350 張 且 大於前 5 日均量 3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1)
-  收盤價均站上輕鬆線 4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line) 5.
-  MACD 動能過濾：MACD 柱狀體 (OSC) 由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0) 6. 🌟【個股年線風控
-  & OLS 豁免】： (Close_T0 - MA240_T0) / MA240_T0 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0
-  (強勢飆股豁免) 7. 🌟【大盤年線風控防線】： 大盤年線乖離率 <= 12.0% (防範大盤過熱崩跌風險) 8.
-  🌟【右側二次確認】： 觸發後第 2 日 (T+2) 報酬率 >= -2.0%
+  核心邏輯： 
+  1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元 
+  2. 量能過濾：成交量 >= 350 張 且 大於前 5 日均量 
+  3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線 
+  4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line) 
+  5. MACD 動能過濾：MACD 柱狀體 (OSC) 由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0) 
+  6. 🌟【個股年線風控 & OLS 豁免】： (Close_T0 - MA240_T0) / MA240_T0 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0   (強勢飆股豁免) 
+  7. 🌟【大盤年線風控防線】： 大盤年線乖離率 <= 12.0% (防範大盤過熱崩跌風險) 
+  8. 🌟【右側二次確認】： 觸發後第 2 日 (T+2) 報酬率 >= -2.0%
   """
   profile = profile or {}
 
@@ -2266,21 +2268,17 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     # 基礎欄位擷取 (強制轉為 float 避免形態例外)
     close_t0 = float(row_t0["close"])
     easy_t0 = float(row_t0["easy_line"])
-    vol_t0 = float(row_t0["Trading_Volume"])
+    vol_t0 = float(row_t0["Trading_Volume"]) #單位為股數
     ma60_t0 = float(row_t0["MA60"])
     ma240_t0 = float(row_t0["MA240"])
-    osc_t0 = float(
-        row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
-    )
+    osc_t0 = float(row_tm1["osc"])
 
     close_tm1 = float(row_tm1["close"])
     easy_tm1 = float(row_tm1["easy_line"])
-    osc_tm1 = float(
-        row_tm1.get("osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0)))
-    )
+    osc_tm1 = float(row_tm1["osc"])
 
     # 成交量張數換算與 5 日均量
-    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    vol_lots_t0 = vol_t0 / 1000.0
     recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
     vol_ma5 = float(recent_vols.mean())
     vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
@@ -2312,19 +2310,14 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     # 🌟 7-B. 個股年線乖離率與 OLS 斜率豁免判定
     ma240_bias = float(row_t0.get("ma240_bias"))
 
-    is_ma240_normal_ok = ma240_bias <= max_ma240_bias
+    is_ma240_normal_ok = ma240_bias <= max_ma240_bias * 100
     is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
     # 🌟 8. 大盤年線風控過濾 (大盤年線乖離率 <= 12.0%)
-    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2)
-      
-    threshold_val = (
-      max_market_ma240_bias * 100.0
-      if max_market_ma240_bias <= 1.0
-      else max_market_ma240_bias
-    )
-    cond9_market_ma240_ok = market_bias_pct <= threshold_val
+    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2)     
+
+    cond9_market_ma240_ok = market_bias_pct <= max_market_ma240_bias * 100.0
 
     # 基礎條件綜合判定
     base_hit = (
@@ -2419,7 +2412,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
 
     print("\n" + "=" * 65)
     print(
-        f"🔔 [F3_洗盤後_20261001_1_1_1 (大盤年線<12%+OLS斜率>=1.0豁免)]"
+        f"🔔 [F3_洗盤後_20261001_1_1_2 (大盤年線<12%+個股OLS斜率>=1.0豁免)]"
         f" 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日: {date_confirm_str}"
     )
     print("-" * 65)
@@ -2444,7 +2437,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     )
     print(
         f"  [{c7_m}] 7. 🌟 個股年線乖離 & OLS豁免 :"
-        f" 乖離率={details['ma240_bias']*100:.2f}% (門檻<=25%) |"
+        f" 乖離率={details['ma240_bias']:.2f}% (門檻<=25%) |"
         f" OLS斜率={details['easy_ols_slope']:.4f} (豁免門檻>=1.0) ->"
         f" [常態過濾:{ma240_normal_str} | 飆股豁免:{ols_exempt_str}]"
     )
@@ -2463,18 +2456,18 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
   info = (
       {
           "選股公式": (
-              "F3_洗盤後_20261001_1_1_1_大盤年線風控與OLS強勢斜率豁免版"
+              "F3_洗盤後_20261001_1_1_2_大盤年線風控與OLS強勢斜率豁免版"
           ),
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
-          "年線乖離率": f"{details['ma240_bias'] * 100:.2f}%",
+          "年線乖離率": f"{details['ma240_bias']:.2f}%",
           "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
           "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
           f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
           "操作建議": (
-              f"個股年線乖離 {details['ma240_bias']*100:.1f}%"
+              f"個股年線乖離 {details['ma240_bias']:.1f}%"
               f" ({'正常區間' if details['is_ma240_normal_ok'] else '飆股OLS強勢豁免'})，"
               f"大盤年線乖離 {details['market_bias_pct']:.1f}% (<= 12.0%)。"
               f" T+{delay_days} 右側確認報酬 {confirm_return*100:.1f}% 通過！"
