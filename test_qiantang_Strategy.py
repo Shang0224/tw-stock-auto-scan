@@ -60,7 +60,7 @@ from utils import (
     calculate_one_year_extremes,        # 一年內最高與最低極值報酬
     load_stocks_from_csv,
     fetch_market_ema_dict,               # 🌟 大盤數據與 EMA 秒查字典工具
-    generate_qiantang_wave_charts,
+    #generate_qiantang_wave_charts, #  🌟 直接從子模組匯入，避開 utils/__init__.py 的影響, 免得導致執行時, 不繪圖但還要花很多時間載入中文字型   
     #parse_stock_dict,
     parse_and_validate_stocks,
 )
