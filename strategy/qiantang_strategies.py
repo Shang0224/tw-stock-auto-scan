@@ -1448,7 +1448,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     }
     return base_hit, details
 
-  base_hit, details = _check_f3_base_signal(t0_pos)
+  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
   row_confirm = df_single.iloc[t_confirm_pos]
   close_confirm = float(row_confirm["close"])
   close_t0 = details["close_t0"]
