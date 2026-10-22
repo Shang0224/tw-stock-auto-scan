@@ -39,7 +39,8 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout_20261001_1_1_2, #大盤年線過熱過濾, ols斜率>1.0強勢股豁免
     #st_qiantang_f3_after_shakeout_20261001_1_1_3, #終極精準降噪旗艦版, 失敗
     #st_qiantang_f3_after_shakeout_20261001_1_1_4,  #終極精準降噪旗艦版, 失敗
-    st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
+    #st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2 失敗, CAT1/3一起都砍
+    st_qiantang_f3_after_shakeout_20261022_1_1_6, #從st_qiantang_f3_after_shakeout_20261001_1_1_2修改, 籌碼共振與高位強勢旗艦版
 
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
@@ -82,7 +83,8 @@ TEST_QIANTANG_STRATEGY = [
     st_qiantang_f3_after_shakeout_20261001_1_1_2, #大盤年線過熱過濾, ols斜率>1.0強勢股豁免
     #st_qiantang_f3_after_shakeout_20261001_1_1_3, #終極精準降噪旗艦版
     #st_qiantang_f3_after_shakeout_20261001_1_1_4,  #終極精準降噪旗艦版, 修正版
-    st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
+    #st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
+    st_qiantang_f3_after_shakeout_20261022_1_1_6, #從st_qiantang_f3_after_shakeout_20261001_1_1_2修改, 籌碼共振與高位強勢旗艦版
         
     
     #st_qiantang_f3_after_shakeout_20261001_1,
