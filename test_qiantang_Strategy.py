@@ -186,16 +186,20 @@ def scan_qiantang_strategy_day(
     # 4. 查閱當日大盤環境數據
     m_info = market_dict.get(day_str, {}) if market_dict else {}
 
-    print(f"{stock_id}/{stock_name}")    
-    # 3. 呼叫引擎執行策略檢測
-    hits = scan_single_stock(
-        df_single=df_single,
-        category=stock_cat,
-        func_list=strategies,
-        param_profiles=profiles_map,
-        market_info=m_info
-    )
-
+    try:
+        # 執行當日單一股票掃描
+        hits = scan_single_stock(
+            df_single=df_single,
+            category=stock_cat,
+            func_list=strategies,
+            param_profiles=profiles_map,
+            market_info=m_info,
+        )
+    except Exception as e:
+        # 攔截該檔股票當天發生的任何例外    
+        print(f'⚠️ [股票掃描跳過] 股票代號: {stock_id} | 日期: {day_str} | 錯誤: {e}')
+        continue
+        
     if hits:
       # 取得觸發當日 (Day T) 的預處理資料列
       latest_row = df_single.iloc[-1]
