@@ -1196,7 +1196,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
         f"  [{c3_m}] 3. 🌟 量能黃金比例 : {c_vratio:.2f}倍 (1.2~2.5倍,"
         f" {c_vlots:,.0f}張)"
     )
-    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
     print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
     print(
         f"  [{c6_m}] 6. 🌟 MACD綠柱提前勾頭 : OSC T0({c_osct0:.3f}) >"
@@ -1505,7 +1505,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
         f"  [{c3_m}] 3. 🌟 量能黃金比例 : {c_vratio:.2f}倍 (>=1.2倍,"
         f" {c_vlots:,.0f}張)"
     )
-    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
     print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
     print(
         f"  [{c6_m}] 6. 🌟 MACD綠柱提前勾頭 : OSC T0({c_osct0:.3f}) >"
@@ -1787,7 +1787,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
         f"  [{c3_m}] 3. 量能過濾 : {c_vlots:,.0f} 張 (>5日均量 {c_vma5:,.0f}張 且"
         " >=350張)"
     )
-    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
     print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
     print(
         f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({c_osct0:.3f}) > 0 且 T-1 OSC"
@@ -2095,7 +2095,7 @@ def st_qiantang_f3_after_shakeout_20261022_1_1_6(
         f"  [{c3_m}] 3. 量能過濾 : {c_vlots:,.0f} 張 (>5日均量 {c_vma5:,.0f}張 且"
         " >=350張)"
     )
-    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
     print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
     print(
         f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({c_osct0:.3f}) > 0 且 T-1 OSC"
