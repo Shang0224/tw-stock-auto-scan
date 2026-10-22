@@ -1316,7 +1316,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
   t0_pos = -(1 + delay_days)
   t_confirm_pos = -1
 
-  def _check_f3_base_signal(pos_idx: int) -> tuple[bool, dict]:
+  def _check_f3_base_signal(pos_idx: int, m_info:dict = None) -> tuple[bool, dict]:
     row_t0 = df_single.iloc[pos_idx]
     row_tm1 = df_single.iloc[pos_idx - 1]
     row_tm2 = df_single.iloc[pos_idx - 2]
