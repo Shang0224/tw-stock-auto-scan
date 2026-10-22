@@ -2723,7 +2723,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_1(
   info = (
       {
           "選股公式": (
-              f"F3_洗盤後_20261001_1_1_MACD綠翻紅與年線乖離雙控 (T+{delay_days})"
+              f"F3_洗盤後_20261001_1_1_1_MACD綠翻紅與年線乖離雙控 (T+{delay_days})"
           ),
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
