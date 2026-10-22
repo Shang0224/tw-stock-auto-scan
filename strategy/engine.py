@@ -260,7 +260,7 @@ def scan_single_stock(
         
         if 'profile' in sig_params:
             is_hit, info = run_func(df_single, profile=profile)
-        else if 'market_info' in sig_params:
+        elif 'market_info' in sig_params:
             is_hit, info = run_func(df_single, market_info=market_info)      
         else:
             is_hit, info = run_func(df_single, market_info=market_info)
