@@ -1079,9 +1079,7 @@ def st_qiantang_f3_after_shakeout_20261022_1_1_6(
       cond10_dist_52w_high_ok = True
 
     # 🌟 10. 【防線二】外資近 5 日累計張數 (> -100 張)
-    foreign_5d_raw = row_t0.get(
-        "外資近5日累計(張)", row_t0.get("foreign_5d_sum", None)
-    )
+    foreign_5d_raw = row_t0.get("foreign_5d_shares_sum")
     if foreign_5d_raw is not None and not pd.isna(foreign_5d_raw):
       foreign_5d_val = float(foreign_5d_raw)
       cond11_foreign_5d_ok = foreign_5d_val > min_foreign_5d
@@ -1090,9 +1088,7 @@ def st_qiantang_f3_after_shakeout_20261022_1_1_6(
       cond11_foreign_5d_ok = True
 
     # 🌟 11. 【防線三】主力近 5 日累計張數 (> 0 張)
-    main_5d_raw = row_t0.get(
-        "主力近5日累計(張)", row_t0.get("main_5d_sum", None)
-    )
+    main_5d_raw = row_t0.get("major_5d_shares_sum")
     if main_5d_raw is not None and not pd.isna(main_5d_raw):
       main_5d_val = float(main_5d_raw)
       cond12_main_5d_ok = main_5d_val > min_main_5d
