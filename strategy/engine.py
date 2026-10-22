@@ -235,7 +235,7 @@ def scan_single_stock(
     category: str,
     func_list: list,
     param_profiles: dict = BUY_PARAM_PROFILES,
-    market_info: dict
+    market_info: dict = None
 ) -> list:
     """
     【核心底層】單一股票的監控策略檢測元件
