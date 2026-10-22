@@ -2221,7 +2221,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
     max_market_ma240_bias: float = 0.12,  # 🌟 大盤年線乖離率上限 (12.0%)
     min_exempt_ols_slope: float = 1.0,  # 🌟 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
-    market_info:dict = None, #當日大盤資料
+    market_info: dict = None, #當日大盤資料
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261001_1_1_1 MACD綠翻紅 + 個股/大盤年線雙風控 + OLS強勢斜率豁免 + T+2右側確認進化版)】
 
