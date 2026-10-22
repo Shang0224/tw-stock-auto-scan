@@ -3,6 +3,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+PULLBACK_LIMIT_PCT = -15.0  # 2131 版深跌門檻
+
 def calculate_forward_horizon_returns(
     stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
 ) -> dict:
@@ -137,7 +139,6 @@ def calculate_one_year_extremes(
 
   # 4. 判定最低點是否先於最高點發生 (is_pullback_first)
   is_pullback_first = days_to_min < days_to_max
-  PULLBACK_LIMIT_PCT = -15.0  # 2131 版深跌門檻
 
   gain_before_trough_pct = None
 
