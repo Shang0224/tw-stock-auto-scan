@@ -1279,6 +1279,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
     min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
     max_ma240_deduction_pos: float = 25.0,  # 🌟 【新增防線一】年線扣抵位置上限 (25.0%)
+    market_info:dict,
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261022_1_1_5 黃金雙防線版)】
 
@@ -1358,25 +1359,19 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)  # MACD 綠翻紅
 
     # 7. 個股年線乖離率 & OLS 斜率豁免
-    easy_ols_slope = row_t0.get(
-        "輕鬆線OLS斜率", row_t0.get("easy_ols_slope", None)
-    )
-    if easy_ols_slope is None or pd.isna(easy_ols_slope):
-      easy_5d = df_single["easy_line"].iloc[pos_idx - 4 : pos_idx + 1].values
-      if len(easy_5d) == 5 and not np.isnan(easy_5d).any():
-        easy_ols_slope = float(linregress(np.arange(5), easy_5d).slope)
-      else:
-        easy_ols_slope = 0.0
-    else:
-      easy_ols_slope = float(easy_ols_slope)
+    #easy_ols_slope = row_t0.get("easy_line_slope", row_t0.get("easy_ols_slope", None))
+    easy_ols_slope = row_t0.get("easy_line_slope")
 
-    ma240_bias = (close_t0 - ma240_t0) / ma240_t0 if ma240_t0 > 0 else 0.0
+    #ma240_bias = (close_t0 - ma240_t0) / ma240_t0 if ma240_t0 > 0 else 0.0
+    ma240_bias = float(row_t0.get("ma240_bias"))
+      
     is_ma240_normal_ok = ma240_bias <= max_ma240_bias
     is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
     # 8. 大盤年線風控過濾 (<= 12.0%)
-    market_bias_raw = row_t0.get(
+    """
+      market_bias_raw = row_t0.get(
         "大盤年線乖離率(%)",
         row_t0.get(
             "market_ma240_bias_pct",
@@ -1385,35 +1380,26 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
             ),
         ),
     )
-    if market_bias_raw is not None and not pd.isna(market_bias_raw):
-      market_bias_val = float(market_bias_raw)
-      market_bias_pct = (
-          market_bias_val
-          if abs(market_bias_val) > 1.0
-          else market_bias_val * 100.0
-      )
-      threshold_val = (
-          max_market_ma240_bias * 100.0
-          if max_market_ma240_bias <= 1.0
-          else max_market_ma240_bias
-      )
-      cond9_market_ma240_ok = market_bias_pct <= threshold_val
-    else:
-      market_bias_pct = 0.0
-      cond9_market_ma240_ok = True
+    """
+      
+    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2),
+      
+    threshold_val = (
+      max_market_ma240_bias * 100.0
+      if max_market_ma240_bias <= 1.0
+      else max_market_ma240_bias
+    )
+    cond9_market_ma240_ok = market_bias_pct <= threshold_val
+
 
     # 🌟 9. 【新增防線一】長線年線扣抵位置結構過濾 (<= 25.0%)
-    ma240_deduction_pos = row_t0.get(
-        "年線扣抵位置(%)", row_t0.get("ma240_deduction_pos", None)
+    ma240_deduction_pos = float(row_t0.get(
+      "ma240_deduct_bias", row_t0.get("ma240_deduction_pos", None)
+    ))
+
+    cond10_ma240_deduction_ok = (
+        ma240_deduction_pos <= max_ma240_deduction_pos
     )
-    if ma240_deduction_pos is not None and not pd.isna(ma240_deduction_pos):
-      ma240_deduction_val = float(ma240_deduction_pos)
-      cond10_ma240_deduction_ok = (
-          ma240_deduction_val <= max_ma240_deduction_pos
-      )
-    else:
-      ma240_deduction_val = 0.0
-      cond10_ma240_deduction_ok = True
 
     base_hit = (
         cond1_trend
