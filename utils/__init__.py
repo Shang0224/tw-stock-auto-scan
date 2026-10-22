@@ -9,7 +9,7 @@ from utils.file_handler import (send_report, cleanup_local_file, archive_and_cle
     load_stocks_from_csv, parse_stock_list, parse_stock_ids_old, parse_stock_dict, parse_and_validate_stocks)
 from utils.analytics import calculate_one_year_extremes, calculate_fixed_horizon_returns, calculate_forward_horizon_returns
 from utils.indicators import preprocess_all_technical_indicators
-from utils.wave_chart_generator import generate_qiantang_wave_charts
+# from utils.wave_chart_generator import generate_qiantang_wave_charts 執行時才載入中文字型, 故不可以列入all, 否則一執行程式只要載入utils任何函數都會執行generate_qiantang_wave_charts, 便要載入中文字型
 
 
 # 這行定義了當別人寫 from utils import * 時，允許拿走哪些東西
@@ -22,5 +22,6 @@ __all__ = [
     'save_multi_day_report', 'parse_monitor_stocks', 'parse_stock_list', 'parse_stock_ids_old',
     'calculate_one_year_extremes', 'calculate_fixed_horizon_returns', 'align_and_normalize_results', 'get_fm_trading_days', 'process_monitor_stock_data', 
     'yf_fetch_monitor_stocks', 'calculate_forward_horizon_returns', 'preprocess_all_technical_indicators', 'load_stocks_from_csv',
-    'generate_qiantang_wave_charts', 'parse_stock_dict', 'parse_and_validate_stocks'
+    'parse_stock_dict', 'parse_and_validate_stocks',
+    #'generate_qiantang_wave_charts', 執行時才載入中文字型, 故不可以列入all, 否則一執行程式只要載入utils任何函數都會執行generate_qiantang_wave_charts, 便要載入中文字型
 ]
