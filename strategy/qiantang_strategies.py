@@ -2256,7 +2256,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
   # =========================================================================
   # 🌟 內部工具函數：專門驗證相對位置 pos_idx 之基礎訊號
   # =========================================================================
-  def _check_f3_base_signal(pos_idx: int) -> tuple[bool, dict]:
+  def _check_f3_base_signal(pos_idx: int, m_info: dict = None) -> tuple[bool, dict]:
     row_t0 = df_single.iloc[pos_idx]
     row_tm1 = df_single.iloc[pos_idx - 1]
     row_tm2 = df_single.iloc[pos_idx - 2]
