@@ -949,6 +949,7 @@ def st_qiantang_f3_after_shakeout_20261022_1_1_6(
     min_dist_52w_high: float = -25.0,  # 🌟 【籌碼共振強勢防線 1】距 52 週高點比例 (>= -25.0%)
     min_foreign_5d: float = -100.0,  # 🌟 【籌碼共振強勢防線 2】外資近 5 日累計張數 (> -100 張)
     min_main_5d: float = 0.0,  # 🌟 【籌碼共振強勢防線 3】主力近 5 日累計張數 (> 0 張)
+    market_info:dict = None, #當日大盤資料
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261022_1_1_6 籌碼共振與高位強勢旗艦版)】
 
@@ -2220,6 +2221,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
     max_market_ma240_bias: float = 0.12,  # 🌟 大盤年線乖離率上限 (12.0%)
     min_exempt_ols_slope: float = 1.0,  # 🌟 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
+    market_info:dict = None, #當日大盤資料
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261001_1_1_1 MACD綠翻紅 + 個股/大盤年線雙風控 + OLS強勢斜率豁免 + T+2右側確認進化版)】
 
@@ -2305,54 +2307,24 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
 
     # 🌟 7-A. 計算輕鬆線 OLS 斜率 (優先讀取預算欄位，無則動態計算 5 日斜率)
-    easy_ols_slope = row_t0.get(
-        "輕鬆線OLS斜率", row_t0.get("easy_ols_slope", None)
-    )
-    if easy_ols_slope is None or pd.isna(easy_ols_slope):
-      easy_5d = df_single["easy_line"].iloc[pos_idx - 4 : pos_idx + 1].values
-      if len(easy_5d) == 5 and not np.isnan(easy_5d).any():
-        easy_ols_slope = float(linregress(np.arange(5), easy_5d).slope)
-      else:
-        easy_ols_slope = 0.0
-    else:
-      easy_ols_slope = float(easy_ols_slope)
-
+    easy_ols_slope = row_t0.get("easy_line_slope")
+    
     # 🌟 7-B. 個股年線乖離率與 OLS 斜率豁免判定
-    if ma240_t0 > 0:
-      ma240_bias = (close_t0 - ma240_t0) / ma240_t0
-    else:
-      ma240_bias = 0.0
+    ma240_bias = float(row_t0.get("ma240_bias"))
 
     is_ma240_normal_ok = ma240_bias <= max_ma240_bias
     is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
     # 🌟 8. 大盤年線風控過濾 (大盤年線乖離率 <= 12.0%)
-    market_bias_raw = row_t0.get(
-        "大盤年線乖離率(%)",
-        row_t0.get(
-            "market_ma240_bias_pct",
-            profile.get(
-                "market_ma240_bias_pct", profile.get("market_ma240_bias", None)
-            ),
-        ),
+    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2)
+      
+    threshold_val = (
+      max_market_ma240_bias * 100.0
+      if max_market_ma240_bias <= 1.0
+      else max_market_ma240_bias
     )
-    if market_bias_raw is not None and not pd.isna(market_bias_raw):
-      market_bias_val = float(market_bias_raw)
-      market_bias_pct = (
-          market_bias_val
-          if abs(market_bias_val) > 1.0
-          else market_bias_val * 100.0
-      )
-      threshold_val = (
-          max_market_ma240_bias * 100.0
-          if max_market_ma240_bias <= 1.0
-          else max_market_ma240_bias
-      )
-      cond9_market_ma240_ok = market_bias_pct <= threshold_val
-    else:
-      market_bias_pct = 0.0
-      cond9_market_ma240_ok = True
+    cond9_market_ma240_ok = market_bias_pct <= threshold_val
 
     # 基礎條件綜合判定
     base_hit = (
