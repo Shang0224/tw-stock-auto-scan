@@ -937,969 +937,9 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
-def st_qiantang_f3_after_shakeout_20261022_1_1_6(
-    df_single: pd.DataFrame,
-    profile: dict = None,
-    verbose: bool = True,
-    delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
-    threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
-    max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
-    max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
-    min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
-    min_dist_52w_high: float = -25.0,  # 🌟 【籌碼共振強勢防線 1】距 52 週高點比例 (>= -25.0%)
-    min_foreign_5d: float = -100.0,  # 🌟 【籌碼共振強勢防線 2】外資近 5 日累計張數 (> -100 張)
-    min_main_5d: float = 0.0,  # 🌟 【籌碼共振強勢防線 3】主力近 5 日累計張數 (> 0 張)
-    market_info:dict = None, #當日大盤資料
-) -> tuple[bool, dict]:
-  """【F3_洗盤後 (20261022_1_1_6 籌碼共振與高位強勢旗艦版)】
-
-  1_1_2 核心架構 + 三大位階籌碼共振防線：
-  1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元
-  2. 量能過濾：成交量 >= 350 張 且 大於前 5 日均量 (vol_t0 > vol_ma5)
-  3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線 (close > easy_line)
-  4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line)
-  5. MACD 動能過濾：柱狀體由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0)
-  6. 個股年線風控 & OLS 豁免：年線乖離 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0 (飆股豁免)
-  7. 大盤年線風控防線：大盤年線乖離率 <= 12.0%
-  8. 🌟 【防線一：位階過濾】距 52 週高點 >= -25.0% (排除深跌弱勢反彈股)
-  9. 🌟 【防線二：外資流向】外資近 5 日累計 > -100 張 (排除外資逢高提款倒貨股)
-  10. 🌟 【防線三：主力鎖碼】主力近 5 日累計 > 0 張 (要求主力大戶籌碼淨買超共振)
-  11. 右側二次確認：觸發後第 2 日 (T+2) 報酬率 >= -2.0%
-  """
-  profile = profile or {}
-
-  min_required_len = 240 + 5 + delay_days
-  if len(df_single) < min_required_len:
-    if verbose:
-      print(
-          f"❌ [策略 1_1_6] 資料筆數不足 {min_required_len} 筆 (目前: {len(df_single)})"
-      )
-    return False, {}
-
-  df_single = df_single.copy()
-
-  if "MA60" not in df_single.columns:
-    df_single["MA60"] = df_single["close"].rolling(window=60).mean()
-  if "MA240" not in df_single.columns:
-    df_single["MA240"] = df_single["close"].rolling(window=240).mean()
-
-  def _check_f3_base_signal(pos_idx: int) -> tuple[bool, dict]:
-    row_t0 = df_single.iloc[pos_idx]
-    row_tm1 = df_single.iloc[pos_idx - 1]
-    row_tm2 = df_single.iloc[pos_idx - 2]
-    row_tm3 = df_single.iloc[pos_idx - 3]
-    row_tm4 = df_single.iloc[pos_idx - 4]
-
-    close_t0 = float(row_t0["close"])
-    easy_t0 = float(row_t0["easy_line"])
-    vol_t0 = float(row_t0["Trading_Volume"])
-    ma60_t0 = float(row_t0["MA60"])
-    ma240_t0 = float(row_t0["MA240"])
-
-    osc_t0 = float(
-        row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
-    )
-    close_tm1 = float(row_tm1["close"])
-    easy_tm1 = float(row_tm1["easy_line"])
-    osc_tm1 = float(
-        row_tm1.get("osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0)))
-    )
-
-    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
-    recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
-    vol_ma5 = float(recent_vols.mean())
-    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
-
-    # 1_1_2 原始基礎條件 1~6
-    cond1_trend = close_t0 > ma60_t0
-    cond2_price_ok = close_t0 >= 5.0
-    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_lots_t0 > vol_ma5_lots)
-    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
-
-    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
-    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
-    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
-    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
-
-    cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)  # MACD 綠翻紅
-
-    # 7. 個股年線乖離率 & OLS 斜率豁免
-    easy_ols_slope = row_t0.get(
-        "輕鬆線OLS斜率", row_t0.get("easy_ols_slope", None)
-    )
-    if easy_ols_slope is None or pd.isna(easy_ols_slope):
-      easy_5d = df_single["easy_line"].iloc[pos_idx - 4 : pos_idx + 1].values
-      if len(easy_5d) == 5 and not np.isnan(easy_5d).any():
-        easy_ols_slope = float(linregress(np.arange(5), easy_5d).slope)
-      else:
-        easy_ols_slope = 0.0
-    else:
-      easy_ols_slope = float(easy_ols_slope)
-
-    ma240_bias = (close_t0 - ma240_t0) / ma240_t0 if ma240_t0 > 0 else 0.0
-    is_ma240_normal_ok = ma240_bias <= max_ma240_bias
-    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
-    cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
-
-    # 8. 大盤年線風控過濾 (<= 12.0%)
-    market_bias_raw = row_t0.get(
-        "大盤年線乖離率(%)",
-        row_t0.get(
-            "market_ma240_bias_pct",
-            profile.get(
-                "market_ma240_bias_pct", profile.get("market_ma240_bias", None)
-            ),
-        ),
-    )
-    if market_bias_raw is not None and not pd.isna(market_bias_raw):
-      market_bias_val = float(market_bias_raw)
-      market_bias_pct = (
-          market_bias_val
-          if abs(market_bias_val) > 1.0
-          else market_bias_val * 100.0
-      )
-      threshold_val = (
-          max_market_ma240_bias * 100.0
-          if max_market_ma240_bias <= 1.0
-          else max_market_ma240_bias
-      )
-      cond9_market_ma240_ok = market_bias_pct <= threshold_val
-    else:
-      market_bias_pct = 0.0
-      cond9_market_ma240_ok = True
-
-    # 🌟 9. 【防線一】距 52 週高點比例過濾 (>= -25.0%)
-    dist_52w_high_raw = row_t0.get(
-        "距52週高點(%)", row_t0.get("dist_52w_high_pct", None)
-    )
-    if dist_52w_high_raw is not None and not pd.isna(dist_52w_high_raw):
-      dist_52w_high_val = float(dist_52w_high_raw)
-      cond10_dist_52w_high_ok = dist_52w_high_val >= min_dist_52w_high
-    else:
-      dist_52w_high_val = 0.0
-      cond10_dist_52w_high_ok = True
-
-    # 🌟 10. 【防線二】外資近 5 日累計張數 (> -100 張)
-    foreign_5d_raw = row_t0.get("foreign_5d_shares_sum")
-    if foreign_5d_raw is not None and not pd.isna(foreign_5d_raw):
-      foreign_5d_val = float(foreign_5d_raw)
-      cond11_foreign_5d_ok = foreign_5d_val > min_foreign_5d
-    else:
-      foreign_5d_val = 0.0
-      cond11_foreign_5d_ok = True
-
-    # 🌟 11. 【防線三】主力近 5 日累計張數 (> 0 張)
-    main_5d_raw = row_t0.get("major_5d_shares_sum")
-    if main_5d_raw is not None and not pd.isna(main_5d_raw):
-      main_5d_val = float(main_5d_raw)
-      cond12_main_5d_ok = main_5d_val > min_main_5d
-    else:
-      main_5d_val = 0.0
-      cond12_main_5d_ok = True
-
-    base_hit = (
-        cond1_trend
-        and cond2_price_ok
-        and cond3_vol_ok
-        and cond4_continuous
-        and cond5_shakeout
-        and cond6_macd_ok
-        and cond7_ma240_bias_ok
-        and cond9_market_ma240_ok
-        and cond10_dist_52w_high_ok
-        and cond11_foreign_5d_ok
-        and cond12_main_5d_ok
-    )
-
-    stock_id = str(row_t0.get("stock_id", row_t0.get("股票代號", "")))
-    date_t0_str = str(row_t0.get("date", row_t0.get("日期", "")))
-
-    details = {
-        "close_t0": close_t0,
-        "easy_t0": easy_t0,
-        "ma60_t0": ma60_t0,
-        "ma240_t0": ma240_t0,
-        "ma240_bias": ma240_bias,
-        "easy_ols_slope": easy_ols_slope,
-        "market_bias_pct": market_bias_pct,
-        "dist_52w_high_val": dist_52w_high_val,
-        "foreign_5d_val": foreign_5d_val,
-        "main_5d_val": main_5d_val,
-        "vol_lots_t0": vol_lots_t0,
-        "vol_ma5_lots": vol_ma5_lots,
-        "osc_t0": osc_t0,
-        "osc_tm1": osc_tm1,
-        "stock_id": stock_id,
-        "date_t0_str": date_t0_str,
-        "cond1_trend": cond1_trend,
-        "cond2_price_ok": cond2_price_ok,
-        "cond3_vol_ok": cond3_vol_ok,
-        "cond4_continuous": cond4_continuous,
-        "cond5_shakeout": cond5_shakeout,
-        "cond6_macd_ok": cond6_macd_ok,
-        "cond7_ma240_bias_ok": cond7_ma240_bias_ok,
-        "is_ma240_normal_ok": is_ma240_normal_ok,
-        "is_ols_exempt_ok": is_ols_exempt_ok,
-        "cond9_market_ma240_ok": cond9_market_ma240_ok,
-        "cond10_dist_52w_high_ok": cond10_dist_52w_high_ok,
-        "cond11_foreign_5d_ok": cond11_foreign_5d_ok,
-        "cond12_main_5d_ok": cond12_main_5d_ok,
-        "was_below_tm2": was_below_tm2,
-        "was_below_tm3": was_below_tm3,
-        "was_below_tm4": was_below_tm4,
-    }
-    return base_hit, details
-
-  # 主流程：定位觸發日與右側確認日
-  t0_pos = -(1 + delay_days)
-  t_confirm_pos = -1
-
-  base_hit, details = _check_f3_base_signal(t0_pos)
-
-  row_confirm = df_single.iloc[t_confirm_pos]
-  close_confirm = float(row_confirm["close"])
-  close_t0 = details["close_t0"]
-
-  confirm_return = (
-      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
-  )
-  cond8_right_confirm_ok = confirm_return >= threshold_pct
-
-  is_hit = base_hit and cond8_right_confirm_ok
-
-  if verbose:
-    date_confirm_str = str(
-        row_confirm.get("date", row_confirm.get("日期", ""))
-    )
-    stock_id = details["stock_id"]
-    date_t0_str = details["date_t0_str"]
-
-    c1_m = "✓" if details["cond1_trend"] else "✕"
-    c2_m = "✓" if details["cond2_price_ok"] else "✕"
-    c3_m = "✓" if details["cond3_vol_ok"] else "✕"
-    c4_m = "✓" if details["cond4_continuous"] else "✕"
-    c5_m = "✓" if details["cond5_shakeout"] else "✕"
-    c6_m = "✓" if details["cond6_macd_ok"] else "✕"
-    c7_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
-    c8_m = "✓" if cond8_right_confirm_ok else "✕"
-    c9_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
-    c10_m = "✓" if details["cond10_dist_52w_high_ok"] else "✕"
-    c11_m = "✓" if details["cond11_foreign_5d_ok"] else "✕"
-    c12_m = "✓" if details["cond12_main_5d_ok"] else "✕"
-
-    result_str = "🔥 [1_1_6籌碼共振強勢通過建倉]" if is_hit else "⚪ [未通過過濾]"
-
-    print("\n" + "=" * 65)
-    print(
-        f"🔔 [F3_洗盤後_20261022_1_1_6 (1_1_2基底 + 位階>= -25% + 外資近5日> -100 +"
-        f" 主力近5日>0)] 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日:"
-        f" {date_confirm_str}"
-    )
-    print("-" * 65)
-    print(
-        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${details['close_t0']:.2f} >"
-        f" ${details['ma60_t0']:.2f})"
-    )
-    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${details['close_t0']:.2f}")
-    print(
-        f"  [{c3_m}] 3. 量能過濾 : {details['vol_lots_t0']:,.0f} 張 (>5日均量"
-        f" {details['vol_ma5_lots']:,.0f}張 且 >=350張)"
-    )
-    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
-    print(
-        f"  [{c5_m}] 5. 洗盤甩轎軌跡 :"
-        f" T-2({details['was_below_tm2']}) | T-3({details['was_below_tm3']}) |"
-        f" T-4({details['was_below_tm4']})"
-    )
-    print(
-        f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({details['osc_t0']:.3f}) > 0 且 T-1"
-        f" OSC ({details['osc_tm1']:.3f}) <= 0"
-    )
-    print(
-        f"  [{c7_m}] 7. 個股年線乖離 & OLS豁免 :"
-        f" 乖離率={details['ma240_bias']*100:.2f}% (門檻<=25%) |"
-        f" OLS斜率={details['easy_ols_slope']:.4f}"
-    )
-    print(
-        f"  [{c9_m}] 8. 大盤年線風控 : 乖離率={details['market_bias_pct']:.2f}%"
-        f" (門檻 <= {max_market_ma240_bias*100:.1f}%)"
-    )
-    print(
-        f"  [{c10_m}] 9. 🌟 【防線一】距52週高點比例 :"
-        f" {details['dist_52w_high_val']:.2f}% (門檻 <= {min_dist_52w_high:.1f}%)"
-    )
-    print(
-        f"  [{c11_m}] 10. 🌟 【防線二】外資近5日累計 :"
-        f" {details['foreign_5d_val']:,.0f} 張 (門檻 > {min_foreign_5d:.0f}張)"
-    )
-    print(
-        f"  [{c12_m}] 11. 🌟 【防線三】主力近5日累計 :"
-        f" {details['main_5d_val']:,.0f} 張 (門檻 > {min_main_5d:.0f}張)"
-    )
-    print(
-        f"  [{c8_m}] 12. 右側二次確認 (T+{delay_days} 報酬 >="
-        f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
-    )
-    print("-" * 65)
-    print(f"🎯 最終觸發結果: {result_str}")
-    print("=" * 65 + "\n")
-
-  info = (
-      {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261022_1_1_6",
-          "股票代號": details["stock_id"],
-          "訊號日期": details["date_t0_str"],
-          "觸發價格": close_t0,
-          "距52週高點": f"{details['dist_52w_high_val']:.2f}%",
-          "外資近5日累計": f"{details['foreign_5d_val']:,.0f}張",
-          "主力近5日累計": f"{details['main_5d_val']:,.0f}張",
-          "年線乖離率": f"{details['ma240_bias'] * 100:.2f}%",
-          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
-          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
-          "操作建議": (
-              "1_1_2 基底 + 籌碼共振強勢防線通過：距離高點"
-              f" {details['dist_52w_high_val']:.1f}% (>= -25%)，外資近5日"
-              f" {details['foreign_5d_val']:,.0f}張 (> -100張)，主力近5日"
-              f" {details['main_5d_val']:,.0f}張 (> 0張)，大幅降低深跌陷阱率。"
-          ),
-      }
-      if is_hit
-      else {}
-  )
-
-  return is_hit, info
-
-
-def st_qiantang_f3_after_shakeout_20261001_1_1_5(
-    df_single: pd.DataFrame,
-    profile: dict = None,
-    verbose: bool = True,
-    delay_days: int = 3,  # 🌟 右側觀察天數由 T+2 升級為 T+3 (預設 3 天)
-    threshold_pct: float = -0.005,  # 🌟 右側 T+3 觀察期門檻：報酬率 >= -0.5% (-0.005)
-    max_ma240_bias: float = 0.25,  # 個股年線乖離率上限 (25.0%)
-    max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
-    min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
-    max_ma240_deduction_pos: float = 25.0,  # 🌟 【新增防線一】年線扣抵位置上限 (25.0%)
-    market_info:dict = None, #當日大盤資料
-) -> tuple[bool, dict]:
-  """【F3_洗盤後 (20261022_1_1_5 黃金雙防線版)】
-
-  完全承襲 1_1_2 (st_qiantang_f3_after_shakeout_20261001_1_1_2) 核心架構與飆股基因：
-  1. 趨勢與價格過濾：Close_T0 > MA60 且 Close_T0 >= 5.0 元
-  2. 量能過濾：成交量 >= 350 張 且 大於前 5 日均量 (vol_t0 > vol_ma5)
-  3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線
-  4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line)
-  5. MACD 動能過濾：柱狀體由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0)
-  6. 個股年線風控 & OLS 豁免：年線乖離 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0 (飆股豁免)
-  7. 大盤年線風控防線：大盤年線乖離率 <= 12.0%
-  8. 🌟 【防線一：長線年線扣抵結構防線】年線扣抵位置 <= 25.0% (避開解套賣壓天花板)
-  9. 🌟 【防線二：右側 Confirmation 升級】T+3 右側觀察期報酬率 >= -0.5% (主力實質鎖碼)
-  """
-  profile = profile or {}
-
-  # 最小資料長度需求：240日年線 + 5日甩轎軌跡 + delay_days(3天) 右側觀察期
-  min_required_len = 240 + 5 + delay_days
-  if len(df_single) < min_required_len:
-    if verbose:
-      print(
-          f"❌ [策略 1_1_5] 資料筆數不足 {min_required_len} 筆 (目前:"
-          f" {len(df_single)})"
-      )
-    return False, {}
-
-  df_single = df_single.copy()
-  if "MA60" not in df_single.columns:
-    df_single["MA60"] = df_single["close"].rolling(window=60).mean()
-  if "MA240" not in df_single.columns:
-    df_single["MA240"] = df_single["close"].rolling(window=240).mean()
-
-  # 定位訊號觸發日 (pos_idx) 與 右側確認日 (t_confirm_pos)
-  t0_pos = -(1 + delay_days)
-  t_confirm_pos = -1
-
-  def _check_f3_base_signal(pos_idx: int, m_info:dict = None) -> tuple[bool, dict]:
-    row_t0 = df_single.iloc[pos_idx]
-    row_tm1 = df_single.iloc[pos_idx - 1]
-    row_tm2 = df_single.iloc[pos_idx - 2]
-    row_tm3 = df_single.iloc[pos_idx - 3]
-    row_tm4 = df_single.iloc[pos_idx - 4]
-
-    # 基礎欄位擷取
-    close_t0 = float(row_t0["close"])
-    easy_t0 = float(row_t0["easy_line"])
-    vol_t0 = float(row_t0["Trading_Volume"])
-    ma60_t0 = float(row_t0["MA60"])
-    ma240_t0 = float(row_t0["MA240"])
-    osc_t0 = float(
-        row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
-    )
-
-    close_tm1 = float(row_tm1["close"])
-    easy_tm1 = float(row_tm1["easy_line"])
-    osc_tm1 = float(
-        row_tm1.get("osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0)))
-    )
-
-    # 成交量張數換算與前 5 日均量
-    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
-    recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
-    vol_ma5 = float(recent_vols.mean())
-    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
-
-    # 1_1_2 原始基礎條件 1~6
-    cond1_trend = close_t0 > ma60_t0
-    cond2_price_ok = close_t0 >= 5.0
-    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_lots_t0 > vol_ma5_lots)
-    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
-
-    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
-    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
-    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
-    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
-
-    cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)  # MACD 綠翻紅
-
-    # 7. 個股年線乖離率 & OLS 斜率豁免
-    #easy_ols_slope = row_t0.get("easy_line_slope", row_t0.get("easy_ols_slope", None))
-    easy_ols_slope = row_t0.get("easy_line_slope")
-
-    #ma240_bias = (close_t0 - ma240_t0) / ma240_t0 if ma240_t0 > 0 else 0.0
-    ma240_bias = float(row_t0.get("ma240_bias"))
-      
-    is_ma240_normal_ok = ma240_bias <= max_ma240_bias
-    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
-    cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
-
-    # 8. 大盤年線風控過濾 (<= 12.0%)
-    """
-      market_bias_raw = row_t0.get(
-        "大盤年線乖離率(%)",
-        row_t0.get(
-            "market_ma240_bias_pct",
-            profile.get(
-                "market_ma240_bias_pct", profile.get("market_ma240_bias", None)
-            ),
-        ),
-    )
-    """
-      
-    market_bias_pct = round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2)
-      
-    threshold_val = (
-      max_market_ma240_bias * 100.0
-      if max_market_ma240_bias <= 1.0
-      else max_market_ma240_bias
-    )
-    cond9_market_ma240_ok = market_bias_pct <= threshold_val
-
-
-    # 🌟 9. 【新增防線一】長線年線扣抵位置結構過濾 (<= 25.0%)
-    ma240_deduction_pos = float(row_t0.get(
-      "ma240_deduct_bias", row_t0.get("ma240_deduction_pos", None)
-    ))
-
-    cond10_ma240_deduction_ok = (
-        ma240_deduction_pos <= max_ma240_deduction_pos
-    )
-
-    base_hit = (
-        cond1_trend
-        and cond2_price_ok
-        and cond3_vol_ok
-        and cond4_continuous
-        and cond5_shakeout
-        and cond6_macd_ok
-        and cond7_ma240_bias_ok
-        and cond9_market_ma240_ok
-        and cond10_ma240_deduction_ok
-    )
-
-    stock_id = str(row_t0.get("stock_id", row_t0.get("股票代號", "")))
-    date_t0_str = str(row_t0.get("date", row_t0.get("日期", "")))
-
-    details = {
-        "close_t0": close_t0,
-        "easy_t0": easy_t0,
-        "ma60_t0": ma60_t0,
-        "ma240_t0": ma240_t0,
-        "ma240_bias": ma240_bias,
-        "easy_ols_slope": easy_ols_slope,
-        "market_bias_pct": market_bias_pct,
-        "ma240_deduction_pos": ma240_deduction_pos,
-        "vol_lots_t0": vol_lots_t0,
-        "vol_ma5_lots": vol_ma5_lots,
-        "osc_t0": osc_t0,
-        "osc_tm1": osc_tm1,
-        "stock_id": stock_id,
-        "date_t0_str": date_t0_str,
-        "cond1_trend": cond1_trend,
-        "cond2_price_ok": cond2_price_ok,
-        "cond3_vol_ok": cond3_vol_ok,
-        "cond4_continuous": cond4_continuous,
-        "cond5_shakeout": cond5_shakeout,
-        "cond6_macd_ok": cond6_macd_ok,
-        "cond7_ma240_bias_ok": cond7_ma240_bias_ok,
-        "is_ma240_normal_ok": is_ma240_normal_ok,
-        "is_ols_exempt_ok": is_ols_exempt_ok,
-        "cond9_market_ma240_ok": cond9_market_ma240_ok,
-        "cond10_ma240_deduction_ok": cond10_ma240_deduction_ok,
-        "was_below_tm2": was_below_tm2,
-        "was_below_tm3": was_below_tm3,
-        "was_below_tm4": was_below_tm4,
-    }
-    return base_hit, details
-
-  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
-  row_confirm = df_single.iloc[t_confirm_pos]
-  close_confirm = float(row_confirm["close"])
-  close_t0 = details["close_t0"]
-
-  # 🌟 【防線二】右側 T+3 二務確認 (T+3 報酬率 >= threshold_pct，預設 -0.5%)
-  confirm_return = (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
-  cond8_right_confirm_ok = confirm_return >= threshold_pct
-
-  is_hit = base_hit and cond8_right_confirm_ok
-
-  if verbose:
-    date_confirm_str = str(row_confirm.get("date", row_confirm.get("日期", "")))
-    stock_id = details["stock_id"]
-    date_t0_str = details["date_t0_str"]
-
-    c1_m = "✓" if details["cond1_trend"] else "✕"
-    c2_m = "✓" if details["cond2_price_ok"] else "✕"
-    c3_m = "✓" if details["cond3_vol_ok"] else "✕"
-    c4_m = "✓" if details["cond4_continuous"] else "✕"
-    c5_m = "✓" if details["cond5_shakeout"] else "✕"
-    c6_m = "✓" if details["cond6_macd_ok"] else "✕"
-    c7_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
-    c8_m = "✓" if cond8_right_confirm_ok else "✕"
-    c9_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
-    c10_m = "✓" if details["cond10_ma240_deduction_ok"] else "✕"
-
-    ma240_normal_str = "✓" if details["is_ma240_normal_ok"] else "✕"
-    ols_exempt_str = "✓" if details["is_ols_exempt_ok"] else "✕"
-    result_str = "🔥 [1_1_5黃金雙防線建倉]" if is_hit else "⚪ [未通過過濾]"
-
-    print("\n" + "=" * 65)
-    print(
-        f"🔔 [F3_洗盤後_20261022_1_1_5 (1_1_2基底 +"
-        f" 年線扣抵<=25% + T+3確認>=-0.5%)] 股票: {stock_id} | 觸發日:"
-        f" {date_t0_str} -> 確認日: {date_confirm_str}"
-    )
-    print("-" * 65)
-    print(
-        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${details['close_t0']:.2f} >"
-        f" ${details['ma60_t0']:.2f})"
-    )
-    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${details['close_t0']:.2f}")
-    print(
-        f"  [{c3_m}] 3. 量能過濾 : {details['vol_lots_t0']:,.0f} 張 (>5日均量"
-        f" {details['vol_ma5_lots']:,.0f}張 且 >=350張)"
-    )
-    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
-    print(
-        f"  [{c5_m}] 5. 洗盤甩轎軌跡 :"
-        f" T-2({details['was_below_tm2']}) | T-3({details['was_below_tm3']}) |"
-        f" T-4({details['was_below_tm4']})"
-    )
-    print(
-        f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({details['osc_t0']:.3f}) > 0 且 T-1"
-        f" OSC ({details['osc_tm1']:.3f}) <= 0"
-    )
-    print(
-        f"  [{c7_m}] 7. 個股年線乖離 & OLS豁免 :"
-        f" 乖離率={details['ma240_bias']*100:.2f}% (門檻<=25%) |"
-        f" OLS斜率={details['easy_ols_slope']:.4f} -> [常態:{ma240_normal_str} |"
-        f" 豁免:{ols_exempt_str}]"
-    )
-    print(
-        f"  [{c9_m}] 8. 大盤年線風控 : 乖離率={details['market_bias_pct']:.2f}%"
-        f" (門檻 <= {max_market_ma240_bias*100:.1f}%)"
-    )
-    print(
-        f"  [{c10_m}] 9. 🌟 【防線一】年線扣抵位置 :"
-        f" {details['ma240_deduction_pos']:.2f}% (門檻 <="
-        f" {max_ma240_deduction_pos:.1f}%)"
-    )
-    print(
-        f"  [{c8_m}] 10. 🌟 【防線二】T+{delay_days} 右側二次確認 (報酬 >="
-        f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
-    )
-    print("-" * 65)
-    print(f"🎯 最終觸發結果: {result_str}")
-    print("=" * 65 + "\n")
-
-  info = (
-      {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261022_1_1_5",
-          "股票代號": details["stock_id"],
-          "訊號日期": details["date_t0_str"],
-          "觸發價格": close_t0,
-          "年線乖離率": f"{details['ma240_bias'] * 100:.2f}%",
-          "年線扣抵位置": f"{details['ma240_deduction_pos']:.2f}%",
-          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
-          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
-          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
-          "操作建議": (
-              "1_1_2 基底升級 1_1_5 黃金雙防線版通過：年線扣抵"
-              f" {details['ma240_deduction_val']:.1f}% (<=25%)，T+{delay_days}右側確認報酬"
-              f" {confirm_return * 100:.1f}% (>= {threshold_pct * 100:.1f}%)。"
-          ),
-      }
-      if is_hit
-      else {}
-  )
-
-  return is_hit, info
-
-def st_qiantang_f3_after_shakeout_20261001_1_1_4(
-    df_single: pd.DataFrame,
-    profile: dict = None,
-    verbose: bool = True,
-    delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
-    threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
-    max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
-    max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
-    min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
-    max_easy_bias: float = 12.0,  # 🌟 輕鬆線適度乖離上限 (0% < 乖離率 <= 12.0%)
-    max_upper_shadow: float = 50.0,  # 🌟 避雷針過濾門檻：上影線比例 (<= 50.0%)
-    min_vol_ratio: float = 1.2,  # 🌟 量能黃金下限 (>= 1.2 倍 5日均量)
-    market_info: dict = None,  # 🌟 當日大盤秒查資料字典
-) -> tuple[bool, dict]:
-  """【F3_洗盤後 (20261001_1_1_4 黃金降噪與飆股最大化平衡版)】"""
-  profile = profile or {}
-
-  min_required_len = 240 + 5 + delay_days
-  if len(df_single) < min_required_len:
-    if verbose:
-      print(
-          f"❌ [策略 20261001_1_1_4] 資料 {len(df_single)}筆不足, 需"
-          f" {min_required_len} 筆"
-      )
-    return False, {}
-
-  df_single = df_single.copy()
-
-  if "MA60" not in df_single.columns:
-    df_single["MA60"] = df_single["close"].rolling(window=60).mean()
-  if "MA240" not in df_single.columns:
-    df_single["MA240"] = df_single["close"].rolling(window=240).mean()
-
-  def _check_f3_base_signal(pos_idx: int, m_info: dict = None) -> tuple[bool, dict]:
-    row_t0 = df_single.iloc[pos_idx]
-    row_tm1 = df_single.iloc[pos_idx - 1]
-    row_tm2 = df_single.iloc[pos_idx - 2]
-    row_tm3 = df_single.iloc[pos_idx - 3]
-    row_tm4 = df_single.iloc[pos_idx - 4]
-
-    close_t0 = float(row_t0["close"])
-    open_t0 = float(row_t0.get("open", close_t0))
-    high_t0 = float(row_t0.get("high", close_t0))
-    low_t0 = float(row_t0.get("low", close_t0))
-    easy_t0 = float(row_t0["easy_line"])
-    vol_t0 = float(row_t0["Trading_Volume"])
-    ma60_t0 = float(row_t0["MA60"])
-    ma240_t0 = float(row_t0["MA240"])
-
-    osc_t0_raw = row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC")))
-    osc_tm1_raw = row_tm1.get(
-        "osc", row_tm1.get("macd_osc", row_tm1.get("OSC"))
-    )
-    osc_tm2_raw = row_tm2.get(
-        "osc", row_tm2.get("macd_osc", row_tm2.get("OSC"))
-    )
-
-    if pd.isna(osc_t0_raw) or pd.isna(osc_tm1_raw) or pd.isna(osc_tm2_raw):
-      cond6_macd_hook = False
-      osc_t0, osc_tm1, osc_tm2 = np.nan, np.nan, np.nan
-    else:
-      osc_t0, osc_tm1, osc_tm2 = (
-          float(osc_t0_raw),
-          float(osc_tm1_raw),
-          float(osc_tm2_raw),
-      )
-      cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
-
-    close_tm1 = float(row_tm1["close"])
-    easy_tm1 = float(row_tm1["easy_line"])
-
-    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
-    recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
-    vol_ma5 = float(recent_vols.mean())
-    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
-    vol_ratio = vol_lots_t0 / vol_ma5_lots if vol_ma5_lots > 0 else 0.0
-
-    cond1_trend = close_t0 > ma60_t0
-    cond2_price_ok = close_t0 >= 5.0
-    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_ratio >= min_vol_ratio)
-    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
-
-    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
-    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
-    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
-    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
-
-    easy_bias_pct = (
-        ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else np.nan
-    )
-    cond_low_bias = (
-        (0.0 < easy_bias_pct <= max_easy_bias)
-        if pd.notna(easy_bias_pct)
-        else False
-    )
-
-    total_len = high_t0 - low_t0
-    upper_shadow_pct = (
-        ((high_t0 - max(close_t0, open_t0)) / total_len) * 100.0
-        if total_len > 0
-        else 0.0
-    )
-    cond_kbar_ok = upper_shadow_pct <= max_upper_shadow
-
-    easy_ols_slope_raw = row_t0.get(
-        "easy_line_slope",
-        row_t0.get("輕鬆線OLS斜率", row_t0.get("easy_ols_slope")),
-    )
-    if pd.isna(easy_ols_slope_raw):
-      easy_ols_slope = np.nan
-      is_ols_exempt_ok = False
-    else:
-      easy_ols_slope = float(easy_ols_slope_raw)
-      is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
-
-    ma240_bias_raw = row_t0.get(
-        "ma240_bias", row_t0.get("年線乖離率(%)", row_t0.get("ma240_bias_pct"))
-    )
-    if pd.isna(ma240_bias_raw):
-      ma240_bias = np.nan
-      is_ma240_normal_ok = False
-    else:
-      ma240_bias = float(ma240_bias_raw)
-      bias_threshold = (
-          max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
-      )
-      is_ma240_normal_ok = ma240_bias <= bias_threshold
-
-    cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
-
-    m_info = m_info or {}
-    market_bias_raw = m_info.get(
-        "taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct")
-    )
-    if market_bias_raw is None or pd.isna(market_bias_raw):
-      market_bias_raw = row_t0.get(
-          "大盤年線乖離率(%)",
-          row_t0.get(
-              "market_ma240_bias_pct", row_t0.get("taiex_ma240_bias_pct")
-          ),
-      )
-
-    if market_bias_raw is not None and pd.notna(market_bias_raw):
-      market_bias_val = float(market_bias_raw)
-      market_bias_pct = (
-          market_bias_val
-          if abs(market_bias_val) > 1.0
-          else market_bias_val * 100.0
-      )
-      m_threshold = (
-          max_market_ma240_bias * 100.0
-          if max_market_ma240_bias <= 1.0
-          else max_market_ma240_bias
-      )
-      cond9_market_ma240_ok = market_bias_pct <= m_threshold
-    else:
-      market_bias_pct = np.nan
-      cond9_market_ma240_ok = False
-
-    base_hit = (
-        cond1_trend
-        and cond2_price_ok
-        and cond3_vol_ok
-        and cond4_continuous
-        and cond5_shakeout
-        and cond6_macd_hook
-        and cond_low_bias
-        and cond_kbar_ok
-        and cond7_ma240_bias_ok
-        and cond9_market_ma240_ok
-    )
-
-    stock_id = str(row_t0.get("stock_id", row_t0.get("股票代號", "")))
-    date_t0_str = str(row_t0.get("date", row_t0.get("日期", "")))
-
-    details = {
-        "close_t0": close_t0,
-        "open_t0": open_t0,
-        "easy_t0": easy_t0,
-        "easy_bias_pct": easy_bias_pct,
-        "ma60_t0": ma60_t0,
-        "ma240_t0": ma240_t0,
-        "ma240_bias": ma240_bias,
-        "easy_ols_slope": easy_ols_slope,
-        "market_bias_pct": market_bias_pct,
-        "vol_lots_t0": vol_lots_t0,
-        "vol_ma5_lots": vol_ma5_lots,
-        "vol_ratio": vol_ratio,
-        "osc_t0": osc_t0,
-        "osc_tm1": osc_tm1,
-        "osc_tm2": osc_tm2,
-        "upper_shadow_pct": upper_shadow_pct,
-        "stock_id": stock_id,
-        "date_t0_str": date_t0_str,
-        "cond1_trend": cond1_trend,
-        "cond2_price_ok": cond2_price_ok,
-        "cond3_vol_ok": cond3_vol_ok,
-        "cond4_continuous": cond4_continuous,
-        "cond5_shakeout": cond5_shakeout,
-        "cond6_macd_hook": cond6_macd_hook,
-        "cond_low_bias": cond_low_bias,
-        "cond_kbar_ok": cond_kbar_ok,
-        "cond7_ma240_bias_ok": cond7_ma240_bias_ok,
-        "is_ma240_normal_ok": is_ma240_normal_ok,
-        "is_ols_exempt_ok": is_ols_exempt_ok,
-        "cond9_market_ma240_ok": cond9_market_ma240_ok,
-        "was_below_tm2": was_below_tm2,
-        "was_below_tm3": was_below_tm3,
-        "was_below_tm4": was_below_tm4,
-    }
-    return base_hit, details
-
-  t0_pos = -(1 + delay_days)
-  t_confirm_pos = -1
-
-  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
-
-  row_confirm = df_single.iloc[t_confirm_pos]
-  close_confirm = float(row_confirm["close"])
-  close_t0 = details["close_t0"]
-
-  confirm_return = (
-      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
-  )
-  cond8_right_confirm_ok = confirm_return >= threshold_pct
-
-  is_hit = base_hit and cond8_right_confirm_ok
-
-  if verbose:
-    date_confirm_str = str(
-        row_confirm.get("date", row_confirm.get("日期", ""))
-    )
-    stock_id = details["stock_id"]
-    date_t0_str = details["date_t0_str"]
-
-    c1_m = "✓" if details["cond1_trend"] else "✕"
-    c2_m = "✓" if details["cond2_price_ok"] else "✕"
-    c3_m = "✓" if details["cond3_vol_ok"] else "✕"
-    c4_m = "✓" if details["cond4_continuous"] else "✕"
-    c5_m = "✓" if details["cond5_shakeout"] else "✕"
-    c6_m = "✓" if details["cond6_macd_hook"] else "✕"
-    c7_m = "✓" if details["cond_low_bias"] else "✕"
-    c8_m = "✓" if details["cond_kbar_ok"] else "✕"
-    c9_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
-    c10_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
-    c11_m = "✓" if cond8_right_confirm_ok else "✕"
-
-    result_str = "🔥 [黃金降噪平衡版通過建倉]" if is_hit else "⚪ [未通過過濾]"
-
-    bias_val = details["ma240_bias"]
-    bias_disp = f"{bias_val:.2f}%" if pd.notna(bias_val) else "N/A"
-    slope_val = details["easy_ols_slope"]
-    slope_disp = f"{slope_val:.4f}" if pd.notna(slope_val) else "N/A"
-    mkt_val = details["market_bias_pct"]
-    mkt_disp = f"{mkt_val:.2f}%" if pd.notna(mkt_val) else "N/A"
-    easy_b_val = details["easy_bias_pct"]
-    easy_b_disp = f"{easy_b_val:.2f}%" if pd.notna(easy_b_val) else "N/A"
-
-    print("\n" + "=" * 65)
-    print(
-        f"🔔 [F3_洗盤後_20261001_1_1_4 (黃金降噪平衡版)] 股票: {stock_id} | 觸發日:"
-        f" {date_t0_str} -> 確認日: {date_confirm_str}"
-    )
-    print("-" * 65)
-    print(
-        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${details['close_t0']:.2f} >"
-        f" ${details['ma60_t0']:.2f})"
-    )
-    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${details['close_t0']:.2f}")
-    print(
-        f"  [{c3_m}] 3. 🌟 量能黃金比例 : {details['vol_ratio']:.2f}倍 (>=1.2倍,"
-        f" {details['vol_lots_t0']:,.0f}張)"
-    )
-    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
-    print(
-        f"  [{c5_m}] 5. 洗盤甩轎軌跡 :"
-        f" T-2({details['was_below_tm2']}) | T-3({details['was_below_tm3']}) |"
-        f" T-4({details['was_below_tm4']})"
-    )
-    print(
-        f"  [{c6_m}] 6. 🌟 MACD綠柱提前勾頭 : OSC"
-        f" T0({details['osc_t0']:.3f}) > T-1({details['osc_tm1']:.3f}) <="
-        f" T-2({details['osc_tm2']:.3f})"
-    )
-    print(
-        f"  [{c7_m}] 7. 🌟 輕鬆線適度乖離防守 : {easy_b_disp} (門檻 0% < 乖離"
-        " <= 12.0%)"
-    )
-    print(
-        f"  [{c8_m}] 8. 🌟 避雷針防偽 : 上影線={details['upper_shadow_pct']:.1f}%"
-        " (<= 50%)"
-    )
-    print(
-        f"  [{c9_m}] 9. 個股年線乖離 & OLS豁免 : 乖離率={bias_disp} |"
-        f" OLS斜率={slope_disp}"
-    )
-    print(
-        f"  [{c10_m}] 10. 大盤年線風控 : 乖離率={mkt_disp} (門檻 <="
-        f" {max_market_ma240_bias*100:.1f}%)"
-    )
-    print(
-        f"  [{c11_m}] 11. 右側二次確認 (T+{delay_days} 報酬 >="
-        f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
-    )
-    print("-" * 65)
-    print(f"🎯 最終觸發結果: {result_str}")
-    print("=" * 65 + "\n")
-
-  info = (
-      {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261001_1_1_4",
-          "股票代號": details["stock_id"],
-          "訊號日期": details["date_t0_str"],
-          "觸發價格": close_t0,
-          "輕鬆線乖離率": (
-              f"{details['easy_bias_pct']:.2f}%"
-              if pd.notna(details["easy_bias_pct"])
-              else "N/A"
-          ),
-          "量能爆發倍數": f"{details['vol_ratio']:.2f}倍",
-          "年線乖離率": (
-              f"{details['ma240_bias']:.2f}%"
-              if pd.notna(details["ma240_bias"])
-              else "N/A"
-          ),
-          "輕鬆線OLS斜率": (
-              f"{details['easy_ols_slope']:.4f}"
-              if pd.notna(details["easy_ols_slope"])
-              else "N/A"
-          ),
-          "大盤年線乖離率": (
-              f"{details['market_bias_pct']:.2f}%"
-              if pd.notna(details["market_bias_pct"])
-              else "N/A"
-          ),
-          "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
-          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
-          "操作建議": (
-              "結合大盤風控、MACD綠柱提前勾頭、輕鬆線適度乖離(<12%)與避雷針(<=50%)過濾，兼顧高飆股留存率與低深跌風險。"
-          ),
-      }
-      if is_hit
-      else {}
-  )
-
-  return is_hit, info
-
-
+# -----------------------------------------------------------------------------
+# 1. 20261001_1_1_3 (終極精準降噪旗艦版)
+# -----------------------------------------------------------------------------
 def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     df_single: pd.DataFrame,
     profile: dict = None,
@@ -1913,9 +953,21 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     max_upper_shadow: float = 30.0,  # 上影線比例上限 (<= 30.0%)
     min_vol_ratio: float = 1.2,  # 量能黃金比例下限 (>= 1.2 倍 5日均量)
     max_vol_ratio: float = 2.5,  # 量能黃金比例上限 (<= 2.5 倍 5日均量)
-    market_info: dict = None,  # 🌟 當日大盤秒查資料字典
+    market_info: dict = None,  # 當日大盤資料
 ) -> tuple[bool, dict]:
-  """【F3_洗盤後 (20261001_1_1_3 終極精準降噪旗艦版)】"""
+  """【F3_洗盤後 (20261001_1_1_3 終極精準降噪旗艦版)】
+
+  1_1_2 基礎 + 四大微觀精準降噪組合： 1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且
+  Close_T0 >= 5.0 元 2. 🌟 量能黃金爆發區間：成交量 >= 350 張 且 1.2 <= 今日成交量 /
+  5日均量 <= 2.5 3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線 4.
+  洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line) 5. 🌟 MACD
+  綠柱提前勾頭：OSC_T0 > OSC_T-1 且 OSC_T-1 <= OSC_T-2 (提前卡位) 6. 🌟
+  輕鬆線低乖離防守：0% < 輕鬆線乖離率 <= 5.0% (貼近支撐買進) 7. 🌟 K棒品質防偽：當日必須為紅
+  K (Close > Open) 且 上影線比例 <= 30.0% 8. 🌟 個股年線風控 & OLS 豁免：(Close_T0 -
+  MA240_T0) / MA240_T0 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0 9. 🌟
+  大盤年線風控防線：大盤年線乖離率 <= 12.0% 10. 🌟 右側二次確認：觸發後第 2 日 (T+2) 報酬率
+  >= -2.0%
+  """
   profile = profile or {}
 
   min_required_len = 240 + 5 + delay_days
@@ -1942,25 +994,19 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     row_tm4 = df_single.iloc[pos_idx - 4]
 
     close_t0 = float(row_t0["close"])
-    open_t0 = float(row_t0.get("open", close_t0))
-    high_t0 = float(row_t0.get("high", close_t0))
-    low_t0 = float(row_t0.get("low", close_t0))
+    open_t0 = float(row_t0["open"])
+    high_t0 = float(row_t0["max"])
+    low_t0 = float(row_t0["min"])
     easy_t0 = float(row_t0["easy_line"])
     vol_t0 = float(row_t0["Trading_Volume"])
     ma60_t0 = float(row_t0["MA60"])
     ma240_t0 = float(row_t0["MA240"])
 
-    # 1. MACD 綠柱提前勾頭 (不補 0)
-    osc_t0_raw = row_t0["osc"]
-    osc_tm1_raw = row_tm1["osc"]
-    osc_tm2_raw = row_tm2["osc"]
-
-    osc_t0, osc_tm1, osc_tm2 = (
-        float(osc_t0_raw),
-        float(osc_tm1_raw),
-        float(osc_tm2_raw),
-    )
-    cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
+    osc_t0 = float(row_t0["osc"])
+    osc_tm1 = float(row_tm1["osc"])
+    osc_tm2 = float(row_tm2["osc"])
+    if pd.isna(osc_t0) or pd.isna(osc_tm1) or pd.isna(osc_tm2):
+      raise ValueError("MACD (osc) 包含 NaN 數據")
 
     close_tm1 = float(row_tm1["close"])
     easy_tm1 = float(row_tm1["easy_line"])
@@ -1983,14 +1029,14 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
     cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
 
+    cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
+
     easy_bias_pct = (
         ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else np.nan
     )
-    cond_low_bias = (
-        (0.0 < easy_bias_pct <= max_easy_bias)
-        if pd.notna(easy_bias_pct)
-        else False
-    )
+    if pd.isna(easy_bias_pct):
+      raise ValueError("輕鬆線乖離率計算結果為 NaN")
+    cond_low_bias = 0.0 < easy_bias_pct <= max_easy_bias
 
     is_red_k = close_t0 > open_t0
     total_len = high_t0 - low_t0
@@ -2001,58 +1047,33 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     )
     cond_kbar_ok = is_red_k and (upper_shadow_pct <= max_upper_shadow)
 
-    # 2. 輕鬆線 OLS 斜率 (不補 0)
-    easy_ols_slope_raw = row_t0.get(
-        "easy_line_slope",
-        row_t0.get("easy_ols_slope"),
-    )
-    if pd.isna(easy_ols_slope_raw):
-      easy_ols_slope = np.nan
-      is_ols_exempt_ok = False
-    else:
-      easy_ols_slope = float(easy_ols_slope_raw)
-      is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
+    easy_ols_slope = float(row_t0["easy_line_slope"])
+    if pd.isna(easy_ols_slope):
+      raise ValueError("easy_line_slope 包含 NaN 數據")
 
-    # 3. 個股年線乖離率 (不補 0)
-    ma240_bias_raw = row_t0.get(
-        "ma240_bias", row_t0.get("ma240_bias_pct")
-    )
-    if pd.isna(ma240_bias_raw):
-      ma240_bias = np.nan
-      is_ma240_normal_ok = False
-    else:
-      ma240_bias = float(ma240_bias_raw)
-      bias_threshold = (
-          max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
-      )
-      is_ma240_normal_ok = ma240_bias <= bias_threshold
+    ma240_bias = float(row_t0["ma240_bias"])
+    if pd.isna(ma240_bias):
+      raise ValueError("ma240_bias 包含 NaN 數據")
 
+    bias_threshold = (
+        max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
+    )
+    is_ma240_normal_ok = ma240_bias <= bias_threshold
+    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
-    # 4. 大盤年線乖離率 (不補 0)
-    m_info = m_info or {}
-    market_bias_raw = m_info.get(
-        "taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct")
-    )
-    if market_bias_raw is None or pd.isna(market_bias_raw):
-      market_bias_raw = row_t0.get("taiex_ma240_bias_pct")
+    if m_info is None:
+      raise TypeError("大盤資料字典 (market_info/m_info) 未傳入或為 None")
+    market_bias_pct = float(m_info["taiex_ma240_bias_pct"])
+    if pd.isna(market_bias_pct):
+      raise ValueError("taiex_ma240_bias_pct 包含 NaN 數據")
 
-    if market_bias_raw is not None and pd.notna(market_bias_raw):
-      market_bias_val = float(market_bias_raw)
-      market_bias_pct = (
-          market_bias_val
-          if abs(market_bias_val) > 1.0
-          else market_bias_val * 100.0
-      )
-      m_threshold = (
-          max_market_ma240_bias * 100.0
-          if max_market_ma240_bias <= 1.0
-          else max_market_ma240_bias
-      )
-      cond9_market_ma240_ok = market_bias_pct <= m_threshold
-    else:
-      market_bias_pct = np.nan
-      cond9_market_ma240_ok = False
+    m_threshold = (
+        max_market_ma240_bias * 100.0
+        if max_market_ma240_bias <= 1.0
+        else max_market_ma240_bias
+    )
+    cond9_market_ma240_ok = market_bias_pct <= m_threshold
 
     base_hit = (
         cond1_trend
@@ -2067,8 +1088,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
         and cond9_market_ma240_ok
     )
 
-    stock_id = str(row_t0.get("stock_id"))
-    date_t0_str = str(row_t0.get("date"))
+    stock_id = str(row_t0["stock_id"])
+    date_t0_str = str(row_t0["date"])
 
     details = {
         "close_t0": close_t0,
@@ -2124,9 +1145,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
   is_hit = base_hit and cond8_right_confirm_ok
 
   if verbose:
-    date_confirm_str = str(
-        row_confirm.get("date", row_confirm.get("日期", ""))
-    )
+    date_confirm_str = str(row_confirm["date"])
     stock_id = details["stock_id"]
     date_t0_str = details["date_t0_str"]
 
@@ -2142,57 +1161,61 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     c10_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
     c11_m = "✓" if cond8_right_confirm_ok else "✕"
 
-    result_str = "🔥 [精準降噪旗艦通過建倉]" if is_hit else "⚪ [未通過過濾]"
+    result_str = "🔥 [精準降噪旗艦通關建倉]" if is_hit else "⚪ [未通過過濾]"
 
-    bias_val = details["ma240_bias"]
-    bias_disp = f"{bias_val:.2f}%" if pd.notna(bias_val) else "N/A"
-    slope_val = details["easy_ols_slope"]
-    slope_disp = f"{slope_val:.4f}" if pd.notna(slope_val) else "N/A"
-    mkt_val = details["market_bias_pct"]
-    mkt_disp = f"{mkt_val:.2f}%" if pd.notna(mkt_val) else "N/A"
-    easy_b_val = details["easy_bias_pct"]
-    easy_b_disp = f"{easy_b_val:.2f}%" if pd.notna(easy_b_val) else "N/A"
+    c_close = details["close_t0"]
+    c_ma60 = details["ma60_t0"]
+    c_vratio = details["vol_ratio"]
+    c_vlots = details["vol_lots_t0"]
+    c_osct0 = details["osc_t0"]
+    c_osctm1 = details["osc_tm1"]
+    c_osctm2 = details["osc_tm2"]
+    c_easyb = details["easy_bias_pct"]
+    c_redk = details["is_red_k"]
+    c_ushad = details["upper_shadow_pct"]
+    c_bias = details["ma240_bias"]
+    c_slope = details["easy_ols_slope"]
+    c_mkt = details["market_bias_pct"]
+    w_tm2 = details["was_below_tm2"]
+    w_tm3 = details["was_below_tm3"]
+    w_tm4 = details["was_below_tm4"]
 
-    print("\n" + "=" * 65)
+    print()
+    print("=" * 65)
     print(
         f"🔔 [F3_洗盤後_20261001_1_1_3 (精準降噪旗艦版)] 股票: {stock_id} | 觸發日:"
         f" {date_t0_str} -> 確認日: {date_confirm_str}"
     )
     print("-" * 65)
     print(
-        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${details['close_t0']:.2f} >"
-        f" ${details['ma60_t0']:.2f})"
+        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${c_close:.2f} >"
+        f" ${c_ma60:.2f})"
     )
-    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${details['close_t0']:.2f}")
+    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${c_close:.2f}")
     print(
-        f"  [{c3_m}] 3. 🌟 量能黃金比例 : {details['vol_ratio']:.2f}倍 (1.2~2.5倍,"
-        f" {details['vol_lots_t0']:,.0f}張)"
+        f"  [{c3_m}] 3. 🌟 量能黃金比例 : {c_vratio:.2f}倍 (1.2~2.5倍,"
+        f" {c_vlots:,.0f}張)"
     )
-    print(f"  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
     print(
-        f"  [{c5_m}] 5. 洗盤甩轎軌跡 :"
-        f" T-2({details['was_below_tm2']}) | T-3({details['was_below_tm3']}) |"
-        f" T-4({details['was_below_tm4']})"
-    )
-    print(
-        f"  [{c6_m}] 6. 🌟 MACD綠柱提前勾頭 : OSC"
-        f" T0({details['osc_t0']:.3f}) > T-1({details['osc_tm1']:.3f}) <="
-        f" T-2({details['osc_tm2']:.3f})"
+        f"  [{c6_m}] 6. 🌟 MACD綠柱提前勾頭 : OSC T0({c_osct0:.3f}) >"
+        f" T-1({c_osctm1:.3f}) <= T-2({c_osctm2:.3f})"
     )
     print(
-        f"  [{c7_m}] 7. 🌟 輕鬆線低乖離防守 : {easy_b_disp} (門檻 0% < 乖離"
+        f"  [{c7_m}] 7. 🌟 輕鬆線低乖離防守 : {c_easyb:.2f}% (門檻 0% < 乖離"
         " <= 5.0%)"
     )
     print(
-        f"  [{c8_m}] 8. 🌟 K棒品質防偽 : 紅K={details['is_red_k']} |"
-        f" 上影線={details['upper_shadow_pct']:.1f}% (<= 30%)"
+        f"  [{c8_m}] 8. 🌟 K棒品質防偽 : 紅K={c_redk} |"
+        f" 上影線={c_ushad:.1f}% (<= 30%)"
     )
     print(
-        f"  [{c9_m}] 9. 個股年線乖離 & OLS豁免 : 乖離率={bias_disp} |"
-        f" OLS斜率={slope_disp}"
+        f"  [{c9_m}] 9. 個股年線乖離 & OLS豁免 : 乖離率={c_bias:.2f}% |"
+        f" OLS斜率={c_slope:.4f}"
     )
     print(
-        f"  [{c10_m}] 10. 大盤年線風控 : 乖離率={mkt_disp} (門檻 <="
+        f"  [{c10_m}] 10. 大盤年線風控 : 乖離率={c_mkt:.2f}% (門檻 <="
         f" {max_market_ma240_bias*100:.1f}%)"
     )
     print(
@@ -2201,7 +1224,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     )
     print("-" * 65)
     print(f"🎯 最終觸發結果: {result_str}")
-    print("=" * 65 + "\n")
+    print("=" * 65)
+    print()
 
   info = (
       {
@@ -2209,31 +1233,922 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
-          "輕鬆線乖離率": (
-              f"{details['easy_bias_pct']:.2f}%"
-              if pd.notna(details["easy_bias_pct"])
-              else "N/A"
-          ),
+          "輕鬆線乖離率": f"{details['easy_bias_pct']:.2f}%",
           "量能爆發倍數": f"{details['vol_ratio']:.2f}倍",
-          "年線乖離率": (
-              f"{details['ma240_bias']:.2f}%"
-              if pd.notna(details["ma240_bias"])
-              else "N/A"
-          ),
-          "輕鬆線OLS斜率": (
-              f"{details['easy_ols_slope']:.4f}"
-              if pd.notna(details["easy_ols_slope"])
-              else "N/A"
-          ),
-          "大盤年線乖離率": (
-              f"{details['market_bias_pct']:.2f}%"
-              if pd.notna(details["market_bias_pct"])
-              else "N/A"
-          ),
+          "年線乖離率": f"{details['ma240_bias']:.2f}%",
+          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
+          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
           f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
           "操作建議": (
               "結合大盤風控、MACD勾頭提前卡位、輕鬆線低乖離(<5%)與紅K上影線過濾，大幅降低假突破與拉回風險。"
+          ),
+      }
+      if is_hit
+      else {}
+  )
+
+  return is_hit, info
+
+
+# -----------------------------------------------------------------------------
+# 2. 20261001_1_1_4 (黃金降噪與飆股最大化平衡版)
+# -----------------------------------------------------------------------------
+def st_qiantang_f3_after_shakeout_20261001_1_1_4(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = True,
+    delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
+    threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
+    max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
+    max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
+    min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
+    max_easy_bias: float = 12.0,  # 🌟 輕鬆線適度乖離上限 (0% < 乖離率 <= 12.0%)
+    max_upper_shadow: float = 50.0,  # 🌟 避雷針過濾門檻：上影線比例 (<= 50.0%)
+    min_vol_ratio: float = 1.2,  # 🌟 量能黃金下限 (>= 1.2 倍 5日均量)
+    market_info: dict = None,  # 當日大盤資料
+) -> tuple[bool, dict]:
+  """【F3_洗盤後 (20261001_1_1_4 黃金降噪與飆股最大化平衡版)】
+
+  核心架構：
+  1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元
+  2. 🌟 量能黃金爆發區間：成交量 >= 350 張 且 今日成交量 / 5日均量 >= 1.2 倍 (取消 2.5倍上限，放行巨量換手飆股)
+  3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線 (close > easy_line)
+  4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line)
+  5. 🌟 MACD 綠柱提前勾頭：OSC_T0 > OSC_T-1 且 OSC_T-1 <= OSC_T-2 (提前 2~3 天卡位)
+  6. 🌟 輕鬆線適度乖離防守：0% < 輕鬆線乖離率 <= 12.0% (放寬放行強勢起漲飆股)
+  7. 🌟 避雷針過濾：上影線比例 <= 50.0% (剔除拉高倒貨型態，取消硬性紅 K 限制)
+  8. 🌟 個股年線風控 & OLS 豁免：(Close_T0 - MA240_T0) / MA240_T0 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0 (飆股豁免)
+  9. 🌟 大盤年線風控防線：大盤年線乖離率 <= 12.0% (防範大盤高檔過熱風險)
+  10. 🌟 右側二次確認：觸發後第 2 日 (T+2) 報酬率 >= -2.0%
+  """
+  profile = profile or {}
+
+  min_required_len = 240 + 5 + delay_days
+  if len(df_single) < min_required_len:
+    if verbose:
+      print(
+          f"❌ [策略 20261001_1_1_4] 資料 {len(df_single)}筆不足, 需 {min_required_len} 筆"
+      )
+    return False, {}
+
+  df_single = df_single.copy()
+
+  if "MA60" not in df_single.columns:
+    df_single["MA60"] = df_single["close"].rolling(window=60).mean()
+  if "MA240" not in df_single.columns:
+    df_single["MA240"] = df_single["close"].rolling(window=240).mean()
+
+  def _check_f3_base_signal(pos_idx: int, m_info: dict = None) -> tuple[bool, dict]:
+    row_t0 = df_single.iloc[pos_idx]
+    row_tm1 = df_single.iloc[pos_idx - 1]
+    row_tm2 = df_single.iloc[pos_idx - 2]
+    row_tm3 = df_single.iloc[pos_idx - 3]
+    row_tm4 = df_single.iloc[pos_idx - 4]
+
+    close_t0 = float(row_t0["close"])
+    open_t0 = float(row_t0["open"])
+    high_t0 = float(row_t0["max"])
+    low_t0 = float(row_t0["min"])
+    easy_t0 = float(row_t0["easy_line"])
+    vol_t0 = float(row_t0["Trading_Volume"])
+    ma60_t0 = float(row_t0["MA60"])
+    ma240_t0 = float(row_t0["MA240"])
+
+    osc_t0 = float(row_t0["osc"])
+    osc_tm1 = float(row_tm1["osc"])
+    osc_tm2 = float(row_tm2["osc"])
+    if pd.isna(osc_t0) or pd.isna(osc_tm1) or pd.isna(osc_tm2):
+      raise ValueError("MACD (osc) 包含 NaN 數據")
+
+    close_tm1 = float(row_tm1["close"])
+    easy_tm1 = float(row_tm1["easy_line"])
+
+    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
+    vol_ma5 = float(recent_vols.mean())
+    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+    vol_ratio = vol_lots_t0 / vol_ma5_lots if vol_ma5_lots > 0 else 0.0
+
+    cond1_trend = close_t0 > ma60_t0
+    cond2_price_ok = close_t0 >= 5.0
+    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_ratio >= min_vol_ratio)
+    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
+    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
+    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
+    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
+
+    cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
+
+    easy_bias_pct = (
+        ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else np.nan
+    )
+    if pd.isna(easy_bias_pct):
+      raise ValueError("輕鬆線乖離率計算結果為 NaN")
+    cond_low_bias = 0.0 < easy_bias_pct <= max_easy_bias
+
+    total_len = high_t0 - low_t0
+    upper_shadow_pct = (
+        ((high_t0 - max(close_t0, open_t0)) / total_len) * 100.0
+        if total_len > 0
+        else 0.0
+    )
+    cond_kbar_ok = upper_shadow_pct <= max_upper_shadow
+
+    easy_ols_slope = float(row_t0["easy_line_slope"])
+    if pd.isna(easy_ols_slope):
+      raise ValueError("easy_line_slope 包含 NaN 數據")
+
+    ma240_bias = float(row_t0["ma240_bias"])
+    if pd.isna(ma240_bias):
+      raise ValueError("ma240_bias 包含 NaN 數據")
+
+    bias_threshold = (
+        max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
+    )
+    is_ma240_normal_ok = ma240_bias <= bias_threshold
+    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
+    cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
+
+    if m_info is None:
+      raise TypeError("大盤資料字典 (market_info/m_info) 未傳入或為 None")
+    market_bias_pct = float(m_info["taiex_ma240_bias_pct"])
+    if pd.isna(market_bias_pct):
+      raise ValueError("taiex_ma240_bias_pct 包含 NaN 數據")
+
+    m_threshold = (
+        max_market_ma240_bias * 100.0
+        if max_market_ma240_bias <= 1.0
+        else max_market_ma240_bias
+    )
+    cond9_market_ma240_ok = market_bias_pct <= m_threshold
+
+    base_hit = (
+        cond1_trend
+        and cond2_price_ok
+        and cond3_vol_ok
+        and cond4_continuous
+        and cond5_shakeout
+        and cond6_macd_hook
+        and cond_low_bias
+        and cond_kbar_ok
+        and cond7_ma240_bias_ok
+        and cond9_market_ma240_ok
+    )
+
+    stock_id = str(row_t0["stock_id"])
+    date_t0_str = str(row_t0["date"])
+
+    details = {
+        "close_t0": close_t0,
+        "open_t0": open_t0,
+        "easy_t0": easy_t0,
+        "easy_bias_pct": easy_bias_pct,
+        "ma60_t0": ma60_t0,
+        "ma240_t0": ma240_t0,
+        "ma240_bias": ma240_bias,
+        "easy_ols_slope": easy_ols_slope,
+        "market_bias_pct": market_bias_pct,
+        "vol_lots_t0": vol_lots_t0,
+        "vol_ma5_lots": vol_ma5_lots,
+        "vol_ratio": vol_ratio,
+        "osc_t0": osc_t0,
+        "osc_tm1": osc_tm1,
+        "osc_tm2": osc_tm2,
+        "upper_shadow_pct": upper_shadow_pct,
+        "stock_id": stock_id,
+        "date_t0_str": date_t0_str,
+        "cond1_trend": cond1_trend,
+        "cond2_price_ok": cond2_price_ok,
+        "cond3_vol_ok": cond3_vol_ok,
+        "cond4_continuous": cond4_continuous,
+        "cond5_shakeout": cond5_shakeout,
+        "cond6_macd_hook": cond6_macd_hook,
+        "cond_low_bias": cond_low_bias,
+        "cond_kbar_ok": cond_kbar_ok,
+        "cond7_ma240_bias_ok": cond7_ma240_bias_ok,
+        "is_ma240_normal_ok": is_ma240_normal_ok,
+        "is_ols_exempt_ok": is_ols_exempt_ok,
+        "cond9_market_ma240_ok": cond9_market_ma240_ok,
+        "was_below_tm2": was_below_tm2,
+        "was_below_tm3": was_below_tm3,
+        "was_below_tm4": was_below_tm4,
+    }
+    return base_hit, details
+
+  t0_pos = -(1 + delay_days)
+  t_confirm_pos = -1
+
+  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
+
+  row_confirm = df_single.iloc[t_confirm_pos]
+  close_confirm = float(row_confirm["close"])
+  close_t0 = details["close_t0"]
+
+  confirm_return = (
+      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
+  )
+  cond8_right_confirm_ok = confirm_return >= threshold_pct
+
+  is_hit = base_hit and cond8_right_confirm_ok
+
+  if verbose:
+    date_confirm_str = str(row_confirm["date"])
+    stock_id = details["stock_id"]
+    date_t0_str = details["date_t0_str"]
+
+    c1_m = "✓" if details["cond1_trend"] else "✕"
+    c2_m = "✓" if details["cond2_price_ok"] else "✕"
+    c3_m = "✓" if details["cond3_vol_ok"] else "✕"
+    c4_m = "✓" if details["cond4_continuous"] else "✕"
+    c5_m = "✓" if details["cond5_shakeout"] else "✕"
+    c6_m = "✓" if details["cond6_macd_hook"] else "✕"
+    c7_m = "✓" if details["cond_low_bias"] else "✕"
+    c8_m = "✓" if details["cond_kbar_ok"] else "✕"
+    c9_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
+    c10_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
+    c11_m = "✓" if cond8_right_confirm_ok else "✕"
+
+    result_str = "🔥 [黃金降噪平衡版通關建倉]" if is_hit else "⚪ [未通過過濾]"
+
+    c_close = details["close_t0"]
+    c_ma60 = details["ma60_t0"]
+    c_vratio = details["vol_ratio"]
+    c_vlots = details["vol_lots_t0"]
+    c_osct0 = details["osc_t0"]
+    c_osctm1 = details["osc_tm1"]
+    c_osctm2 = details["osc_tm2"]
+    c_easyb = details["easy_bias_pct"]
+    c_ushad = details["upper_shadow_pct"]
+    c_bias = details["ma240_bias"]
+    c_slope = details["easy_ols_slope"]
+    c_mkt = details["market_bias_pct"]
+    w_tm2 = details["was_below_tm2"]
+    w_tm3 = details["was_below_tm3"]
+    w_tm4 = details["was_below_tm4"]
+
+    print()
+    print("=" * 65)
+    print(
+        f"🔔 [F3_洗盤後_20261001_1_1_4 (黃金降噪平衡版)] 股票: {stock_id} | 觸發日:"
+        f" {date_t0_str} -> 確認日: {date_confirm_str}"
+    )
+    print("-" * 65)
+    print(
+        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${c_close:.2f} >"
+        f" ${c_ma60:.2f})"
+    )
+    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${c_close:.2f}")
+    print(
+        f"  [{c3_m}] 3. 🌟 量能黃金比例 : {c_vratio:.2f}倍 (>=1.2倍,"
+        f" {c_vlots:,.0f}張)"
+    )
+    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
+    print(
+        f"  [{c6_m}] 6. 🌟 MACD綠柱提前勾頭 : OSC T0({c_osct0:.3f}) >"
+        f" T-1({c_osctm1:.3f}) <= T-2({c_osctm2:.3f})"
+    )
+    print(
+        f"  [{c7_m}] 7. 🌟 輕鬆線適度乖離防守 : {c_easyb:.2f}% (門檻 0% < 乖離"
+        " <= 12.0%)"
+    )
+    print(f"  [{c8_m}] 8. 🌟 避雷針防偽 : 上影線={c_ushad:.1f}% (<= 50%)")
+    print(
+        f"  [{c9_m}] 9. 個股年線乖離 & OLS豁免 : 乖離率={c_bias:.2f}% |"
+        f" OLS斜率={c_slope:.4f}"
+    )
+    print(
+        f"  [{c10_m}] 10. 大盤年線風控 : 乖離率={c_mkt:.2f}% (門檻 <="
+        f" {max_market_ma240_bias*100:.1f}%)"
+    )
+    print(
+        f"  [{c11_m}] 11. 右側二次確認 (T+{delay_days} 報酬 >="
+        f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
+    )
+    print("-" * 65)
+    print(f"🎯 最終觸發結果: {result_str}")
+    print("=" * 65)
+    print()
+
+  info = (
+      {
+          "選股公式": "st_qiantang_f3_after_shakeout_20261001_1_1_4",
+          "股票代號": details["stock_id"],
+          "訊號日期": details["date_t0_str"],
+          "觸發價格": close_t0,
+          "輕鬆線乖離率": f"{details['easy_bias_pct']:.2f}%",
+          "量能爆發倍數": f"{details['vol_ratio']:.2f}倍",
+          "年線乖離率": f"{details['ma240_bias']:.2f}%",
+          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
+          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
+          "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
+          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
+          "操作建議": (
+              "結合大盤風控、MACD綠柱提前勾頭、輕鬆線適度乖離(<12%)與避雷針(<=50%)過濾，兼顧高飆股留存率與低深跌風險。"
+          ),
+      }
+      if is_hit
+      else {}
+  )
+
+  return is_hit, info
+
+
+# -----------------------------------------------------------------------------
+# 3. 20261001_1_1_5 (黃金雙防線版)
+# -----------------------------------------------------------------------------
+def st_qiantang_f3_after_shakeout_20261001_1_1_5(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = True,
+    delay_days: int = 3,  # 🌟 右側觀察天數由 T+2 升級為 T+3 (預設 3 天)
+    threshold_pct: float = -0.005,  # 🌟 右側 T+3 觀察期門檻：報酬率 >= -0.5% (-0.005)
+    max_ma240_bias: float = 0.25,  # 個股年線乖離率上限 (25.0%)
+    max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
+    min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
+    max_ma240_deduction_pos: float = 25.0,  # 🌟 【新增防線一】年線扣抵位置上限 (25.0%)
+    market_info: dict = None,  # 當日大盤資料
+) -> tuple[bool, dict]:
+  """【F3_洗盤後 (20261022_1_1_5 黃金雙防線版)】
+
+  完全承襲 1_1_2 (st_qiantang_f3_after_shakeout_20261001_1_1_2) 核心架構與飆股基因：
+  1. 趨勢與價格過濾：Close_T0 > MA60 且 Close_T0 >= 5.0 元
+  2. 量能過濾：成交量 >= 350 張 且 大於前 5 日均量 (vol_t0 > vol_ma5)
+  3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線
+  4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line)
+  5. MACD 動能過濾：柱狀體由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0)
+  6. 個股年線風控 & OLS 豁免：年線乖離 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0 (飆股豁免)
+  7. 大盤年線風控防線：大盤年線乖離率 <= 12.0%
+  8. 🌟 【防線一：長線年線扣抵結構防線】年線扣抵位置 <= 25.0% (避開解套賣壓天花板)
+  9. 🌟 【防線二：右側 Confirmation 升級】T+3 右側觀察期報酬率 >= -0.5% (主力實質鎖碼)
+  """
+  profile = profile or {}
+
+  min_required_len = 240 + 5 + delay_days
+  if len(df_single) < min_required_len:
+    if verbose:
+      print(
+          f"❌ [策略 20261001_1_1_5] 資料 {len(df_single)}筆不足, 需 {min_required_len} 筆"
+      )
+    return False, {}
+
+  df_single = df_single.copy()
+  if "MA60" not in df_single.columns:
+    df_single["MA60"] = df_single["close"].rolling(window=60).mean()
+  if "MA240" not in df_single.columns:
+    df_single["MA240"] = df_single["close"].rolling(window=240).mean()
+
+  def _check_f3_base_signal(pos_idx: int, m_info: dict = None) -> tuple[bool, dict]:
+    row_t0 = df_single.iloc[pos_idx]
+    row_tm1 = df_single.iloc[pos_idx - 1]
+    row_tm2 = df_single.iloc[pos_idx - 2]
+    row_tm3 = df_single.iloc[pos_idx - 3]
+    row_tm4 = df_single.iloc[pos_idx - 4]
+
+    close_t0 = float(row_t0["close"])
+    easy_t0 = float(row_t0["easy_line"])
+    vol_t0 = float(row_t0["Trading_Volume"])
+    ma60_t0 = float(row_t0["MA60"])
+    ma240_t0 = float(row_t0["MA240"])
+
+    osc_t0 = float(row_t0["osc"])
+    osc_tm1 = float(row_tm1["osc"])
+    if pd.isna(osc_t0) or pd.isna(osc_tm1):
+      raise ValueError("MACD (osc) 包含 NaN 數據")
+
+    close_tm1 = float(row_tm1["close"])
+    easy_tm1 = float(row_tm1["easy_line"])
+
+    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
+    vol_ma5 = float(recent_vols.mean())
+    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+
+    cond1_trend = close_t0 > ma60_t0
+    cond2_price_ok = close_t0 >= 5.0
+    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_lots_t0 > vol_ma5_lots)
+    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
+    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
+    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
+    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
+
+    cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
+
+    easy_ols_slope = float(row_t0["easy_line_slope"])
+    if pd.isna(easy_ols_slope):
+      raise ValueError("easy_line_slope 包含 NaN 數據")
+
+    ma240_bias = float(row_t0["ma240_bias"])
+    if pd.isna(ma240_bias):
+      raise ValueError("ma240_bias 包含 NaN 數據")
+
+    bias_threshold = (
+        max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
+    )
+    is_ma240_normal_ok = ma240_bias <= bias_threshold
+    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
+    cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
+
+    if m_info is None:
+      raise TypeError("大盤資料字典 (market_info/m_info) 未傳入或為 None")
+    market_bias_pct = float(m_info["taiex_ma240_bias_pct"])
+    if pd.isna(market_bias_pct):
+      raise ValueError("taiex_ma240_bias_pct 包含 NaN 數據")
+
+    m_threshold = (
+        max_market_ma240_bias * 100.0
+        if max_market_ma240_bias <= 1.0
+        else max_market_ma240_bias
+    )
+    cond9_market_ma240_ok = market_bias_pct <= m_threshold
+
+    ma240_deduction_val = float(row_t0["ma240_deduct_bias"])
+    if pd.isna(ma240_deduction_val):
+      raise ValueError("ma240_deduct_bias 包含 NaN 數據")
+
+    cond10_ma240_deduction_ok = ma240_deduction_val <= max_ma240_deduction_pos
+
+    base_hit = (
+        cond1_trend
+        and cond2_price_ok
+        and cond3_vol_ok
+        and cond4_continuous
+        and cond5_shakeout
+        and cond6_macd_ok
+        and cond7_ma240_bias_ok
+        and cond9_market_ma240_ok
+        and cond10_ma240_deduction_ok
+    )
+
+    stock_id = str(row_t0["stock_id"])
+    date_t0_str = str(row_t0["date"])
+
+    details = {
+        "close_t0": close_t0,
+        "easy_t0": easy_t0,
+        "ma60_t0": ma60_t0,
+        "ma240_t0": ma240_t0,
+        "ma240_bias": ma240_bias,
+        "easy_ols_slope": easy_ols_slope,
+        "market_bias_pct": market_bias_pct,
+        "ma240_deduction_val": ma240_deduction_val,
+        "vol_lots_t0": vol_lots_t0,
+        "vol_ma5_lots": vol_ma5_lots,
+        "osc_t0": osc_t0,
+        "osc_tm1": osc_tm1,
+        "stock_id": stock_id,
+        "date_t0_str": date_t0_str,
+        "cond1_trend": cond1_trend,
+        "cond2_price_ok": cond2_price_ok,
+        "cond3_vol_ok": cond3_vol_ok,
+        "cond4_continuous": cond4_continuous,
+        "cond5_shakeout": cond5_shakeout,
+        "cond6_macd_ok": cond6_macd_ok,
+        "cond7_ma240_bias_ok": cond7_ma240_bias_ok,
+        "is_ma240_normal_ok": is_ma240_normal_ok,
+        "is_ols_exempt_ok": is_ols_exempt_ok,
+        "cond9_market_ma240_ok": cond9_market_ma240_ok,
+        "cond10_ma240_deduction_ok": cond10_ma240_deduction_ok,
+        "was_below_tm2": was_below_tm2,
+        "was_below_tm3": was_below_tm3,
+        "was_below_tm4": was_below_tm4,
+    }
+    return base_hit, details
+
+  t0_pos = -(1 + delay_days)
+  t_confirm_pos = -1
+
+  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
+
+  row_confirm = df_single.iloc[t_confirm_pos]
+  close_confirm = float(row_confirm["close"])
+  close_t0 = details["close_t0"]
+
+  confirm_return = (
+      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
+  )
+  cond8_right_confirm_ok = confirm_return >= threshold_pct
+
+  is_hit = base_hit and cond8_right_confirm_ok
+
+  if verbose:
+    date_confirm_str = str(row_confirm["date"])
+    stock_id = details["stock_id"]
+    date_t0_str = details["date_t0_str"]
+
+    c1_m = "✓" if details["cond1_trend"] else "✕"
+    c2_m = "✓" if details["cond2_price_ok"] else "✕"
+    c3_m = "✓" if details["cond3_vol_ok"] else "✕"
+    c4_m = "✓" if details["cond4_continuous"] else "✕"
+    c5_m = "✓" if details["cond5_shakeout"] else "✕"
+    c6_m = "✓" if details["cond6_macd_ok"] else "✕"
+    c7_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
+    c8_m = "✓" if cond8_right_confirm_ok else "✕"
+    c9_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
+    c10_m = "✓" if details["cond10_ma240_deduction_ok"] else "✕"
+
+    ma240_normal_str = "✓" if details["is_ma240_normal_ok"] else "✕"
+    ols_exempt_str = "✓" if details["is_ols_exempt_ok"] else "✕"
+    result_str = "🔥 [1_1_5黃金雙防線通關建倉]" if is_hit else "⚪ [未通過過濾]"
+
+    c_close = details["close_t0"]
+    c_ma60 = details["ma60_t0"]
+    c_vlots = details["vol_lots_t0"]
+    c_vma5 = details["vol_ma5_lots"]
+    c_osct0 = details["osc_t0"]
+    c_osctm1 = details["osc_tm1"]
+    c_bias = details["ma240_bias"]
+    c_slope = details["easy_ols_slope"]
+    c_mkt = details["market_bias_pct"]
+    c_ded = details["ma240_deduction_val"]
+    w_tm2 = details["was_below_tm2"]
+    w_tm3 = details["was_below_tm3"]
+    w_tm4 = details["was_below_tm4"]
+
+    print()
+    print("=" * 65)
+    print(
+        f"🔔 [F3_洗盤後_20261022_1_1_5 (1_1_2基底 + 年線扣抵<=25% +"
+        f" T+3確認>=-0.5%)] 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日:"
+        f" {date_confirm_str}"
+    )
+    print("-" * 65)
+    print(
+        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${c_close:.2f} >"
+        f" ${c_ma60:.2f})"
+    )
+    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${c_close:.2f}")
+    print(
+        f"  [{c3_m}] 3. 量能過濾 : {c_vlots:,.0f} 張 (>5日均量 {c_vma5:,.0f}張 且"
+        " >=350張)"
+    )
+    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
+    print(
+        f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({c_osct0:.3f}) > 0 且 T-1 OSC"
+        f" ({c_osctm1:.3f}) <= 0"
+    )
+    print(
+        f"  [{c7_m}] 7. 個股年線乖離 & OLS豁免 : 乖離率={c_bias:.2f}% (門檻<=25%) |"
+        f" OLS斜率={c_slope:.4f} -> [常態:{ma240_normal_str} |"
+        f" 豁免:{ols_exempt_str}]"
+    )
+    print(
+        f"  [{c9_m}] 8. 大盤年線風控 : 乖離率={c_mkt:.2f}% (門檻 <="
+        f" {max_market_ma240_bias*100:.1f}%)"
+    )
+    print(
+        f"  [{c10_m}] 9. 🌟 【防線一】年線扣抵位置 : {c_ded:.2f}% (門檻 <="
+        f" {max_ma240_deduction_pos:.1f}%)"
+    )
+    print(
+        f"  [{c8_m}] 10. 🌟 【防線二】T+{delay_days} 右側二次確認 (報酬 >="
+        f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
+    )
+    print("-" * 65)
+    print(f"🎯 最終觸發結果: {result_str}")
+    print("=" * 65)
+    print()
+
+  info = (
+      {
+          "選股公式": "st_qiantang_f3_after_shakeout_20261001_1_1_5",
+          "股票代號": details["stock_id"],
+          "訊號日期": details["date_t0_str"],
+          "觸發價格": close_t0,
+          "年線乖離率": f"{details['ma240_bias']:.2f}%",
+          "年線扣抵位置": f"{details['ma240_deduction_val']:.2f}%",
+          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
+          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
+          "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
+          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
+          "操作建議": (
+              f"1_1_2 基底升級 1_1_5 黃金雙防線版通過：年線扣抵 {details['ma240_deduction_val']:.1f}%"
+              f" (<=25%)，T+{delay_days}右側確認報酬 {confirm_return * 100:.1f}%"
+              f" (>= {threshold_pct * 100:.1f}%)。"
+          ),
+      }
+      if is_hit
+      else {}
+  )
+
+  return is_hit, info
+
+
+# -----------------------------------------------------------------------------
+# 4. 20261022_1_1_6 (籌碼共振與高位強勢旗艦版)
+# -----------------------------------------------------------------------------
+def st_qiantang_f3_after_shakeout_20261022_1_1_6(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = True,
+    delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
+    threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
+    max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
+    max_market_ma240_bias: float = 0.12,  # 大盤年線乖離率上限 (12.0%)
+    min_exempt_ols_slope: float = 1.0,  # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
+    min_dist_52w_high: float = -25.0,  # 🌟 【籌碼共振強勢防線 1】距 52 週高點比例 (>= -25.0%)
+    min_foreign_5d: float = -100.0,  # 🌟 【籌碼共振強勢防線 2】外資近 5 日累計張數 (> -100 張)
+    min_main_5d: float = 0.0,  # 🌟 【籌碼共振強勢防線 3】主力近 5 日累計張數 (> 0 張)
+    market_info: dict = None,  # 當日大盤資料
+) -> tuple[bool, dict]:
+  """【F3_洗盤後 (20261022_1_1_6 籌碼共振與高位強勢旗艦版)】
+
+  1_1_2 核心架構 + 三大位階籌碼共振防線：
+  1. 趨勢與價格過濾：Close_T0 > MA60 (季線多頭) 且 Close_T0 >= 5.0 元
+  2. 量能過濾：成交量 >= 350 張 且 大於前 5 日均量 (vol_t0 > vol_ma5)
+  3. 連續站穩輕鬆線：今日 (T0) 與昨日 (T-1) 收盤價均站上輕鬆線 (close > easy_line)
+  4. 洗盤甩轎軌跡：T-2、T-3 或 T-4 曾跌破輕鬆線 (Close <= easy_line)
+  5. MACD 動能過濾：柱狀體由綠翻紅 (T0 OSC > 0 且 T-1 OSC <= 0)
+  6. 個股年線風控 & OLS 豁免：年線乖離 <= 25.0% 或 輕鬆線 OLS 斜率 >= 1.0 (飆股豁免)
+  7. 大盤年線風控防線：大盤年線乖離率 <= 12.0%
+  8. 🌟 【防線一：位階過濾】距 52 週高點 >= -25.0% (排除深跌弱勢反彈股)
+  9. 🌟 【防線二：外資流向】外資近 5 日累計 > -100 張 (排除外資逢高提款倒貨股)
+  10. 🌟 【防線三：主力鎖碼】主力近 5 日累計 > 0 張 (要求主力大戶籌碼淨買超共振)
+  11. 右側二次確認：觸發後第 2 日 (T+2) 報酬率 >= -2.0%
+  """
+  profile = profile or {}
+
+  min_required_len = 240 + 5 + delay_days
+  if len(df_single) < min_required_len:
+    if verbose:
+      print(
+          f"❌ [策略 20261022_1_1_6] 資料 {len(df_single)}筆不足, 需 {min_required_len} 筆"
+      )
+    return False, {}
+
+  df_single = df_single.copy()
+  if "MA60" not in df_single.columns:
+    df_single["MA60"] = df_single["close"].rolling(window=60).mean()
+  if "MA240" not in df_single.columns:
+    df_single["MA240"] = df_single["close"].rolling(window=240).mean()
+
+  def _check_f3_base_signal(pos_idx: int, m_info: dict = None) -> tuple[bool, dict]:
+    row_t0 = df_single.iloc[pos_idx]
+    row_tm1 = df_single.iloc[pos_idx - 1]
+    row_tm2 = df_single.iloc[pos_idx - 2]
+    row_tm3 = df_single.iloc[pos_idx - 3]
+    row_tm4 = df_single.iloc[pos_idx - 4]
+
+    close_t0 = float(row_t0["close"])
+    easy_t0 = float(row_t0["easy_line"])
+    vol_t0 = float(row_t0["Trading_Volume"])
+    ma60_t0 = float(row_t0["MA60"])
+    ma240_t0 = float(row_t0["MA240"])
+
+    osc_t0 = float(row_t0["osc"])
+    osc_tm1 = float(row_tm1["osc"])
+    if pd.isna(osc_t0) or pd.isna(osc_tm1):
+      raise ValueError("MACD (osc) 包含 NaN 數據")
+
+    close_tm1 = float(row_tm1["close"])
+    easy_tm1 = float(row_tm1["easy_line"])
+
+    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    recent_vols = df_single["Trading_Volume"].iloc[pos_idx - 5 : pos_idx]
+    vol_ma5 = float(recent_vols.mean())
+    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+
+    cond1_trend = close_t0 > ma60_t0
+    cond2_price_ok = close_t0 >= 5.0
+    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_lots_t0 > vol_ma5_lots)
+    cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
+
+    was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
+    was_below_tm3 = float(row_tm3["close"]) <= float(row_tm3["easy_line"])
+    was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
+    cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
+
+    cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
+
+    easy_ols_slope = float(row_t0["easy_line_slope"])
+    if pd.isna(easy_ols_slope):
+      raise ValueError("easy_line_slope 包含 NaN 數據")
+
+    ma240_bias = float(row_t0["ma240_bias"])
+    if pd.isna(ma240_bias):
+      raise ValueError("ma240_bias 包含 NaN 數據")
+
+    bias_threshold = (
+        max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
+    )
+    is_ma240_normal_ok = ma240_bias <= bias_threshold
+    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
+    cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
+
+    if m_info is None:
+      raise TypeError("大盤資料字典 (market_info/m_info) 未傳入或為 None")
+    market_bias_pct = float(m_info["taiex_ma240_bias_pct"])
+    if pd.isna(market_bias_pct):
+      raise ValueError("taiex_ma240_bias_pct 包含 NaN 數據")
+
+    m_threshold = (
+        max_market_ma240_bias * 100.0
+        if max_market_ma240_bias <= 1.0
+        else max_market_ma240_bias
+    )
+    cond9_market_ma240_ok = market_bias_pct <= m_threshold
+
+    dist_52w_high_val = float(row_t0["dist_to_52w_high_pct"])
+    if pd.isna(dist_52w_high_val):
+      raise ValueError("dist_to_52w_high_pct 包含 NaN 數據")
+    cond10_dist_52w_high_ok = dist_52w_high_val >= min_dist_52w_high
+
+    foreign_raw = float(row_t0["foreign_5d_shares_sum"])
+    if pd.isna(foreign_raw):
+      raise ValueError("foreign_5d_shares_sum 包含 NaN 數據")
+    foreign_5d_val = (
+        foreign_raw / 1000.0 if abs(foreign_raw) > 50000 else foreign_raw
+    )
+    cond11_foreign_5d_ok = foreign_5d_val > min_foreign_5d
+
+    main_raw = float(row_t0["major_5d_shares_sum"])
+    if pd.isna(main_raw):
+      raise ValueError("major_5d_shares_sum 包含 NaN 數據")
+    main_5d_val = main_raw / 1000.0 if abs(main_raw) > 50000 else main_raw
+    cond12_main_5d_ok = main_5d_val > min_main_5d
+
+    base_hit = (
+        cond1_trend
+        and cond2_price_ok
+        and cond3_vol_ok
+        and cond4_continuous
+        and cond5_shakeout
+        and cond6_macd_ok
+        and cond7_ma240_bias_ok
+        and cond9_market_ma240_ok
+        and cond10_dist_52w_high_ok
+        and cond11_foreign_5d_ok
+        and cond12_main_5d_ok
+    )
+
+    stock_id = str(row_t0["stock_id"])
+    date_t0_str = str(row_t0["date"])
+
+    details = {
+        "close_t0": close_t0,
+        "easy_t0": easy_t0,
+        "ma60_t0": ma60_t0,
+        "ma240_t0": ma240_t0,
+        "ma240_bias": ma240_bias,
+        "easy_ols_slope": easy_ols_slope,
+        "market_bias_pct": market_bias_pct,
+        "dist_52w_high_val": dist_52w_high_val,
+        "foreign_5d_val": foreign_5d_val,
+        "main_5d_val": main_5d_val,
+        "vol_lots_t0": vol_lots_t0,
+        "vol_ma5_lots": vol_ma5_lots,
+        "osc_t0": osc_t0,
+        "osc_tm1": osc_tm1,
+        "stock_id": stock_id,
+        "date_t0_str": date_t0_str,
+        "cond1_trend": cond1_trend,
+        "cond2_price_ok": cond2_price_ok,
+        "cond3_vol_ok": cond3_vol_ok,
+        "cond4_continuous": cond4_continuous,
+        "cond5_shakeout": cond5_shakeout,
+        "cond6_macd_ok": cond6_macd_ok,
+        "cond7_ma240_bias_ok": cond7_ma240_bias_ok,
+        "is_ma240_normal_ok": is_ma240_normal_ok,
+        "is_ols_exempt_ok": is_ols_exempt_ok,
+        "cond9_market_ma240_ok": cond9_market_ma240_ok,
+        "cond10_dist_52w_high_ok": cond10_dist_52w_high_ok,
+        "cond11_foreign_5d_ok": cond11_foreign_5d_ok,
+        "cond12_main_5d_ok": cond12_main_5d_ok,
+        "was_below_tm2": was_below_tm2,
+        "was_below_tm3": was_below_tm3,
+        "was_below_tm4": was_below_tm4,
+    }
+    return base_hit, details
+
+  t0_pos = -(1 + delay_days)
+  t_confirm_pos = -1
+
+  base_hit, details = _check_f3_base_signal(t0_pos, market_info)
+
+  row_confirm = df_single.iloc[t_confirm_pos]
+  close_confirm = float(row_confirm["close"])
+  close_t0 = details["close_t0"]
+
+  confirm_return = (
+      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
+  )
+  cond8_right_confirm_ok = confirm_return >= threshold_pct
+
+  is_hit = base_hit and cond8_right_confirm_ok
+
+  if verbose:
+    date_confirm_str = str(row_confirm["date"])
+    stock_id = details["stock_id"]
+    date_t0_str = details["date_t0_str"]
+
+    c1_m = "✓" if details["cond1_trend"] else "✕"
+    c2_m = "✓" if details["cond2_price_ok"] else "✕"
+    c3_m = "✓" if details["cond3_vol_ok"] else "✕"
+    c4_m = "✓" if details["cond4_continuous"] else "✕"
+    c5_m = "✓" if details["cond5_shakeout"] else "✕"
+    c6_m = "✓" if details["cond6_macd_ok"] else "✕"
+    c7_m = "✓" if details["cond7_ma240_bias_ok"] else "✕"
+    c8_m = "✓" if cond8_right_confirm_ok else "✕"
+    c9_m = "✓" if details["cond9_market_ma240_ok"] else "✕"
+    c10_m = "✓" if details["cond10_dist_52w_high_ok"] else "✕"
+    c11_m = "✓" if details["cond11_foreign_5d_ok"] else "✕"
+    c12_m = "✓" if details["cond12_main_5d_ok"] else "✕"
+
+    result_str = "🔥 [1_1_6籌碼共振強勢通關建倉]" if is_hit else "⚪ [未通過過濾]"
+
+    c_close = details["close_t0"]
+    c_ma60 = details["ma60_t0"]
+    c_vlots = details["vol_lots_t0"]
+    c_vma5 = details["vol_ma5_lots"]
+    c_osct0 = details["osc_t0"]
+    c_osctm1 = details["osc_tm1"]
+    c_bias = details["ma240_bias"]
+    c_slope = details["easy_ols_slope"]
+    c_mkt = details["market_bias_pct"]
+    c_dist = details["dist_52w_high_val"]
+    c_for = details["foreign_5d_val"]
+    c_main = details["main_5d_val"]
+    w_tm2 = details["was_below_tm2"]
+    w_tm3 = details["was_below_tm3"]
+    w_tm4 = details["was_below_tm4"]
+
+    print()
+    print("=" * 65)
+    print(
+        f"🔔 [F3_洗盤後_20261022_1_1_6 (1_1_2基底 + 位階>=-25% + 外資近5日>-100 +"
+        f" 主力近5日>0)] 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日:"
+        f" {date_confirm_str}"
+    )
+    print("-" * 65)
+    print(
+        f"  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${c_close:.2f} >"
+        f" ${c_ma60:.2f})"
+    )
+    print(f"  [{c2_m}] 2. 收盤價 >= 5元 : ${c_close:.2f}")
+    print(
+        f"  [{c3_m}] 3. 量能過濾 : {c_vlots:,.0f} 張 (>5日均量 {c_vma5:,.0f}張 且"
+        " >=350張)"
+    )
+    print("  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線")
+    print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({w_tm2}) | T-3({w_tm3}) | T-4({w_tm4})")
+    print(
+        f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({c_osct0:.3f}) > 0 且 T-1 OSC"
+        f" ({c_osctm1:.3f}) <= 0"
+    )
+    print(
+        f"  [{c7_m}] 7. 個股年線乖離 & OLS豁免 : 乖離率={c_bias:.2f}% (門檻<=25%) |"
+        f" OLS斜率={c_slope:.4f}"
+    )
+    print(
+        f"  [{c9_m}] 8. 大盤年線風控 : 乖離率={c_mkt:.2f}% (門檻 <="
+        f" {max_market_ma240_bias*100:.1f}%)"
+    )
+    print(
+        f"  [{c10_m}] 9. 🌟 【防線一】距52週高點比例 : {c_dist:.2f}% (門檻 >="
+        f" {min_dist_52w_high:.1f}%)"
+    )
+    print(
+        f"  [{c11_m}] 10. 🌟 【防線二】外資近5日累計 : {c_for:,.0f} 張 (門檻 >"
+        f" {min_foreign_5d:.0f}張)"
+    )
+    print(
+        f"  [{c12_m}] 11. 🌟 【防線三】主力近5日累計 : {c_main:,.0f} 張 (門檻 >"
+        f" {min_main_5d:.0f}張)"
+    )
+    print(
+        f"  [{c8_m}] 12. 右側二次確認 (T+{delay_days} 報酬 >="
+        f" {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%"
+    )
+    print("-" * 65)
+    print(f"🎯 最終觸發結果: {result_str}")
+    print("=" * 65)
+    print()
+
+  info = (
+      {
+          "選股公式": "st_qiantang_f3_after_shakeout_20261022_1_1_6",
+          "股票代號": details["stock_id"],
+          "訊號日期": details["date_t0_str"],
+          "觸發價格": close_t0,
+          "距52週高點": f"{details['dist_52w_high_val']:.2f}%",
+          "外資近5日累計": f"{details['foreign_5d_val']:,.0f}張",
+          "主力近5日累計": f"{details['main_5d_val']:,.0f}張",
+          "年線乖離率": f"{details['ma240_bias']:.2f}%",
+          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
+          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
+          "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
+          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
+          "操作建議": (
+              "1_1_2 基底 + 籌碼雙防線通過：距離高點"
+              f" {details['dist_52w_high_val']:.1f}% (>= -25%)，外資近5日"
+              f" {details['foreign_5d_val']:,.0f}張 (> -100張)，主力近5日"
+              f" {details['main_5d_val']:,.0f}張 (> 0張)，大幅降低深跌陷阱率。"
           ),
       }
       if is_hit
