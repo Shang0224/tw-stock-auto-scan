@@ -1565,7 +1565,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
     max_easy_bias: float = 12.0,  # 輕鬆線適度乖離上限 (0% < 乖離率 <= 12.0%)
     max_upper_shadow: float = 50.0,  # 避雷針過濾門檻：上影線比例 (<= 50.0%)
     min_vol_ratio: float = 1.2,  # 量能黃金下限 (>= 1.2 倍 5日均量)
-    market_info: dict = None,  # 當日大盤秒查資料字典
+    market_info: dict = None,  # 🌟 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (20261001_1_1_4 黃金降噪與飆股最大化平衡版)】"""
   profile = profile or {}
@@ -1573,7 +1573,10 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
     if verbose:
-      print(f"❌ [策略 20261001_1_1_4] 資料筆數不足 {min_required_len} 筆")
+      print(
+          f"❌ [策略 20261001_1_1_4] 資料 {len(df_single)}筆不足, 需"
+          f" {min_required_len} 筆"
+      )
     return False, {}
 
   df_single = df_single.copy()
@@ -1599,15 +1602,24 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
     ma60_t0 = float(row_t0["MA60"])
     ma240_t0 = float(row_t0["MA240"])
 
-    osc_t0 = float(
-        row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
+    osc_t0_raw = row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC")))
+    osc_tm1_raw = row_tm1.get(
+        "osc", row_tm1.get("macd_osc", row_tm1.get("OSC"))
     )
-    osc_tm1 = float(
-        row_tm1.get("osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0)))
+    osc_tm2_raw = row_tm2.get(
+        "osc", row_tm2.get("macd_osc", row_tm2.get("OSC"))
     )
-    osc_tm2 = float(
-        row_tm2.get("osc", row_tm2.get("macd_osc", row_tm2.get("OSC", 0.0)))
-    )
+
+    if pd.isna(osc_t0_raw) or pd.isna(osc_tm1_raw) or pd.isna(osc_tm2_raw):
+      cond6_macd_hook = False
+      osc_t0, osc_tm1, osc_tm2 = np.nan, np.nan, np.nan
+    else:
+      osc_t0, osc_tm1, osc_tm2 = (
+          float(osc_t0_raw),
+          float(osc_tm1_raw),
+          float(osc_tm2_raw),
+      )
+      cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
 
     close_tm1 = float(row_tm1["close"])
     easy_tm1 = float(row_tm1["easy_line"])
@@ -1628,12 +1640,14 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
     was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
     cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
 
-    cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
-
     easy_bias_pct = (
-        ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else 999.0
+        ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else np.nan
     )
-    cond_low_bias = 0.0 < easy_bias_pct <= max_easy_bias
+    cond_low_bias = (
+        (0.0 < easy_bias_pct <= max_easy_bias)
+        if pd.notna(easy_bias_pct)
+        else False
+    )
 
     total_len = high_t0 - low_t0
     upper_shadow_pct = (
@@ -1643,38 +1657,41 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
     )
     cond_kbar_ok = upper_shadow_pct <= max_upper_shadow
 
-    # 沿用預處理指標
     easy_ols_slope_raw = row_t0.get(
         "easy_line_slope",
-        row_t0.get("輕鬆線OLS斜率", row_t0.get("easy_ols_slope", 0.0)),
+        row_t0.get("輕鬆線OLS斜率", row_t0.get("easy_ols_slope")),
     )
-    easy_ols_slope = (
-        float(easy_ols_slope_raw) if pd.notna(easy_ols_slope_raw) else 0.0
-    )
+    if pd.isna(easy_ols_slope_raw):
+      easy_ols_slope = np.nan
+      is_ols_exempt_ok = False
+    else:
+      easy_ols_slope = float(easy_ols_slope_raw)
+      is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
 
     ma240_bias_raw = row_t0.get(
-        "ma240_bias",
-        row_t0.get("年線乖離率(%)", row_t0.get("ma240_bias_pct", 0.0)),
+        "ma240_bias", row_t0.get("年線乖離率(%)", row_t0.get("ma240_bias_pct"))
     )
-    ma240_bias = float(ma240_bias_raw) if pd.notna(ma240_bias_raw) else 0.0
+    if pd.isna(ma240_bias_raw):
+      ma240_bias = np.nan
+      is_ma240_normal_ok = False
+    else:
+      ma240_bias = float(ma240_bias_raw)
+      bias_threshold = (
+          max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
+      )
+      is_ma240_normal_ok = ma240_bias <= bias_threshold
 
-    bias_threshold = (
-        max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
-    )
-    is_ma240_normal_ok = ma240_bias <= bias_threshold
-    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
     m_info = m_info or {}
     market_bias_raw = m_info.get(
-        "taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct", None)
+        "taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct")
     )
     if market_bias_raw is None or pd.isna(market_bias_raw):
       market_bias_raw = row_t0.get(
           "大盤年線乖離率(%)",
           row_t0.get(
-              "market_ma240_bias_pct",
-              row_t0.get("taiex_ma240_bias_pct", None),
+              "market_ma240_bias_pct", row_t0.get("taiex_ma240_bias_pct")
           ),
       )
 
@@ -1692,8 +1709,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
       )
       cond9_market_ma240_ok = market_bias_pct <= m_threshold
     else:
-      market_bias_pct = 0.0
-      cond9_market_ma240_ok = True
+      market_bias_pct = np.nan
+      cond9_market_ma240_ok = False
 
     base_hit = (
         cond1_trend
@@ -1723,6 +1740,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
         "vol_ratio": vol_ratio,
         "stock_id": stock_id,
         "date_t0_str": date_t0_str,
+        "is_ma240_normal_ok": is_ma240_normal_ok,
+        "is_ols_exempt_ok": is_ols_exempt_ok,
     }
     return base_hit, details
 
@@ -1755,11 +1774,28 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
-          "輕鬆線乖離率": f"{details['easy_bias_pct']:.2f}%",
+          "輕鬆線乖離率": (
+              f"{details['easy_bias_pct']:.2f}%"
+              if pd.notna(details["easy_bias_pct"])
+              else "N/A"
+          ),
           "量能爆發倍數": f"{details['vol_ratio']:.2f}倍",
-          "年線乖離率": f"{details['ma240_bias']:.2f}%",
-          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
-          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
+          "年線乖離率": (
+              f"{details['ma240_bias']:.2f}%"
+              if pd.notna(details["ma240_bias"])
+              else "N/A"
+          ),
+          "輕鬆線OLS斜率": (
+              f"{details['easy_ols_slope']:.4f}"
+              if pd.notna(details["easy_ols_slope"])
+              else "N/A"
+          ),
+          "大盤年線乖離率": (
+              f"{details['market_bias_pct']:.2f}%"
+              if pd.notna(details["market_bias_pct"])
+              else "N/A"
+          ),
+          "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
           f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
           "操作建議": (
               "結合大盤風控、MACD綠柱提前勾頭、輕鬆線適度乖離(<12%)與避雷針(<=50%)過濾，兼顧高飆股留存率與低深跌風險。"
@@ -1793,7 +1829,10 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
     if verbose:
-      print(f"❌ [策略 20261001_1_1_3] 資料筆數不足 {min_required_len} 筆")
+      print(
+          f"❌ [策略 20261001_1_1_3] 資料 {len(df_single)}筆不足, 需"
+          f" {min_required_len} 筆"
+      )
     return False, {}
 
   df_single = df_single.copy()
@@ -1819,15 +1858,24 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     ma60_t0 = float(row_t0["MA60"])
     ma240_t0 = float(row_t0["MA240"])
 
-    osc_t0 = float(
-        row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC", 0.0)))
+    osc_t0_raw = row_t0.get("osc", row_t0.get("macd_osc", row_t0.get("OSC")))
+    osc_tm1_raw = row_tm1.get(
+        "osc", row_tm1.get("macd_osc", row_tm1.get("OSC"))
     )
-    osc_tm1 = float(
-        row_tm1.get("osc", row_tm1.get("macd_osc", row_tm1.get("OSC", 0.0)))
+    osc_tm2_raw = row_tm2.get(
+        "osc", row_tm2.get("macd_osc", row_tm2.get("OSC"))
     )
-    osc_tm2 = float(
-        row_tm2.get("osc", row_tm2.get("macd_osc", row_tm2.get("OSC", 0.0)))
-    )
+
+    if pd.isna(osc_t0_raw) or pd.isna(osc_tm1_raw) or pd.isna(osc_tm2_raw):
+      cond6_macd_hook = False
+      osc_t0, osc_tm1, osc_tm2 = np.nan, np.nan, np.nan
+    else:
+      osc_t0, osc_tm1, osc_tm2 = (
+          float(osc_t0_raw),
+          float(osc_tm1_raw),
+          float(osc_tm2_raw),
+      )
+      cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
 
     close_tm1 = float(row_tm1["close"])
     easy_tm1 = float(row_tm1["easy_line"])
@@ -1850,12 +1898,14 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     was_below_tm4 = float(row_tm4["close"]) <= float(row_tm4["easy_line"])
     cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
 
-    cond6_macd_hook = (osc_t0 > osc_tm1) and (osc_tm1 <= osc_tm2)
-
     easy_bias_pct = (
-        ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else 999.0
+        ((close_t0 - easy_t0) / easy_t0) * 100.0 if easy_t0 > 0 else np.nan
     )
-    cond_low_bias = 0.0 < easy_bias_pct <= max_easy_bias
+    cond_low_bias = (
+        (0.0 < easy_bias_pct <= max_easy_bias)
+        if pd.notna(easy_bias_pct)
+        else False
+    )
 
     is_red_k = close_t0 > open_t0
     total_len = high_t0 - low_t0
@@ -1866,39 +1916,41 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     )
     cond_kbar_ok = is_red_k and (upper_shadow_pct <= max_upper_shadow)
 
-    # 沿用預處理指標
     easy_ols_slope_raw = row_t0.get(
         "easy_line_slope",
-        row_t0.get("輕鬆線OLS斜率", row_t0.get("easy_ols_slope", 0.0)),
+        row_t0.get("輕鬆線OLS斜率", row_t0.get("easy_ols_slope")),
     )
-    easy_ols_slope = (
-        float(easy_ols_slope_raw) if pd.notna(easy_ols_slope_raw) else 0.0
-    )
+    if pd.isna(easy_ols_slope_raw):
+      easy_ols_slope = np.nan
+      is_ols_exempt_ok = False
+    else:
+      easy_ols_slope = float(easy_ols_slope_raw)
+      is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
 
     ma240_bias_raw = row_t0.get(
-        "ma240_bias",
-        row_t0.get("年線乖離率(%)", row_t0.get("ma240_bias_pct", 0.0)),
+        "ma240_bias", row_t0.get("年線乖離率(%)", row_t0.get("ma240_bias_pct"))
     )
-    ma240_bias = float(ma240_bias_raw) if pd.notna(ma240_bias_raw) else 0.0
+    if pd.isna(ma240_bias_raw):
+      ma240_bias = np.nan
+      is_ma240_normal_ok = False
+    else:
+      ma240_bias = float(ma240_bias_raw)
+      bias_threshold = (
+          max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
+      )
+      is_ma240_normal_ok = ma240_bias <= bias_threshold
 
-    bias_threshold = (
-        max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
-    )
-    is_ma240_normal_ok = ma240_bias <= bias_threshold
-    is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
-    # 沿用大盤預處理資料
     m_info = m_info or {}
     market_bias_raw = m_info.get(
-        "taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct", None)
+        "taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct")
     )
     if market_bias_raw is None or pd.isna(market_bias_raw):
       market_bias_raw = row_t0.get(
           "大盤年線乖離率(%)",
           row_t0.get(
-              "market_ma240_bias_pct",
-              row_t0.get("taiex_ma240_bias_pct", None),
+              "market_ma240_bias_pct", row_t0.get("taiex_ma240_bias_pct")
           ),
       )
 
@@ -1916,8 +1968,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
       )
       cond9_market_ma240_ok = market_bias_pct <= m_threshold
     else:
-      market_bias_pct = 0.0
-      cond9_market_ma240_ok = True
+      market_bias_pct = np.nan
+      cond9_market_ma240_ok = False
 
     base_hit = (
         cond1_trend
@@ -1947,6 +1999,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
         "vol_ratio": vol_ratio,
         "stock_id": stock_id,
         "date_t0_str": date_t0_str,
+        "is_ma240_normal_ok": is_ma240_normal_ok,
+        "is_ols_exempt_ok": is_ols_exempt_ok,
     }
     return base_hit, details
 
@@ -1979,19 +2033,38 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
-          "輕鬆線乖離率": f"{details['easy_bias_pct']:.2f}%",
+          "輕鬆線乖離率": (
+              f"{details['easy_bias_pct']:.2f}%"
+              if pd.notna(details["easy_bias_pct"])
+              else "N/A"
+          ),
           "量能爆發倍數": f"{details['vol_ratio']:.2f}倍",
-          "年線乖離率": f"{details['ma240_bias']:.2f}%",
-          "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
-          "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
+          "年線乖離率": (
+              f"{details['ma240_bias']:.2f}%"
+              if pd.notna(details["ma240_bias"])
+              else "N/A"
+          ),
+          "輕鬆線OLS斜率": (
+              f"{details['easy_ols_slope']:.4f}"
+              if pd.notna(details["easy_ols_slope"])
+              else "N/A"
+          ),
+          "大盤年線乖離率": (
+              f"{details['market_bias_pct']:.2f}%"
+              if pd.notna(details["market_bias_pct"])
+              else "N/A"
+          ),
+          "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
           f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
           "操作建議": (
-              "結合大盤風控、MACD勾頭提前卡位、輕鬆線低乖離(<5%)與紅K上影線過濾，大幅降低假突破與拉回風險。"
+              "結合大盤風控、MACD勾頭提前卡位、輕鬆線低乖離(<5%)與紅K上影線過濾，兼顧低追高風險與強勢動能。"
           ),
       }
       if is_hit
       else {}
   )
+
+  return is_hit, info
 
 def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     df_single: pd.DataFrame,
