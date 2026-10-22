@@ -263,7 +263,7 @@ def scan_single_stock(
         elif 'market_info' in sig_params:
             is_hit, info = run_func(df_single, market_info=market_info)      
         else:
-            is_hit, info = run_func(df_single, market_info=market_info)
+            is_hit, info = run_func(df_single)
 
         if is_hit:
             res_info = info if isinstance(info, dict) else {"detail": str(info)}
