@@ -721,6 +721,9 @@ def run_qiantang_strategy_range_scan(
   # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
   # ==============================================================================
   if GENERATE_WAVE_CHARTS and not dashboard_df.empty:
+    # 🌟 直接從子模組匯入，避開 utils/__init__.py 的影響
+    from utils.wave_chart_generator import generate_qiantang_wave_charts
+      
     wave_output_dir = os.path.join(output_dir, "dashboard_wave_plots")
     print("\n📈 正在根據波段規則繪製股票 K 線走勢圖...")
 
