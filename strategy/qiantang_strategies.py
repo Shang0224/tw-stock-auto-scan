@@ -1536,7 +1536,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
           "年線乖離率": f"{details['ma240_bias'] * 100:.2f}%",
-          "年線扣抵位置": f"{details['ma240_deduction_val']:.2f}%",
+          "年線扣抵位置": f"{details['ma240_deduction_pos']:.2f}%",
           "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
           "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
