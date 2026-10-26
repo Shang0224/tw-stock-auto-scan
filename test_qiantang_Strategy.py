@@ -125,7 +125,7 @@ STOCK_MODE = "csv"
 
 #STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
-STOCK_INPUT = "data/mid100.csv"
+STOCK_INPUT = "data/MID100.csv"
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 
 #STOCK_MODE = 'noncsv' 
