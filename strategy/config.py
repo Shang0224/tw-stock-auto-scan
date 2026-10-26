@@ -1,6 +1,6 @@
 # strategy/config.py
 
-DEBUG_VERBOSE = True
+DEBUG_VERBOSE = False
 
 BUY_PARAM_PROFILES = {
     # -----------------------------------------------------------------
