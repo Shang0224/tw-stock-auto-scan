@@ -3789,11 +3789,12 @@ def st_qiantang_f3_after_shakeout_20261020_2(
 
   return is_hit, info
 
+#####################################################################################################
 
 def st_qiantang_f3_after_shakeout_20261020_1(
     df_single: pd.DataFrame,
     delay_days: int = 3,  # 🌟 彈性右側觀察天數 (預設 T+3 觀察期)
-    threshold_pct: float = 0.025,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%), 改為
+    threshold_pct: float = -0.005,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%), 改為
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
 ) -> tuple[bool, dict]:
