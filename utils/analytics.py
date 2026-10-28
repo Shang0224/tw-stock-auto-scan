@@ -75,6 +75,208 @@ def calculate_forward_horizon_returns(
 def calculate_one_year_extremes(
     stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
 ) -> dict:
+  """計算進場後「持倉最高績效」、「持倉實際最低績效」、「停損波段極限深度(%)」與 Cat 1~4 自動走勢標籤
+
+  採用「動態持倉凍結機制 (Dynamic Holding Window Freeze)」：
+  1. 觀察視野統一為進場起算 T0 -> T0 + 240 個交易日 (滿 1 年)。
+  2. 交易帳戶持倉區間：限定為 T0+1 -> T_stop (首次盤中跌破停損線 PULLBACK_LIMIT_PCT，預設 -15.0% 當日)。
+     - 若未觸發停損，則看滿 T0+1 -> T0 + 240。
+     - 「持倉最高績效」：持倉期間最高漲幅 (%) 與日期 (離場後暴漲不計入)。
+     - 「持倉實際最低績效」：持倉期間最低跌幅 (%) 與日期 (反應真實 MAE 與穿透滑點)。
+  3. 風控與策略優化維度：
+     - 「停損波段極限深度(%)」：專門售後觀察觸發停損 (T_stop) 後的個股走勢。
+       - 情況 A (停損後在 T0 + 240 內成功攻上 >= +20%)：搜尋區間為 [T_stop -> 首次達到 +20% 當日]，記錄最深跌幅 (%) 做停損放寬拯救診斷。
+       - 情況 B (停損後在 T0 + 240 內未曾達到 +20%)：搜尋區間為 [T_stop -> T0 + 240]，記錄最深跌幅 (%) 驗證停損防禦效益。
+     - 「創高前最大回撤(%)」：記錄進場至持倉最高價當天期間的最深拉回 (%)。
+  4. 個股物理性格維度 (備查)：
+     - 「1Y全期最高漲幅(%)」與「1Y全期最深跌幅(%)」：備查 240 個交易日全期極限波幅。
+  5. 走勢類別標籤：
+     - 若有停損：依持倉最高漲幅分類 (>=50% Cat1, >=20% Cat2, <20% Cat3)。
+     - 若無停損：依全期最高漲幅分類 (>=50% Cat1, >=20% Cat2, <20% Cat4)。
+  """
+  if global_df is None or global_df.empty:
+    return {}
+
+  # 1. 取出觸發日及未來 240 個交易日 (約 1 年) 的 K 線資料
+  df_future = (
+      global_df[
+          (global_df["stock_id"].astype(str) == str(stock_id))
+          & (global_df["date"] >= trigger_date_str)
+      ]
+      .sort_values("date")
+      .reset_index(drop=True)
+  )
+
+  if df_future.empty or len(df_future) < 2:
+    return {
+        "持倉最高績效": "N/A",
+        "持倉實際最低績效": "N/A",
+        "1Y內最高績效": "N/A",
+        "1Y內最低績效": "N/A",
+        "走勢類別標籤": "資料不足",
+    }
+
+  # 買進基準價 (Day T0 收盤價)
+  close_t0 = float(df_future["close"].iloc[0])
+  if close_t0 <= 0:
+    return {}
+
+  # 未來觀察視窗 (排除 Day T 當天，往後取最多 240 個交易日，即 Day T+1 ~ Day T+240)
+  df_window = df_future.iloc[1:241].copy().reset_index(drop=True)
+
+  # 2. 個股全期 1 年 (T0 + 240) 極值資訊 (作為個股性格備查)
+  full_max_idx = df_window["max"].idxmax()
+  full_min_idx = df_window["min"].idxmin()
+
+  full_max_price = float(df_window.iloc[full_max_idx]["max"])
+  full_min_price = float(df_window.iloc[full_min_idx]["min"])
+
+  full_max_date = str(df_window.iloc[full_max_idx]["date"]).split(" ")[0]
+  full_min_date = str(df_window.iloc[full_min_idx]["date"]).split(" ")[0]
+
+  full_max_perf_pct = ((full_max_price - close_t0) / close_t0) * 100.0
+  full_min_perf_pct = ((full_min_price - close_t0) / close_t0) * 100.0
+
+  # 3. 🌟【時序首發停損動態持倉凍結邏輯】
+  stopout_limit = (
+      PULLBACK_LIMIT_PCT if "PULLBACK_LIMIT_PCT" in globals() else -15.0
+  )
+
+  # 依時間順序檢查每日盤中最低價是否跌破停損線
+  stopout_mask = (
+      (df_window["min"] - close_t0) / close_t0 * 100.0 < stopout_limit
+  )
+  has_stopout = stopout_mask.any()
+
+  if has_stopout:
+    # 第一次跌破停損線的 K 線索引位置 (T_stop)
+    first_stopout_idx = int(stopout_mask.idxmax())
+
+    # 動態凍結：持倉區間限制在進場至第一次停損當天 (Day T+1 ~ Day T_stop)
+    df_holding = df_window.iloc[: first_stopout_idx + 1]
+
+    # 持倉最高點 (MFE during holding)
+    holding_max_idx = df_holding["max"].idxmax()
+    row_holding_max = df_holding.iloc[holding_max_idx]
+    holding_max_price = float(row_holding_max["max"])
+    holding_max_date = str(row_holding_max["date"]).split(" ")[0]
+    holding_days_to_max = int(holding_max_idx) + 1
+    holding_max_perf_pct = ((holding_max_price - close_t0) / close_t0) * 100.0
+
+    # 持倉實際最低點 (MAE during holding，包含離場當天滑點與穿透)
+    holding_min_idx = df_holding["min"].idxmin()
+    row_holding_min = df_holding.iloc[holding_min_idx]
+    holding_min_price = float(row_holding_min["min"])
+    holding_min_date = str(row_holding_min["date"]).split(" ")[0]
+    holding_days_to_min = int(holding_min_idx) + 1
+    holding_min_perf_pct = ((holding_min_price - close_t0) / close_t0) * 100.0
+
+    # -----------------------------------------------------------------
+    # 🎯 停損波段極限深度 (%)：停損當日 (T_stop) 開始往後至 T0 + 240 內診斷
+    # -----------------------------------------------------------------
+    df_after_stop = df_window.iloc[first_stopout_idx:]
+
+    # 檢查在 T0 + 240 內，停損後是否攻上 >= +20% (相較於 close_t0)
+    reach_20_mask = ((df_after_stop["max"] - close_t0) / close_t0 * 100.0) >= 20.0
+    has_reached_20 = reach_20_mask.any()
+
+    if has_reached_20:
+      # 情況 A：停損後在 T0 + 240 內成功攻上 >= +20%
+      # 找到首次達到 +20% 的相對索引位置
+      first_20_rel_idx = int(reach_20_mask.idxmax())
+      # 搜尋區間：[T_stop -> 首次攻上 +20% 當日]
+      search_window = df_window.iloc[first_stopout_idx : first_20_rel_idx + 1]
+    else:
+      # 情況 B：停損後在 T0 + 240 內未曾達到 +20%
+      # 搜尋區間：[T_stop -> T0 + 240]
+      search_window = df_after_stop
+
+    stopout_wave_trough_price = float(search_window["min"].min())
+    stopout_wave_trough_pct = (
+        (stopout_wave_trough_price - close_t0) / close_t0
+    ) * 100.0
+
+    # 分類判定 (基於持倉期間最高漲幅)
+    if holding_max_perf_pct >= 50.0:
+      category_tag = "Cat1_飆股"
+    elif holding_max_perf_pct >= 20.0:
+      category_tag = "Cat2_溫和上漲"
+    else:
+      category_tag = "Cat3_深跌陷阱"
+
+  else:
+    # 全程未跌破停損線，持倉視窗看滿 240 個交易日
+    holding_max_idx = full_max_idx
+    holding_max_price = full_max_price
+    holding_max_date = full_max_date
+    holding_days_to_max = int(full_max_idx) + 1
+    holding_max_perf_pct = full_max_perf_pct
+
+    holding_min_idx = full_min_idx
+    holding_min_price = full_min_price
+    holding_min_date = full_min_date
+    holding_days_to_min = int(full_min_idx) + 1
+    holding_min_perf_pct = full_min_perf_pct
+
+    stopout_wave_trough_pct = "N/A"
+
+    # 分類判定 (基於全期最高漲幅)
+    if holding_max_perf_pct >= 50.0:
+      category_tag = "Cat1_飆股"
+    elif holding_max_perf_pct >= 20.0:
+      category_tag = "Cat2_溫和上漲"
+    else:
+      category_tag = "Cat4_窄幅橫盤"
+
+  # 創高前最大回撤 (%)：進場至持倉最高價當天 (holding_max_idx) 期間的最深拉回
+  df_before_peak = df_window.iloc[: holding_max_idx + 1]
+  lowest_before_peak = float(df_before_peak["min"].min())
+  mdd_before_peak_pct = ((lowest_before_peak - close_t0) / close_t0) * 100.0
+
+  extremes_dict = {
+      # -----------------------------------------------------------------
+      # 🎯 持倉帳戶維度 (真實持倉損益與滑點)
+      # -----------------------------------------------------------------
+      "持倉最高績效": f"{holding_max_perf_pct:+.2f}% ({holding_max_date})",
+      "持倉實際最低績效": (
+          f"{holding_min_perf_pct:+.2f}% ({holding_min_date})"
+      ),
+      "持倉最高價": round(holding_max_price, 2),
+      "持倉最高天數": holding_days_to_max,
+      "持倉最低價": round(holding_min_price, 2),
+      "持倉最低天數": holding_days_to_min,
+      "最大波段浮盈_MFE(%)": round(holding_max_perf_pct, 2),
+      "最大波段浮虧_MAE(%)": round(holding_min_perf_pct, 2),
+      # -----------------------------------------------------------------
+      # 🛡️ 風控與策略優化維度 (停損敏感度診斷)
+      # -----------------------------------------------------------------
+      "停損波段極限深度(%)": (
+          round(stopout_wave_trough_pct, 2)
+          if isinstance(stopout_wave_trough_pct, (int, float))
+          else stopout_wave_trough_pct
+      ),
+      "創高前最大回撤(%)": round(mdd_before_peak_pct, 2),
+      # -----------------------------------------------------------------
+      # 📈 個股物理性格維度 (全期備查)
+      # -----------------------------------------------------------------
+      "1Y全期最高漲幅(%)": round(full_max_perf_pct, 2),
+      "1Y全期最深跌幅(%)": round(full_min_perf_pct, 2),
+      "走勢類別標籤": category_tag,
+      # -----------------------------------------------------------------
+      # 🔄 舊版別名相容 (防止其他腳本讀取失敗)
+      # -----------------------------------------------------------------
+      "1Y內最高績效": f"{holding_max_perf_pct:+.2f}% ({holding_max_date})",
+      "1Y內最低績效": (
+          f"{holding_min_perf_pct:+.2f}% ({holding_min_date})"
+      ),
+  }
+
+  return extremes_dict
+
+
+def calculate_one_year_extremes_old1(
+    stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
+) -> dict:
   """計算進場後未來 1 年 (約 240 個交易日) 內的「極值、登頂軌跡風險與 Cat 1~4 自動走勢標籤」
 
   包含：1Y內最高/最低價、極值報酬率與達到天數、創高前最大回撤 % (Max Drawdown Before Peak)、
