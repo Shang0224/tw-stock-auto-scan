@@ -6,91 +6,81 @@ import pandas as pd
 
 PULLBACK_LIMIT_PCT = -15.0  # 2131 版深跌門檻
 
-def _extract_date_from_perf_str(val: str) -> str:
-    """輔助函式：從績效字串 (例如 '+39.91% (2015-05-27, 價:184.01)') 擷取 YYYY-MM-DD 日期"""
+def _extract_date(val: str) -> str:
+    """從績效字串 (例如 '+39.91% (2015-05-27)') 直接擷取 YYYY-MM-DD"""
     if not val or not isinstance(val, str):
         return None
     match = re.search(r'\d{4}-\d{2}-\d{2}', val)
     return match.group(0) if match else None
 
-# 內部私有波段記憶庫 (外部無需理會)
-_MODULE_WAVE_TRACKER = {}
-
-def reset_wave_tracker():
-    """重置波段記憶庫 (每次啟動新一輪歷史回測時呼叫一次)"""
-    global _MODULE_WAVE_TRACKER
-    _MODULE_WAVE_TRACKER = {}
-
-def calculate_wave_dedup_info(
-    stock_id: str,
-    trigger_date_str: str,
-    global_df: pd.DataFrame = None,
-    extreme_perf: dict = None,
-    max_gap_days: int = 90
-) -> dict:
+def calculate_wave_dedup_info(all_hits: list[dict], max_gap_days: int = 90) -> list[dict]:
     """
-    獨立自給自足的波段去重計算函式。
-    內部自動維持記憶庫狀態，外部無需傳遞 history_wave_tracker。
+    全量歷史股票掃描完畢後一次性進行波段去重。
+    直接存取固定欄位名稱，簡潔高效！
     """
-    global _MODULE_WAVE_TRACKER
+    if not all_hits:
+        return all_hits
 
-    # 1. 取得極值日期座標
-    mfe_str = extreme_perf.get("持倉最高績效", extreme_perf.get("1Y內最高績效", "")) if extreme_perf else ""
-    mae_str = extreme_perf.get("持倉實際最低績效", extreme_perf.get("1Y內最低績效", "")) if extreme_perf else ""
+    df = pd.DataFrame(all_hits)
+    df['dt_temp'] = pd.to_datetime(df['日期'])
 
-    cur_mfe_date = _extract_date_from_perf_str(mfe_str)
-    cur_mae_date = _extract_date_from_perf_str(mae_str)
-    cur_dt = pd.to_datetime(trigger_date_str)
+    # 🌟 直接存取固定的極值欄位名稱，免去判斷
+    df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date)
+    df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date)
 
-    # 自動取出該股票在模組內部記錄的歷史波段
-    stock_history = _MODULE_WAVE_TRACKER.setdefault(stock_id, [])
+    # 依 [股票代號, 觸發日期] 排序
+    df = df.sort_values(by=['股票代號', 'dt_temp']).reset_index(drop=True)
 
-    # 2. 比對內部歷史波段 (三階段對齊邏輯)
-    matched_wave = None
-    for wave in reversed(stock_history):
-        t0_dt = wave["first_trigger_dt"]
-        
-        # 60 天時間間隔安全鎖 (~90 個日曆天)
-        if (cur_dt - t0_dt).days > max_gap_days:
-            break
+    wave_ids = [None] * len(df)
+    is_first_trigger = [False] * len(df)
 
-        prev_mfe_date = wave["Date_MFE"]
-        prev_mae_date = wave["Date_MAE"]
+    # 針對每一檔股票進行 First Trigger 定錨比對
+    for stock_id, group in df.groupby('股票代號'):
+        records = group.to_dict('records')
+        orig_indices = group.index.tolist()
+        assigned_wave = [None] * len(records)
 
-        exact_match = (cur_mfe_date and prev_mfe_date and cur_mfe_date == prev_mfe_date) and \
-                      (cur_mae_date and prev_mae_date and cur_mae_date == prev_mae_date)
-        mae_match = (cur_mae_date and prev_mae_date and cur_mae_date == prev_mae_date)
-        mfe_match = (cur_mfe_date and prev_mfe_date and cur_mfe_date == prev_mfe_date)
+        for i in range(len(records)):
+            if assigned_wave[i] is not None:
+                continue
 
-        if exact_match or mae_match or mfe_match:
-            matched_wave = wave
-            break
+            # 首發觸發點 (First Trigger)
+            t0_dt = records[i]['dt_temp']
+            t0_date_clean = str(records[i]['日期']).replace('-', '')
+            group_id = f"{stock_id}_{t0_date_clean}"
 
-    # 3. 回傳去重標籤並更新內部記憶庫
-    if matched_wave:
-        return {
-            "波段群組編號": matched_wave["group_id"],
-            "波段首發": False,
-            "波段首發觸發日": matched_wave["first_trigger_date"]
-        }
-    else:
-        t0_date_clean = trigger_date_str.replace("-", "")
-        group_id = f"{stock_id}_{t0_date_clean}"
+            assigned_wave[i] = group_id
+            wave_ids[orig_indices[i]] = group_id
+            is_first_trigger[orig_indices[i]] = True
 
-        # 登記新波段至內部記憶庫
-        stock_history.append({
-            "first_trigger_date": trigger_date_str,
-            "first_trigger_dt": cur_dt,
-            "Date_MFE": cur_mfe_date,
-            "Date_MAE": cur_mae_date,
-            "group_id": group_id
-        })
+            mfe_i, mae_i = records[i]['Date_MFE'], records[i]['Date_MAE']
 
-        return {
-            "波段群組編號": group_id,
-            "波段首發": True,
-            "波段首發觸發日": trigger_date_str
-        }
+            # 向後比對同波段後續重複點
+            for j in range(i + 1, len(records)):
+                if assigned_wave[j] is not None:
+                    continue
+
+                t_j_dt = records[j]['dt_temp']
+                if (t_j_dt - t0_dt).days > max_gap_days:  # 60 個交易日安全鎖 (~90 日曆天)
+                    break
+
+                mfe_j, mae_j = records[j]['Date_MFE'], records[j]['Date_MAE']
+
+                # 三階段對齊邏輯 (雙邊完全對齊 或 單邊邊界漂移對齊)
+                exact_match = (mfe_i and mfe_j and mfe_i == mfe_j) and (mae_i and mae_j and mae_i == mae_j)
+                mae_match = (mae_i and mae_j and mae_i == mae_j)
+                mfe_match = (mfe_i and mfe_j and mfe_i == mfe_j)
+
+                if exact_match or mae_match or mfe_match:
+                    assigned_wave[j] = group_id
+                    wave_ids[orig_indices[j]] = group_id
+                    is_first_trigger[orig_indices[j]] = False
+
+    # 寫回固定名稱欄位
+    df['波段群組編號'] = wave_ids
+    df['波段首發'] = is_first_trigger
+
+    return df.drop(columns=['dt_temp', 'Date_MFE', 'Date_MAE']).to_dict('records')
 
 def calculate_forward_horizon_returns(
     stock_id: str, trigger_date_str: str, global_df: pd.DataFrame
