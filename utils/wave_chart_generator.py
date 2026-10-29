@@ -43,7 +43,7 @@ def group_signals_into_waves(stock_df):
 
     for wave_id, w_df in s_df.groupby('波段群組編號', sort=False):
         w_df = w_df.sort_values('日期')
-        first_row = w_df.iloc
+        first_row = w_df.iloc[0]
 
         # 🌟 擷取首發訊號之『走勢類別標籤』，預設值無資料時顯示為 "NA"
         raw_cat = first_row.get('走勢類別標籤', 'NA')
@@ -143,11 +143,12 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     df_sub = df_sub.reset_index(drop=True)
     x_indices = range(len(df_sub))
 
+    # 🌟 修正點：修復 height_ratios: [3, 1] 語法，恢復兩張子圖正確比例
     fig, (ax1, ax2) = plt.subplots(
         2,
         1,
         figsize=(14, 8),
-        gridspec_kw={'height_ratios':},
+        gridspec_kw={'height_ratios': [3, 1]},
         sharex=True,
     )
 
@@ -219,8 +220,8 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         t_date_str = sig_row[sig_date_col]
         t_df = df_sub[df_sub[date_col] == t_date_str]
         if not t_df.empty:
-            t_idx = t_df.index
-            t_row = t_df.iloc
+            t_idx = t_df.index[0]
+            t_row = t_df.iloc[0]
             t_date_obj = t_row['DateObj']
             t_price = t_row[col_close]
             t_low_p = t_row[col_low]
@@ -248,8 +249,8 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     if high_date_str:
         h_df = df_sub[df_sub[date_col] == high_date_str]
         if not h_df.empty:
-            h_idx = h_df.index
-            h_row = h_df.iloc
+            h_idx = h_df.index[0]
+            h_row = h_df.iloc[0]
             h_price = h_row[col_high]
 
             ax1.scatter(
@@ -286,8 +287,8 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     if low_date_str:
         l_df = df_sub[df_sub[date_col] == low_date_str]
         if not l_df.empty:
-            l_idx = l_df.index
-            l_row = l_df.iloc
+            l_idx = l_df.index[0]
+            l_row = l_df.iloc[0]
             l_price = l_row[col_low]
 
             ax1.scatter(
@@ -407,3 +408,4 @@ def generate_qiantang_wave_charts(
                 print(f'⚠ [警告] 繪製走勢圖 {filename} 失敗: {e}')
 
     return generated_files
+    
