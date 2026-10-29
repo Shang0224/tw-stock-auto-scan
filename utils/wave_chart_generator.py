@@ -12,15 +12,7 @@ import pandas as pd
 
 
 def parse_perf_field(val):
-    """解析 1Y內最高績效 / 持倉最高績效 / 1Y內最低績效 / 持倉實際最低績效 欄位字串。
-
-    支援格式範例:
-      - '+40.99% (2026-06-03)'
-      - '40.99% (2026-06-03)'
-      - '-24.38% $$2026-03-04$$'
-      - '-22.93% (2026-05-18)'
-    傳回: (pct_float, date_str) 或 (None, None)
-    """
+    """解析 1Y內最高績效 / 持倉最高績效 / 1Y內最低績效 / 持倉實際最低績效 欄位字串。"""
     if pd.isna(val) or not isinstance(val, str):
         return None, None
     m = re.search(r'([+\-\d.]+)%\s*[\(\$]+([\d]{4}-\d{2}-\d{2})', val)
@@ -33,7 +25,6 @@ def group_signals_into_waves(stock_df):
     """依據『波段群組編號』對單一股票的所有觸發訊號進行精準波段歸類，並擷取首發標籤與極值。"""
     s_df = stock_df.sort_values('日期').copy()
 
-    # 🛡️ 容錯防護：若傳入資料未包含『波段群組編號』，自動動態補算去重編號
     if '波段群組編號' not in s_df.columns:
         from utils.analytics import calculate_wave_dedup_info
         records = calculate_wave_dedup_info(s_df.to_dict('records'))
@@ -43,17 +34,14 @@ def group_signals_into_waves(stock_df):
 
     for wave_id, w_df in s_df.groupby('波段群組編號', sort=False):
         w_df = w_df.sort_values('日期')
-        first_row = w_df.iloc[0]
+        first_row = w_df.iloc
 
-        # 🌟 擷取首發訊號之『走勢類別標籤』，預設無資料時顯示 "NA"
         raw_cat = first_row.get('走勢類別標籤', 'NA')
         cat_tag = str(raw_cat).strip() if (pd.notna(raw_cat) and str(raw_cat).strip()) else 'NA'
 
-        # 解析 1Y 極值
         high_pct, c_high_date = parse_perf_field(first_row.get('1Y內最高績效', ''))
         low_pct, c_low_date = parse_perf_field(first_row.get('1Y內最低績效', ''))
 
-        # 解析 持倉 極值
         h_hold_pct, h_hold_date = parse_perf_field(first_row.get('持倉最高績效', ''))
         l_hold_pct, l_hold_date = parse_perf_field(first_row.get('持倉實際最低績效', ''))
 
@@ -67,27 +55,27 @@ def group_signals_into_waves(stock_df):
             'stock_id': str(first_row['股票代號']),
             'stock_name': str(first_row['名稱']),
             'group_id': str(wave_id),
-            'cat_tag': cat_tag,                   # 走勢類別標籤 (預設 "NA")
-            'trigger_count': len(w_df),          # 該波段內的總觸發次數
-            'c_high_date': c_high_date,           # 1Y 高點日期
-            'high_pct': high_pct,                 # 1Y 高點漲幅
-            'c_low_date': c_low_date,             # 1Y 低點日期
-            'c_low_pct': low_pct,                 # 1Y 低點跌幅
-            'h_hold_date': h_hold_date,           # 持倉高點日期
-            'h_hold_pct': h_hold_pct,             # 持倉高點漲幅
-            'l_hold_date': l_hold_date,           # 持倉低點日期
-            'l_hold_pct': l_hold_pct,             # 持倉低點跌幅
+            'cat_tag': cat_tag,
+            'trigger_count': len(w_df),
+            'c_high_date': c_high_date,
+            'high_pct': high_pct,
+            'c_low_date': c_low_date,
+            'c_low_pct': low_pct,
+            'h_hold_date': h_hold_date,
+            'h_hold_pct': h_hold_pct,
+            'l_hold_date': l_hold_date,
+            'l_hold_pct': l_hold_pct,
             'first_trigger_str': first_trigger_dt.strftime('%Y%m%d'),
             'start_date': start_date.strftime('%Y-%m-%d'),
             'end_date': end_date.strftime('%Y-%m-%d'),
-            'signals': w_df,                      # 該波段所有觸發紀錄
+            'signals': w_df,
         })
 
     return waves
 
 
 def plot_single_wave_chart(wave_info, kline_df, save_path):
-    """繪製單一波段 K 線圖，智慧標示波段觸發點、首發走勢分類標籤、1Y 與持倉雙重高低點 (智慧避讓不重疊)。"""
+    """繪製單一波段 K 線圖，智慧避避高低點、持倉極值與觸發點標籤重疊。"""
     matplotlib.use('Agg')
 
     plt.rcParams['font.sans-serif'] = [
@@ -146,7 +134,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         sharex=True,
     )
 
-    # 主標題帶上走勢類別標籤 (未分類則顯示 【NA】)
     fig.suptitle(
         f'{stock_id} {stock_name} {first_trigger_str} 走勢圖 【{cat_tag}】 (觸發 {trigger_count} 次)',
         fontsize=16,
@@ -156,28 +143,18 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
     # 1. K 線圖繪製
     for idx, row in df_sub.iterrows():
-        op, cl, hi, lo = (
-            row[col_open],
-            row[col_close],
-            row[col_high],
-            row[col_low],
-        )
-        color = '#d62728' if cl >= op else '#2ca02c'  # 紅漲綠跌
+        op, cl, hi, lo = row[col_open], row[col_close], row[col_high], row[col_low]
+        color = '#d62728' if cl >= op else '#2ca02c'
 
         ax1.plot([idx, idx], [lo, hi], color=color, linewidth=1.2, zorder=2)
         height = abs(cl - op)
         bottom = min(op, cl)
         rect = patches.Rectangle(
-            (idx - 0.35, bottom),
-            0.7,
-            max(height, 0.05),
-            facecolor=color,
-            edgecolor=color,
-            zorder=3,
+            (idx - 0.35, bottom), 0.7, max(height, 0.05), facecolor=color, edgecolor=color, zorder=3
         )
         ax1.add_patch(rect)
 
-    # 2. EMA 指數移動平均線與輕鬆線
+    # 2. EMA 均線
     ema_configs = [
         ('EMA5', 'EMA5', '#1f77b4', 1.0, '-'),
         ('EMA10', 'EMA10', '#2ca02c', 1.0, '-'),
@@ -187,42 +164,27 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     ]
     for col_name, label_name, color, lw, ls in ema_configs:
         if col_name in df_sub.columns:
-            ax1.plot(
-                x_indices,
-                df_sub[col_name],
-                label=label_name,
-                color=color,
-                linewidth=lw,
-                linestyle=ls,
-                alpha=0.85,
-                zorder=4,
-            )
+            ax1.plot(x_indices, df_sub[col_name], label=label_name, color=color, linewidth=lw, linestyle=ls, alpha=0.85, zorder=4)
 
     if 'easy_line' in df_sub.columns:
-        ax1.plot(
-            x_indices,
-            df_sub['easy_line'],
-            label='輕鬆線 (easy_line)',
-            color='#9467bd',
-            linewidth=1.5,
-            zorder=4,
-        )
+        ax1.plot(x_indices, df_sub['easy_line'], label='輕鬆線 (easy_line)', color='#9467bd', linewidth=1.5, zorder=4)
 
-    # 3. 標示該波段內【所有觸發日期與價格】 (藍色箭頭 + 文字)
+    # 3. 標示波段內所有觸發點，並記錄觸發點的 K 棒索引位置 (用於避讓低點標籤)
     sig_date_col = '日期' if '日期' in signals.columns else 'date'
+    trigger_indices = set()
+
     for _, sig_row in signals.iterrows():
         t_date_str = sig_row[sig_date_col]
         t_df = df_sub[df_sub[date_col] == t_date_str]
         if not t_df.empty:
             t_idx = t_df.index[0]
+            trigger_indices.add(t_idx)
             t_row = t_df.iloc[0]
             t_date_obj = t_row['DateObj']
             t_price = t_row[col_close]
             t_low_p = t_row[col_low]
 
-            ax1.scatter(
-                [t_idx], [t_low_p * 0.97], marker='^', color='#1f77b4', s=120, zorder=8
-            )
+            ax1.scatter([t_idx], [t_low_p * 0.97], marker='^', color='#1f77b4', s=120, zorder=8)
             ax1.annotate(
                 f"觸發\n{t_date_obj.strftime('%m/%d')}\n${t_price:.1f}",
                 (t_idx, t_low_p * 0.97),
@@ -236,14 +198,13 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 zorder=8,
             )
 
-    # 🌟 4. 智慧高點標示 (1Y 全期高點 vs 持倉高點 智慧去重與防碰撞)
+    # 4. 智慧高點標示
     c_high_date = wave_info.get('c_high_date')
     high_pct = wave_info.get('high_pct', 0.0) or 0.0
     h_hold_date = wave_info.get('h_hold_date')
     h_hold_pct = wave_info.get('h_hold_pct', 0.0) or 0.0
 
     if c_high_date and h_hold_date and c_high_date == h_hold_date:
-        # 重合狀況：兩者在同一天，自動合併標記
         h_df = df_sub[df_sub[date_col] == c_high_date]
         if not h_df.empty:
             h_idx = h_df.index[0]
@@ -263,16 +224,13 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 zorder=12,
             )
     else:
-        # 不重合狀況：分開繪製並檢查距離
         h1_idx, h2_idx = None, None
         if c_high_date:
             df1 = df_sub[df_sub[date_col] == c_high_date]
-            if not df1.empty:
-                h1_idx = df1.index[0]
+            if not df1.empty: h1_idx = df1.index[0]
         if h_hold_date:
             df2 = df_sub[df_sub[date_col] == h_hold_date]
-            if not df2.empty:
-                h2_idx = df2.index[0]
+            if not df2.empty: h2_idx = df2.index[0]
 
         is_close_h = (h1_idx is not None and h2_idx is not None and abs(h1_idx - h2_idx) < 10)
 
@@ -312,23 +270,26 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 zorder=12,
             )
 
-    # 🌟 5. 智慧低點標示 (1Y 全期低點 vs 持倉低點 智慧去重與防碰撞)
+    # 🌟 5. 智慧低點標示 (含觸發點碰撞避讓：若與藍色觸發點同日或相距≤2天，低點標籤自動往下移至 -78)
     c_low_date = wave_info.get('c_low_date')
     low_pct = wave_info.get('c_low_pct', 0.0) or 0.0
     l_hold_date = wave_info.get('l_hold_date')
     l_hold_pct = wave_info.get('l_hold_pct', 0.0) or 0.0
 
     if c_low_date and l_hold_date and c_low_date == l_hold_date:
-        # 重合狀況：自動合併標記
         l_df = df_sub[df_sub[date_col] == c_low_date]
         if not l_df.empty:
             l_idx = l_df.index[0]
             l_price = l_df.iloc[0][col_low]
+            # 🌟 檢查是否與任何觸發點碰撞
+            has_trigger_collide = any(abs(l_idx - ti) <= 2 for ti in trigger_indices)
+            offset_y = -78 if has_trigger_collide else -44
+
             ax1.scatter([l_idx], [l_price * 0.99], marker='^', color='#2ca02c', s=140, zorder=12)
             ax1.annotate(
                 f'▼ 1Y/持倉最低\n{c_low_date}\n${l_price:.1f} ({low_pct:.1f}%)',
                 (l_idx, l_price * 0.99),
-                xytext=(0, -44),
+                xytext=(0, offset_y),
                 textcoords='offset points',
                 ha='center',
                 fontsize=9,
@@ -339,22 +300,22 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 zorder=12,
             )
     else:
-        # 不重合狀況：分開繪製並檢查距離
         l1_idx, l2_idx = None, None
         if c_low_date:
             df1 = df_sub[df_sub[date_col] == c_low_date]
-            if not df1.empty:
-                l1_idx = df1.index[0]
+            if not df1.empty: l1_idx = df1.index[0]
         if l_hold_date:
             df2 = df_sub[df_sub[date_col] == l_hold_date]
-            if not df2.empty:
-                l2_idx = df2.index[0]
+            if not df2.empty: l2_idx = df2.index[0]
 
         is_close_l = (l1_idx is not None and l2_idx is not None and abs(l1_idx - l2_idx) < 10)
 
         if l1_idx is not None:
             l_price = df_sub.loc[l1_idx, col_low]
-            offset_y = -68 if (is_close_l and l1_idx > l2_idx) else -44
+            has_trigger_collide = any(abs(l1_idx - ti) <= 2 for ti in trigger_indices)
+            base_offset = -78 if has_trigger_collide else -44
+            offset_y = (base_offset - 24) if (is_close_l and l1_idx > l2_idx) else base_offset
+
             ax1.scatter([l1_idx], [l_price * 0.99], marker='^', color='#2ca02c', s=140, zorder=12)
             ax1.annotate(
                 f'▼ 1Y最低\n{c_low_date}\n${l_price:.1f} ({low_pct:.1f}%)',
@@ -372,7 +333,10 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
         if l2_idx is not None:
             l_price = df_sub.loc[l2_idx, col_low]
-            offset_y = -68 if (is_close_l and l2_idx >= l1_idx) else -44
+            has_trigger_collide = any(abs(l2_idx - ti) <= 2 for ti in trigger_indices)
+            base_offset = -78 if has_trigger_collide else -44
+            offset_y = (base_offset - 24) if (is_close_l and l2_idx >= l1_idx) else base_offset
+
             ax1.scatter([l2_idx], [l_price * 0.99], marker='^', color='#006400', s=120, zorder=12)
             ax1.annotate(
                 f'▼ 持倉最低\n{l_hold_date}\n${l_price:.1f} ({l_hold_pct:.1f}%)',
@@ -389,10 +353,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
             )
 
     # 6. 成交量圖表
-    vol_colors = [
-        '#d62728' if cl >= op else '#2ca02c'
-        for op, cl in zip(df_sub[col_open], df_sub[col_close])
-    ]
+    vol_colors = ['#d62728' if cl >= op else '#2ca02c' for op, cl in zip(df_sub[col_open], df_sub[col_close])]
     ax2.bar(x_indices, df_sub[col_vol], color=vol_colors, alpha=0.7)
     ax2.set_ylabel('成交量', fontsize=10)
     ax2.grid(True, linestyle=':', alpha=0.5)
@@ -400,20 +361,18 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     ax1.set_ylabel('股價 (TWD)', fontsize=10)
     ax1.grid(True, linestyle=':', alpha=0.5)
 
-    # 7. 圖例與 Y 軸空間調整 (預留 18% 頂部留白，確保標記不碰觸圖例)
+    # 7. 圖例與 Y 軸空間調整 (頂部留白 18%，底部留白 15% 確保下方的藍色觸發框與綠色最低框完全容納)
     ax1.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=6, frameon=True)
 
     y_min, y_max = df_sub[col_low].min(), df_sub[col_high].max()
     y_range = y_max - y_min
-    ax1.set_ylim(bottom=y_min - y_range * 0.10, top=y_max + y_range * 0.18)
+    ax1.set_ylim(bottom=y_min - y_range * 0.15, top=y_max + y_range * 0.18)
 
-    # 8. 設定 X 軸刻度與日期標籤
+    # 8. X 軸刻度設定
     n_ticks = 10
     step = max(1, len(df_sub) // n_ticks)
     tick_positions = list(range(0, len(df_sub), step))
-    tick_labels = [
-        df_sub.loc[i, 'DateObj'].strftime('%Y-%m') for i in tick_positions
-    ]
+    tick_labels = [df_sub.loc[i, 'DateObj'].strftime('%Y-%m') for i in tick_positions]
 
     ax2.set_xticks(tick_positions)
     ax2.set_xticklabels(tick_labels, rotation=30)
@@ -426,7 +385,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
 
 
 def ensure_remote_sftp_dir(remote_dir_path):
-    """連結 NAS SFTP 並直接嘗試建立遠端資料夾層級."""
+    """連結 NAS SFTP 並嘗試建立遠端目錄層級."""
     try:
         import paramiko
     except ImportError:
@@ -508,10 +467,7 @@ def generate_qiantang_wave_charts(
 
             tag_str = f'_{tag}' if tag else ''
 
-            # 1. 取得走勢分類標籤，若未指定或缺失則強制設為 "NA"
             cat_tag = wave.get('cat_tag', 'NA') or 'NA'
-
-            # 2. 輸出檔名格式：2368_金像電_2368_20230324_Cat1_飆股.png 或 ..._NA.png
             filename = f"{wave['stock_id']}_{wave['stock_name']}_{wave['group_id']}{tag_str}_{cat_tag}.png"
             save_path = os.path.join(output_dir, filename)
 
@@ -522,7 +478,6 @@ def generate_qiantang_wave_charts(
             except Exception as e:
                 print(f'⚠ [警告] 繪製走勢圖 {filename} 失敗: {e}')
 
-    # 🌟 補回 SFTP 同步上傳至 NAS 邏輯
     if nas_sftp_path and generated_files:
         folder_name = os.path.basename(os.path.normpath(output_dir))
         target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
