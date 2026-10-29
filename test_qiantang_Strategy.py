@@ -225,6 +225,15 @@ def scan_qiantang_strategy_day(
       extreme_perf = calculate_one_year_extremes(
           stock_id=sid, trigger_date_str=day_str, global_df=global_df
       )
+
+      # 7. 🌟 仿照前兩者方式計算波段去重資訊
+      dedup_info = calculate_wave_dedup_info(
+          stock_id=sid,
+          trigger_date_str=day_str,
+          global_df=global_df,
+          extreme_perf=extreme_perf,
+          history_wave_tracker=history_wave_tracker
+      )
        
       for hit in hits:
         strat_func_name = hit.get("strategy_name", "")
@@ -364,7 +373,8 @@ def scan_qiantang_strategy_day(
         # -----------------------------------------------------------------
         hit_record.update(fwd_perf)
         hit_record.update(extreme_perf)
-
+        hit_record.update(dedup_info)  # 👈 寫入【波段群組編號】與【波段首發】
+          
         day_hits.append(hit_record)
 
   return day_hits
