@@ -228,13 +228,7 @@ def scan_qiantang_strategy_day(
       )
 
       # 7. 🌟 仿照前兩者方式計算波段去重資訊
-      dedup_info = calculate_wave_dedup_info(
-          stock_id=sid,
-          trigger_date_str=day_str,
-          global_df=global_df,
-          extreme_perf=extreme_perf,
-          history_wave_tracker=history_wave_tracker
-      )
+
        
       for hit in hits:
         strat_func_name = hit.get("strategy_name", "")
@@ -374,7 +368,7 @@ def scan_qiantang_strategy_day(
         # -----------------------------------------------------------------
         hit_record.update(fwd_perf)
         hit_record.update(extreme_perf)
-        hit_record.update(dedup_info)  # 👈 寫入【波段群組編號】與【波段首發】
+        #hit_record.update(dedup_info)  # 👈 寫入【波段群組編號】與【波段首發】
           
         day_hits.append(hit_record)
 
@@ -546,6 +540,11 @@ def run_qiantang_strategy_range_scan(
   # =====================================================================
   # 6. 彙整數據與產出報表 (全動態繼承所有分析欄位)
   # =====================================================================
+  # 🌟全量歷史掃描完畢，立刻進行波段去重與標記
+  if all_hits_list:
+      print("🔄 正在對全量掃描數據進行波段 First Trigger 去重與標記...")
+      all_hits_list = calculate_wave_dedup_info(all_hits_list)
+    
   tw_time = datetime.now(tz_tw)
   current_time_str = tw_time.strftime("%Y%m%d_%H%M")
 
