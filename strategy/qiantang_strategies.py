@@ -940,7 +940,7 @@ from scipy.stats import linregress  # 用於計算 OLS 斜率
 def st_qiantang_f3_after_shakeout_20261023(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,  # T+3 右側觀察天數 (預設 3 天)
     threshold_pct: float = -0.02,  # T+3 觀察期最大允許跌幅 (-2.0%)
     min_dist_52w_high: float = -15.0,  # 🌟 距 52 週高點比例 (>= -15.0%，強勢高位)
@@ -1238,7 +1238,7 @@ def st_qiantang_f3_after_shakeout_20261023(
 def st_qiantang_f3_after_shakeout_20261001_1_1_3(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
     threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
     max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
@@ -1552,7 +1552,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
 def st_qiantang_f3_after_shakeout_20261001_1_1_4(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
     threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
     max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
@@ -1858,7 +1858,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
 def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,  # 🌟 右側觀察天數由 T+2 升級為 T+3 (預設 3 天)
     threshold_pct: float = -0.005,  # 🌟 右側 T+3 觀察期門檻：報酬率 >= -0.5% (-0.005)
     max_ma240_bias: float = 0.25,  # 個股年線乖離率上限 (25.0%)
@@ -2141,7 +2141,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
 def st_qiantang_f3_after_shakeout_20261022_1_1_6(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
     threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
     max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
@@ -2455,7 +2455,7 @@ def st_qiantang_f3_after_shakeout_20261022_1_1_6(
 def st_qiantang_f3_after_shakeout_20261001_1_1_2(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 2,  # T+2 右側觀察天數 (預設 2 天)
     threshold_pct: float = -0.02,  # T+2 觀察期最大允許跌幅 (-2.0%)
     max_ma240_bias: float = 0.25,  # 個股年線乖離率基準上限 (25.0%)
