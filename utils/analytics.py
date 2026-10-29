@@ -350,8 +350,8 @@ def calculate_one_year_extremes(
       # 📈 個股物理性格維度 (全期備查)
       # -----------------------------------------------------------------
       # 2. 1Y 全期極值 (以 240 交易日視窗內的最高價 max_1y 與最低價 min_1y 及其日期為準)
-      "1Y內最高績效": f"{full_1y_max_pct:+.2f}% ({full_1y_max_date})",  #正確連結 1Y 最高日期
-      "1Y內最低績效": f"{full_1y_min_pct:+.2f}% ({full_1y_min_date})",  #正確連結 1Y 最低日期
+      "1Y內最高績效": f"{full_max_perf_pct:+.2f}% ({full_max_date})",
+      "1Y內最低績效": f"{full_min_perf_pct:+.2f}% ({full_min_date})",
      
       "1Y全期最高漲幅(%)": round(full_max_perf_pct, 2),
       "1Y全期最深跌幅(%)": round(full_min_perf_pct, 2),
