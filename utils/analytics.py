@@ -13,28 +13,39 @@ def _extract_date(val: str) -> str:
     match = re.search(r'\d{4}-\d{2}-\d{2}', val)
     return match.group(0) if match else None
 
-def calculate_wave_dedup_info(all_hits: list[dict], max_gap_days: int = 90) -> list[dict]:
-    """
-    全量歷史股票掃描完畢後一次性進行波段去重。
-    直接存取固定欄位名稱，簡潔高效！
-    """
-    if not all_hits:
-        return all_hits
+def _extract_date_from_perf_str(val: str) -> str:
+    """從績效字串 (例如 '+39.91% (2015-05-27)') 直接擷取 YYYY-MM-DD 日期字串"""
+    if not val or not isinstance(val, str):
+        return None
+    match = re.search(r'\d{4}-\d{2}-\d{2}', val)
+    return match.group(0) if match else None
 
-    df = pd.DataFrame(all_hits)
+def calculate_wave_dedup_info(hits_list: list[dict], max_gap_days: int = 90) -> list[dict]:
+    """
+    對單一策略的全量選股結果進行『三階段波段去重』。
+    直接存取固定欄位名稱，無狀態、簡潔高效且自給自足！
+
+    :param hits_list: 個別策略的歷史選股觸發紀錄 (dict 串列)
+    :param max_gap_days: 60 個交易日安全鎖對應之最大日曆天數 (預設 90 天)
+    :return: 補上【波段群組編號】與【波段首發】欄位後的更新 dict 串列
+    """
+    if not hits_list:
+        return hits_list
+
+    df = pd.DataFrame(hits_list)
     df['dt_temp'] = pd.to_datetime(df['日期'])
 
-    # 🌟 直接存取固定的極值欄位名稱，免去判斷
-    df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date)
-    df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date)
+    # 🌟 直接存取系統固定的極值欄位，免去任何 if ... in df.columns 判斷
+    df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date_from_perf_str)
+    df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date_from_perf_str)
 
-    # 依 [股票代號, 觸發日期] 排序
+    # 依 [股票代號, 觸發日期] 遞增排序
     df = df.sort_values(by=['股票代號', 'dt_temp']).reset_index(drop=True)
 
     wave_ids = [None] * len(df)
     is_first_trigger = [False] * len(df)
 
-    # 針對每一檔股票進行 First Trigger 定錨比對
+    # 按股票代號進行 First Trigger 定錨與同波段去重比對
     for stock_id, group in df.groupby('股票代號'):
         records = group.to_dict('records')
         orig_indices = group.index.tolist()
@@ -44,7 +55,7 @@ def calculate_wave_dedup_info(all_hits: list[dict], max_gap_days: int = 90) -> l
             if assigned_wave[i] is not None:
                 continue
 
-            # 首發觸發點 (First Trigger)
+            # 發現全新波段首發 (First Trigger)
             t0_dt = records[i]['dt_temp']
             t0_date_clean = str(records[i]['日期']).replace('-', '')
             group_id = f"{stock_id}_{t0_date_clean}"
@@ -55,7 +66,7 @@ def calculate_wave_dedup_info(all_hits: list[dict], max_gap_days: int = 90) -> l
 
             mfe_i, mae_i = records[i]['Date_MFE'], records[i]['Date_MAE']
 
-            # 向後比對同波段後續重複點
+            # 向後比對同波段後續重複觸發點
             for j in range(i + 1, len(records)):
                 if assigned_wave[j] is not None:
                     continue
@@ -76,7 +87,7 @@ def calculate_wave_dedup_info(all_hits: list[dict], max_gap_days: int = 90) -> l
                     wave_ids[orig_indices[j]] = group_id
                     is_first_trigger[orig_indices[j]] = False
 
-    # 寫回固定名稱欄位
+    # 寫回固定欄位名稱並移除臨時欄位
     df['波段群組編號'] = wave_ids
     df['波段首發'] = is_first_trigger
 
