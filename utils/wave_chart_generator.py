@@ -34,7 +34,7 @@ def group_signals_into_waves(stock_df):
 
     for wave_id, w_df in s_df.groupby('波段群組編號', sort=False):
         w_df = w_df.sort_values('日期')
-        first_row = w_df.iloc
+        first_row = w_df.iloc[0]
 
         raw_cat = first_row.get('走勢類別標籤', 'NA')
         cat_tag = str(raw_cat).strip() if (pd.notna(raw_cat) and str(raw_cat).strip()) else 'NA'
