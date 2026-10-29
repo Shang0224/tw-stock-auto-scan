@@ -535,15 +535,19 @@ def run_qiantang_strategy_range_scan(
 
   # =====================================================================
   # 6. 彙整數據與產出報表 (全動態繼承所有分析欄位)
-  # =====================================================================
-  # 🌟全量歷史掃描完畢，立刻進行波段去重與標記
-  if all_hits_list:
-      print("🔄 正在對全量掃描數據進行波段 First Trigger 去重與標記...")
-      all_hits_list = calculate_wave_dedup_info(all_hits_list)
-    
+  # =====================================================================  
   tw_time = datetime.now(tz_tw)
   current_time_str = tw_time.strftime("%Y%m%d_%H%M")
 
+  # 🌟 核心修改：針對「各個別策略」獨立執行波段去重與標記
+  for strat in strategies:
+      func_name = strat.__name__
+      if func_name in results_by_formula and results_by_formula[func_name]:
+          print(f"🔄 正在對個別策略 [{func_name}] 進行波段 First Trigger 去重與標記...")
+          # 傳入該策略獨立的選股串列，產出專屬的波段群組編號與首發標籤
+          results_by_formula[func_name] = calculate_wave_dedup_info(results_by_formula[func_name])
+
+    
   file_name = (
       f"錢塘潮選股歷史報告_含績效分析_{start_date_str}_to_{end_date_str}_{current_time_str}.xlsx"
   )
