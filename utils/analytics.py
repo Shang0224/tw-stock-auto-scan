@@ -13,60 +13,50 @@ def _extract_date_from_perf_str(val: str) -> str:
     match = re.search(r'\d{4}-\d{2}-\d{2}', val)
     return match.group(0) if match else None
 
+# 內部私有波段記憶庫 (外部無需理會)
+_MODULE_WAVE_TRACKER = {}
+
+def reset_wave_tracker():
+    """重置波段記憶庫 (每次啟動新一輪歷史回測時呼叫一次)"""
+    global _MODULE_WAVE_TRACKER
+    _MODULE_WAVE_TRACKER = {}
 
 def calculate_wave_dedup_info(
     stock_id: str,
     trigger_date_str: str,
-    global_df: pd.DataFrame,
+    global_df: pd.DataFrame = None,
     extreme_perf: dict = None,
-    history_wave_tracker: dict = None,
     max_gap_days: int = 90
 ) -> dict:
     """
-    完全仿照 calculate_forward_horizon_returns / calculate_one_year_extremes 介面。
-    依據《三階段波段去重 SOP》，計算當前觸發訊號的【波段群組編號】與【波段首發】狀態。
-
-    :param stock_id: 股票代號 (例如 '2368')
-    :param trigger_date_str: 當前觸發日期 (例如 '2023-05-23')
-    :param global_df: 全量歷史 K 線資料 DataFrame
-    :param extreme_perf: 前一步 calculate_one_year_extremes 計算出的極值字典 (可選，加快計算)
-    :param history_wave_tracker: 跨日掃描累計的波段快取字典 {stock_id: [wave_record_dict, ...]}
-    :param max_gap_days: 60 個交易日安全鎖對應之最大日曆天數 (預設 90 天)
-    :return: 包含去重標籤的字典 {'波段群組編號': '2368_20230324', '波段首发': False, '波段首發觸發日': '2023-03-24'}
+    獨立自給自足的波段去重計算函式。
+    內部自動維持記憶庫狀態，外部無需傳遞 history_wave_tracker。
     """
-    if history_wave_tracker is None:
-        history_wave_tracker = {}
+    global _MODULE_WAVE_TRACKER
 
-    # 1. 取得當前訊號的極值日期 (Date_MFE / Date_MAE)
-    if extreme_perf:
-        mfe_str = extreme_perf.get("持倉最高績效", extreme_perf.get("1Y內最高績效", ""))
-        mae_str = extreme_perf.get("持倉實際最低績效", extreme_perf.get("1Y內最低績效", ""))
-    else:
-        # 若未傳入，亦可自動重算一次極值
-        ext_dict = calculate_one_year_extremes(stock_id, trigger_date_str, global_df)
-        mfe_str = ext_dict.get("持倉最高績效", ext_dict.get("1Y內最高績效", ""))
-        mae_str = ext_dict.get("持倉實際最低績效", ext_dict.get("1Y內最低績效", ""))
+    # 1. 取得極值日期座標
+    mfe_str = extreme_perf.get("持倉最高績效", extreme_perf.get("1Y內最高績效", "")) if extreme_perf else ""
+    mae_str = extreme_perf.get("持倉實際最低績效", extreme_perf.get("1Y內最低績效", "")) if extreme_perf else ""
 
     cur_mfe_date = _extract_date_from_perf_str(mfe_str)
     cur_mae_date = _extract_date_from_perf_str(mae_str)
     cur_dt = pd.to_datetime(trigger_date_str)
 
-    # 取出該股票過往已記錄的歷史波段列表
-    stock_history = history_wave_tracker.setdefault(stock_id, [])
+    # 自動取出該股票在模組內部記錄的歷史波段
+    stock_history = _MODULE_WAVE_TRACKER.setdefault(stock_id, [])
 
-    # 2. 檢視過往歷史波段，判斷是否屬於同一波段的後續觸發
+    # 2. 比對內部歷史波段 (三階段對齊邏輯)
     matched_wave = None
     for wave in reversed(stock_history):
         t0_dt = wave["first_trigger_dt"]
         
-        # 🛡 60 天時間間隔安全鎖 (超過 90 個日曆天自動強制切割)
+        # 60 天時間間隔安全鎖 (~90 個日曆天)
         if (cur_dt - t0_dt).days > max_gap_days:
             break
 
         prev_mfe_date = wave["Date_MFE"]
         prev_mae_date = wave["Date_MAE"]
 
-        # 三階段對齊條件 (雙邊完全對齊 或 單邊邊界漂移對齊)
         exact_match = (cur_mfe_date and prev_mfe_date and cur_mfe_date == prev_mfe_date) and \
                       (cur_mae_date and prev_mae_date and cur_mae_date == prev_mae_date)
         mae_match = (cur_mae_date and prev_mae_date and cur_mae_date == prev_mae_date)
@@ -76,23 +66,18 @@ def calculate_wave_dedup_info(
             matched_wave = wave
             break
 
-    # 3. 產出去重標記結果
+    # 3. 回傳去重標籤並更新內部記憶庫
     if matched_wave:
-        # 屬同一波段之後續觸發
-        first_date_clean = matched_wave["first_trigger_date"].replace("-", "")
-        group_id = f"{stock_id}_{first_date_clean}"
-        
         return {
-            "波段群組編號": group_id,
+            "波段群組編號": matched_wave["group_id"],
             "波段首發": False,
             "波段首發觸發日": matched_wave["first_trigger_date"]
         }
     else:
-        # 判定為全新波段首發 (First Trigger)
         t0_date_clean = trigger_date_str.replace("-", "")
         group_id = f"{stock_id}_{t0_date_clean}"
 
-        # 登記新波段至歷史快取中，子供後續觸發點比對
+        # 登記新波段至內部記憶庫
         stock_history.append({
             "first_trigger_date": trigger_date_str,
             "first_trigger_dt": cur_dt,
