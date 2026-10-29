@@ -45,7 +45,7 @@ def group_signals_into_waves(stock_df):
         w_df = w_df.sort_values('日期')
         first_row = w_df.iloc[0]
 
-        # 🌟 擷取首發訊號之『走勢類別標籤』，預設值無資料時顯示為 "NA"
+        # 🌟 擷取首發訊號之『走勢類別標籤』，預設無資料時顯示 "NA"
         raw_cat = first_row.get('走勢類別標籤', 'NA')
         cat_tag = str(raw_cat).strip() if (pd.notna(raw_cat) and str(raw_cat).strip()) else 'NA'
 
@@ -53,14 +53,9 @@ def group_signals_into_waves(stock_df):
         high_pct, c_high_date = parse_perf_field(first_row.get('1Y內最高績效', ''))
         low_pct, c_low_date = parse_perf_field(first_row.get('1Y內最低績效', ''))
 
-        # 解析 持倉 極值 (若無則自動降級退回 1Y 極值)
+        # 解析 持倉 極值
         h_hold_pct, h_hold_date = parse_perf_field(first_row.get('持倉最高績效', ''))
         l_hold_pct, l_hold_date = parse_perf_field(first_row.get('持倉實際最低績效', ''))
-
-        if h_hold_date is None:
-            h_hold_pct, h_hold_date = high_pct, c_high_date
-        if l_hold_date is None:
-            l_hold_pct, l_hold_date = low_pct, c_low_date
 
         first_trigger_dt = pd.to_datetime(w_df['日期'].min())
         last_trigger_dt = pd.to_datetime(w_df['日期'].max())
@@ -92,7 +87,7 @@ def group_signals_into_waves(stock_df):
 
 
 def plot_single_wave_chart(wave_info, kline_df, save_path):
-    """繪製單一波段 K 線圖，標示波段觸發點、首發走勢分類標籤、1Y 與持倉高低點。"""
+    """繪製單一波段 K 線圖，智慧標示波段觸發點、首發走勢分類標籤、1Y 與持倉雙重高低點 (智慧避讓不重疊)。"""
     matplotlib.use('Agg')
 
     plt.rcParams['font.sans-serif'] = [
@@ -143,7 +138,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     df_sub = df_sub.reset_index(drop=True)
     x_indices = range(len(df_sub))
 
-    # 🌟 修正點：修復 height_ratios: [3, 1] 語法，恢復兩張子圖正確比例
+    # 🌟 正確寫法：修復 height_ratios: [3, 1] 語法
     fig, (ax1, ax2) = plt.subplots(
         2,
         1,
@@ -242,27 +237,21 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 zorder=8,
             )
 
-    # 4. 標示【最高點】 (紅色 Red，置頂圖層 zorder=12 防蓋住)
-    high_date_str = wave_info.get('c_high_date')
-    high_pct_val = wave_info.get('high_pct', 0.0) or 0.0
+    # 🌟 4. 智慧高點標示 (1Y 全期高點 vs 持倉高點 智慧去重與防碰撞)
+    c_high_date = wave_info.get('c_high_date')
+    high_pct = wave_info.get('high_pct', 0.0) or 0.0
+    h_hold_date = wave_info.get('h_hold_date')
+    h_hold_pct = wave_info.get('h_hold_pct', 0.0) or 0.0
 
-    if high_date_str:
-        h_df = df_sub[df_sub[date_col] == high_date_str]
+    if c_high_date and h_hold_date and c_high_date == h_hold_date:
+        # 重合狀況：兩者在同一天，自動合併標記
+        h_df = df_sub[df_sub[date_col] == c_high_date]
         if not h_df.empty:
             h_idx = h_df.index[0]
-            h_row = h_df.iloc[0]
-            h_price = h_row[col_high]
-
-            ax1.scatter(
-                [h_idx],
-                [h_price * 1.01],
-                marker='v',
-                color='#d62728',
-                s=140,
-                zorder=12,
-            )
+            h_price = h_df.iloc[0][col_high]
+            ax1.scatter([h_idx], [h_price * 1.01], marker='v', color='#d62728', s=140, zorder=12)
             ax1.annotate(
-                f'★ 最高\n{high_date_str}\n${h_price:.1f} (+{high_pct_val:.1f}%)',
+                f'★ 1Y/持倉最高\n{c_high_date}\n${h_price:.1f} (+{high_pct:.1f}%)',
                 (h_idx, h_price * 1.01),
                 xytext=(0, 24),
                 textcoords='offset points',
@@ -270,37 +259,73 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 fontsize=9,
                 color='#d62728',
                 fontweight='bold',
-                bbox=dict(
-                    boxstyle='round,pad=0.3',
-                    facecolor='#ffe6e6',
-                    edgecolor='#d62728',
-                    alpha=0.95,
-                ),
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffe6e6', edgecolor='#d62728', alpha=0.95),
+                arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2),
+                zorder=12,
+            )
+    else:
+        # 不重合狀況：分開繪製並檢查距離
+        h1_idx, h2_idx = None, None
+        if c_high_date:
+            df1 = df_sub[df_sub[date_col] == c_high_date]
+            if not df1.empty: h1_idx = df1.index[0]
+        if h_hold_date:
+            df2 = df_sub[df_sub[date_col] == h_hold_date]
+            if not df2.empty: h2_idx = df2.index[0]
+
+        is_close_h = (h1_idx is not None and h2_idx is not None and abs(h1_idx - h2_idx) < 10)
+
+        if h1_idx is not None:
+            h_price = df_sub.loc[h1_idx, col_high]
+            offset_y = 48 if (is_close_h and h1_idx > h2_idx) else 24
+            ax1.scatter([h1_idx], [h_price * 1.01], marker='v', color='#d62728', s=140, zorder=12)
+            ax1.annotate(
+                f'★ 1Y最高\n{c_high_date}\n${h_price:.1f} (+{high_pct:.1f}%)',
+                (h1_idx, h_price * 1.01),
+                xytext=(0, offset_y),
+                textcoords='offset points',
+                ha='center',
+                fontsize=9,
+                color='#d62728',
+                fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffe6e6', edgecolor='#d62728', alpha=0.95),
                 arrowprops=dict(arrowstyle='->', color='#d62728', lw=1.2),
                 zorder=12,
             )
 
-    # 5. 標示【最低點】 (綠色 Green，置頂圖層 zorder=12)
-    low_date_str = wave_info.get('c_low_date')
-    low_pct_val = wave_info.get('c_low_pct', 0.0) or 0.0
-
-    if low_date_str:
-        l_df = df_sub[df_sub[date_col] == low_date_str]
-        if not l_df.empty:
-            l_idx = l_df.index[0]
-            l_row = l_df.iloc[0]
-            l_price = l_row[col_low]
-
-            ax1.scatter(
-                [l_idx],
-                [l_price * 0.99],
-                marker='^',
-                color='#2ca02c',
-                s=140,
+        if h2_idx is not None:
+            h_price = df_sub.loc[h2_idx, col_high]
+            offset_y = 48 if (is_close_h and h2_idx >= h1_idx) else 24
+            ax1.scatter([h2_idx], [h_price * 1.01], marker='v', color='#b22222', s=120, zorder=12)
+            ax1.annotate(
+                f'★ 持倉最高\n{h_hold_date}\n${h_price:.1f} (+{h_hold_pct:.1f}%)',
+                (h2_idx, h_price * 1.01),
+                xytext=(0, offset_y),
+                textcoords='offset points',
+                ha='center',
+                fontsize=9,
+                color='#b22222',
+                fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#fff0f0', edgecolor='#b22222', alpha=0.95),
+                arrowprops=dict(arrowstyle='->', color='#b22222', lw=1.2),
                 zorder=12,
             )
+
+    # 🌟 5. 智慧低點標示 (1Y 全期低點 vs 持倉低點 智慧去重與防碰撞)
+    c_low_date = wave_info.get('c_low_date')
+    low_pct = wave_info.get('c_low_pct', 0.0) or 0.0
+    l_hold_date = wave_info.get('l_hold_date')
+    l_hold_pct = wave_info.get('l_hold_pct', 0.0) or 0.0
+
+    if c_low_date and l_hold_date and c_low_date == l_hold_date:
+        # 重合狀況：自動合併標記
+        l_df = df_sub[df_sub[date_col] == c_low_date]
+        if not l_df.empty:
+            l_idx = l_df.index[0]
+            l_price = l_df.iloc[0][col_low]
+            ax1.scatter([l_idx], [l_price * 0.99], marker='^', color='#2ca02c', s=140, zorder=12)
             ax1.annotate(
-                f'▼ 最低\n{low_date_str}\n${l_price:.1f} ({low_pct_val:.1f}%)',
+                f'▼ 1Y/持倉最低\n{c_low_date}\n${l_price:.1f} ({low_pct:.1f}%)',
                 (l_idx, l_price * 0.99),
                 xytext=(0, -44),
                 textcoords='offset points',
@@ -308,13 +333,55 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
                 fontsize=9,
                 color='#2ca02c',
                 fontweight='bold',
-                bbox=dict(
-                    boxstyle='round,pad=0.3',
-                    facecolor='#e6ffe6',
-                    edgecolor='#2ca02c',
-                    alpha=0.95,
-                ),
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#e6ffe6', edgecolor='#2ca02c', alpha=0.95),
                 arrowprops=dict(arrowstyle='->', color='#2ca02c', lw=1.2),
+                zorder=12,
+            )
+    else:
+        # 不重合狀況：分開繪製並檢查距離
+        l1_idx, l2_idx = None, None
+        if c_low_date:
+            df1 = df_sub[df_sub[date_col] == c_low_date]
+            if not df1.empty: l1_idx = df1.index[0]
+        if l_hold_date:
+            df2 = df_sub[df_sub[date_col] == l_hold_date]
+            if not df2.empty: l2_idx = df2.index[0]
+
+        is_close_l = (l1_idx is not None and l2_idx is not None and abs(l1_idx - l2_idx) < 10)
+
+        if l1_idx is not None:
+            l_price = df_sub.loc[l1_idx, col_low]
+            offset_y = -68 if (is_close_l and l1_idx > l2_idx) else -44
+            ax1.scatter([l1_idx], [l_price * 0.99], marker='^', color='#2ca02c', s=140, zorder=12)
+            ax1.annotate(
+                f'▼ 1Y最低\n{c_low_date}\n${l_price:.1f} ({low_pct:.1f}%)',
+                (l1_idx, l_price * 0.99),
+                xytext=(0, offset_y),
+                textcoords='offset points',
+                ha='center',
+                fontsize=9,
+                color='#2ca02c',
+                fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#e6ffe6', edgecolor='#2ca02c', alpha=0.95),
+                arrowprops=dict(arrowstyle='->', color='#2ca02c', lw=1.2),
+                zorder=12,
+            )
+
+        if l2_idx is not None:
+            l_price = df_sub.loc[l2_idx, col_low]
+            offset_y = -68 if (is_close_l and l2_idx >= l1_idx) else -44
+            ax1.scatter([l2_idx], [l_price * 0.99], marker='^', color='#006400', s=120, zorder=12)
+            ax1.annotate(
+                f'▼ 持倉最低\n{l_hold_date}\n${l_price:.1f} ({l_hold_pct:.1f}%)',
+                (l2_idx, l_price * 0.99),
+                xytext=(0, offset_y),
+                textcoords='offset points',
+                ha='center',
+                fontsize=9,
+                color='#006400',
+                fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='#f0fff0', edgecolor='#006400', alpha=0.95),
+                arrowprops=dict(arrowstyle='->', color='#006400', lw=1.2),
                 zorder=12,
             )
 
@@ -330,12 +397,12 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     ax1.set_ylabel('股價 (TWD)', fontsize=10)
     ax1.grid(True, linestyle=':', alpha=0.5)
 
-    # 7. 圖例與 Y 軸空間調整 (預留 15% 頂部留白，防高點標記蓋住 Legend)
+    # 7. 圖例與 Y 軸空間調整 (預留 18% 頂部留白，確保標記不碰觸圖例)
     ax1.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01), ncol=6, frameon=True)
 
     y_min, y_max = df_sub[col_low].min(), df_sub[col_high].max()
     y_range = y_max - y_min
-    ax1.set_ylim(bottom=y_min - y_range * 0.08, top=y_max + y_range * 0.15)
+    ax1.set_ylim(bottom=y_min - y_range * 0.10, top=y_max + y_range * 0.18)
 
     # 8. 設定 X 軸刻度與日期標籤
     n_ticks = 10
@@ -393,10 +460,10 @@ def generate_qiantang_wave_charts(
 
             tag_str = f'_{tag}' if tag else ''
 
-            # 🌟 1. 取得走勢分類標籤，若未指定或缺失則強制設為 "NA"
+            # 1. 取得走勢分類標籤，若未指定或缺失則強制設為 "NA"
             cat_tag = wave.get('cat_tag', 'NA') or 'NA'
 
-            # 🌟 2. 輸出檔名格式：2368_金像電_2368_20230324_Cat1_飆股.png 或 ..._NA.png
+            # 2. 輸出檔名格式：2368_金像電_2368_20230324_Cat1_飆股.png 或 ..._NA.png
             filename = f"{wave['stock_id']}_{wave['stock_name']}_{wave['group_id']}{tag_str}_{cat_tag}.png"
             save_path = os.path.join(output_dir, filename)
 
@@ -408,4 +475,3 @@ def generate_qiantang_wave_charts(
                 print(f'⚠ [警告] 繪製走勢圖 {filename} 失敗: {e}')
 
     return generated_files
-    
