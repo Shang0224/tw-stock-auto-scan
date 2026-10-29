@@ -353,8 +353,8 @@ def calculate_one_year_extremes(
       "1Y內最高績效": f"{full_max_perf_pct:+.2f}% ({full_max_date})",
       "1Y內最低績效": f"{full_min_perf_pct:+.2f}% ({full_min_date})",
      
-      "1Y全期最高漲幅(%)": round(full_max_perf_pct, 2),
-      "1Y全期最深跌幅(%)": round(full_min_perf_pct, 2),
+      "1Y內最高漲幅(%)": round(full_max_perf_pct, 2),
+      "1Y內最深跌幅(%)": round(full_min_perf_pct, 2),
       "走勢類別標籤": category_tag,
   }
 
