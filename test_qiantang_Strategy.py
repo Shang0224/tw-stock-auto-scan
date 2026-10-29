@@ -64,6 +64,7 @@ from utils import (
     #generate_qiantang_wave_charts, #  🌟 直接從子模組匯入，避開 utils/__init__.py 的影響, 免得導致執行時, 不繪圖但還要花很多時間載入中文字型   
     #parse_stock_dict,
     parse_and_validate_stocks,
+    calculate_wave_dedup_info,
 )
 
 # =====================================================================
