@@ -356,7 +356,6 @@ def calculate_one_year_extremes(
       "1Y全期最高漲幅(%)": round(full_max_perf_pct, 2),
       "1Y全期最深跌幅(%)": round(full_min_perf_pct, 2),
       "走勢類別標籤": category_tag,
-    ),
   }
 
   return extremes_dict
