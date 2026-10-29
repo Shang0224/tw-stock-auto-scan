@@ -321,7 +321,7 @@ def calculate_one_year_extremes(
   lowest_before_peak = float(df_before_peak["min"].min())
   mdd_before_peak_pct = ((lowest_before_peak - close_t0) / close_t0) * 100.0
 
-  extremes_dict = {
+  extremes_dict = {   
       # -----------------------------------------------------------------
       # 🎯 持倉帳戶維度 (真實持倉損益與滑點)
       # -----------------------------------------------------------------
@@ -344,19 +344,19 @@ def calculate_one_year_extremes(
           else stopout_wave_trough_pct
       ),
       "創高前最大回撤(%)": round(mdd_before_peak_pct, 2),
+
+     
       # -----------------------------------------------------------------
       # 📈 個股物理性格維度 (全期備查)
       # -----------------------------------------------------------------
+      # 2. 1Y 全期極值 (以 240 交易日視窗內的最高價 max_1y 與最低價 min_1y 及其日期為準)
+      "1Y內最高績效": f"{full_1y_max_pct:+.2f}% ({full_1y_max_date})",  #正確連結 1Y 最高日期
+      "1Y內最低績效": f"{full_1y_min_pct:+.2f}% ({full_1y_min_date})",  #正確連結 1Y 最低日期
+     
       "1Y全期最高漲幅(%)": round(full_max_perf_pct, 2),
       "1Y全期最深跌幅(%)": round(full_min_perf_pct, 2),
       "走勢類別標籤": category_tag,
-      # -----------------------------------------------------------------
-      # 🔄 舊版別名相容 (防止其他腳本讀取失敗)
-      # -----------------------------------------------------------------
-      "1Y內最高績效": f"{holding_max_perf_pct:+.2f}% ({holding_max_date})",
-      "1Y內最低績效": (
-          f"{holding_min_perf_pct:+.2f}% ({holding_min_date})"
-      ),
+    ),
   }
 
   return extremes_dict
