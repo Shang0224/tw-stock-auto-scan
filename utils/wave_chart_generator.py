@@ -138,7 +138,6 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     df_sub = df_sub.reset_index(drop=True)
     x_indices = range(len(df_sub))
 
-    # 🌟 正確寫法：修復 height_ratios: [3, 1] 語法
     fig, (ax1, ax2) = plt.subplots(
         2,
         1,
@@ -268,10 +267,12 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         h1_idx, h2_idx = None, None
         if c_high_date:
             df1 = df_sub[df_sub[date_col] == c_high_date]
-            if not df1.empty: h1_idx = df1.index[0]
+            if not df1.empty:
+                h1_idx = df1.index[0]
         if h_hold_date:
             df2 = df_sub[df_sub[date_col] == h_hold_date]
-            if not df2.empty: h2_idx = df2.index[0]
+            if not df2.empty:
+                h2_idx = df2.index[0]
 
         is_close_h = (h1_idx is not None and h2_idx is not None and abs(h1_idx - h2_idx) < 10)
 
@@ -342,10 +343,12 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         l1_idx, l2_idx = None, None
         if c_low_date:
             df1 = df_sub[df_sub[date_col] == c_low_date]
-            if not df1.empty: l1_idx = df1.index[0]
+            if not df1.empty:
+                l1_idx = df1.index[0]
         if l_hold_date:
             df2 = df_sub[df_sub[date_col] == l_hold_date]
-            if not df2.empty: l2_idx = df2.index[0]
+            if not df2.empty:
+                l2_idx = df2.index[0]
 
         is_close_l = (l1_idx is not None and l2_idx is not None and abs(l1_idx - l2_idx) < 10)
 
@@ -422,6 +425,51 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     return True
 
 
+def ensure_remote_sftp_dir(remote_dir_path):
+    """連結 NAS SFTP 並直接嘗試建立遠端資料夾層級."""
+    try:
+        import paramiko
+    except ImportError:
+        print('⚠ 未安裝 paramiko，無法自動建立 SFTP 遠端目錄')
+        return
+
+    host = os.getenv('NAS_VPN_IP')
+    port = int(os.getenv('NAS_SFTP_PORT', 22))
+    username = os.getenv('NAS_ACCOUNT')
+    password = os.getenv('NAS_PASSWORD')
+
+    if not all([host, username, password]):
+        print('⚠ 缺少 NAS SFTP 連線設定 (NAS_VPN_IP / NAS_ACCOUNT / NAS_PASSWORD)')
+        return
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.connect(host, port=port, username=username, password=password, timeout=10)
+        sftp = ssh.open_sftp()
+
+        parts = remote_dir_path.strip('/').split('/')
+        current_path = ''
+        for part in parts:
+            if not part:
+                continue
+            current_path += f'/{part}'
+            try:
+                sftp.mkdir(current_path)
+                print(f'📁 [SFTP] 已直接建立遠端資料夾：{current_path}')
+            except Exception:
+                pass
+
+        sftp.close()
+    except Exception as e:
+        print(f'⚠ 自動建立 NAS 遠端目錄連線提醒: {e}')
+    finally:
+        try:
+            ssh.close()
+        except Exception:
+            pass
+
+
 def generate_qiantang_wave_charts(
     dashboard_df, global_df, output_dir, nas_sftp_path=None
 ):
@@ -473,5 +521,28 @@ def generate_qiantang_wave_charts(
                     generated_files.append(save_path)
             except Exception as e:
                 print(f'⚠ [警告] 繪製走勢圖 {filename} 失敗: {e}')
+
+    # 🌟 補回 SFTP 同步上傳至 NAS 邏輯
+    if nas_sftp_path and generated_files:
+        folder_name = os.path.basename(os.path.normpath(output_dir))
+        target_nas_dir = f"{nas_sftp_path.rstrip('/')}/{folder_name}"
+
+        ensure_remote_sftp_dir(target_nas_dir)
+
+        try:
+            from utils import archive_and_cleanup
+
+            success_count = 0
+            for img_path in generated_files:
+                fname = os.path.basename(img_path)
+                remote_img_path = f'{target_nas_dir}/{fname}'
+                archive_and_cleanup(img_path, remote_img_path)
+                success_count += 1
+            print(
+                '☁️ [純 SFTP 上傳] 已成功同步上傳'
+                f' {success_count} 張走勢圖至 NAS: {target_nas_dir}'
+            )
+        except Exception as e:
+            print(f'⚠ 走勢圖 NAS SFTP 備份失敗: {e}')
 
     return generated_files
