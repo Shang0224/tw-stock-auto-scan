@@ -1028,17 +1028,26 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
 
     # 7. 個股年線乖離率與 OLS 豁免
-    easy_ols_slope = float(row_t0.get("easy_line_slope", row_t0.get("輕鬆線OLS斜率", 0.0)))
-    ma240_bias = float(row_t0.get("ma240_bias", row_t0.get("年線乖離率(%)", 0.0)))
+    easy_ols_slope = float(row_t0.get("easy_line_slope"))
+    ma240_bias = float(row_t0.get("ma240_bias"))    
+    
+    #easy_ols_slope = float(row_t0.get("easy_line_slope", row_t0.get("輕鬆線OLS斜率", 0.0)))    
+    #ma240_bias = float(row_t0.get("ma240_bias", row_t0.get("年線乖離率(%)", 0.0)))
+
     bias_threshold = max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
     is_ma240_normal_ok = ma240_bias <= bias_threshold
     is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
     # 8. 🌟 雙軌位階機制 (Double Track)
-    dist_52w_high_val = float(row_t0.get("dist_to_52w_high_pct", row_t0.get("距52週高點(%)", -99.0)))
-    base_days = int(row_t0.get("base_consolidation_days", row_t0.get("打底沉澱天數", 0)))
-    ma240_deduction_val = float(row_t0.get("ma240_deduct_bias", row_t0.get("年線扣抵位置(%)", 0.0)))
+
+    dist_52w_high_val = float(row_t0.get("dist_to_52w_high_pct"))
+    base_days = int(row_t0.get("base_consolidation_days"))
+    ma240_deduction_val = float(row_t0.get("ma240_deduct_bias"))
+    
+    #dist_52w_high_val = float(row_t0.get("dist_to_52w_high_pct", row_t0.get("距52週高點(%)", -99.0)))
+    #base_days = int(row_t0.get("base_consolidation_days", row_t0.get("打底沉澱天數", 0)))
+    #ma240_deduction_val = float(row_t0.get("ma240_deduct_bias", row_t0.get("年線扣抵位置(%)", 0.0)))
 
     # 第一軌：強勢高位突破 (>= -15.0%)
     is_track1_pass = (dist_52w_high_val >= min_dist_52w_high)
@@ -1057,7 +1066,10 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
 
     # 9. 大盤風控
     m_info = market_info or {}
-    market_bias_val = float(m_info.get("taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct", row_t0.get("大盤年線乖離率(%)", 0.0))))
+    market_bias_val = float(m_info.get("taiex_ma240_bias_pct"))
+    
+    #market_bias_val = float(m_info.get("taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct", row_t0.get("大盤年線乖離率(%)", 0.0))))
+    
     market_bias_pct = market_bias_val if abs(market_bias_val) > 1.0 else market_bias_val * 100.0
     m_threshold = max_market_ma240_bias * 100.0 if max_market_ma240_bias <= 1.0 else max_market_ma240_bias
     cond9_market_ma240_ok = market_bias_pct <= m_threshold
@@ -1079,9 +1091,13 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
 
     is_hit = base_hit and cond11_right_confirm_ok
 
-    stock_id = str(row_t0.get("stock_id", row_t0.get("股票代號", "")))
-    date_t0_str = str(row_t0.get("date", row_t0.get("日期", "")))
-    date_confirm_str = str(row_confirm.get("date", row_confirm.get("日期", "")))
+    stock_id = str(row_t0.get("stock_id"))
+    date_t0_str = str(row_t0.get("date"))
+    date_confirm_str = str(row_confirm.get("date"))
+    
+    #stock_id = str(row_t0.get("stock_id", row_t0.get("股票代號", "")))
+    #date_t0_str = str(row_t0.get("date", row_t0.get("日期", "")))
+    #date_confirm_str = str(row_confirm.get("date", row_confirm.get("日期", "")))
 
     if verbose:
         c1_m = "✓" if cond1_trend else "✕"
