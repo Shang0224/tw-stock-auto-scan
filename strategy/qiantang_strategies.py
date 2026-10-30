@@ -1047,7 +1047,8 @@ def st_qiantang_f3_after_shakeout_20261030_1(
 
     # 3. 統一由主函數輸出底座訊號除錯訊息
     if verbose:
-        print(f"🔍 [20261030_1 除錯 - {stock_id_str} {date_str}] 底座訊號檢測: {'通過' if is_base_pass else '未通過'}")
+        print(f"🔍 [20261030_1 除錯 - {stock_id_str} {date_str}]")
+        print(f"底座訊號檢測: {'通過' if is_base_pass else '未通過'}")
         if base_metrics:
             print(f"   ├─ 價格 >= 5.0: {base_metrics['cond_price_ok']} (收盤: {base_metrics['close_t0']:.2f})")
             print(f"   ├─ 成交量爆量: {base_metrics['cond_vol_ok']} (當日: {base_metrics['vol_t0']/1000:.0f}張, 5日均量: {base_metrics['vol_ma5']/1000:.0f}張)")
@@ -1057,7 +1058,7 @@ def st_qiantang_f3_after_shakeout_20261030_1(
 
     if not is_base_pass:
         if verbose:
-            print(f"❌ [{stock_id_str} {date_str}] 未通過 Tbase 洗盤甩轎底座訊號門檻")
+            print(f"❌ [{stock_id_str} {date_str}] 未通過 Tbase 洗盤甩轎底座訊號門檻\n")
         return False, {}
 
     # 4. 雙軌特徵指標讀取與計算
@@ -1247,7 +1248,8 @@ def st_qiantang_f3_after_shakeout_20261030(
 
     # 3. 統一由主函數輸出底座訊號除錯訊息
     if verbose:
-        print(f"🔍 [20261030 除錯 - {stock_id_str} {date_str}] 底座訊號檢測: {'通過' if is_base_pass else '未通過'}")
+        print(f"🔍 [20261030 除錯 - {stock_id_str} {date_str}]")
+        print(f"底座訊號檢測: {'通過' if is_base_pass else '未通過'}")
         if base_metrics:
             print(f"   ├─ 價格 >= 5.0: {base_metrics['cond_price_ok']} (收盤: {base_metrics['close_t0']:.2f})")
             print(f"   ├─ 成交量爆量: {base_metrics['cond_vol_ok']} (當日: {base_metrics['vol_t0']/1000:.0f}張, 5日均量: {base_metrics['vol_ma5']/1000:.0f}張)")
@@ -1257,15 +1259,15 @@ def st_qiantang_f3_after_shakeout_20261030(
 
     if not is_base_pass:
         if verbose:
-            print(f"❌ [{stock_id_str} {date_str}] 未通過 Tbase 洗盤甩轎底座訊號門檻")
+            print(f"❌ [{stock_id_str} {date_str}] 未通過 Tbase 洗盤甩轎底座訊號門檻\n")
         return False, {}
 
     # 4. 雙軌特徵指標讀取與計算
     close_t0 = base_metrics['close_t0']
     vol_t0 = base_metrics['vol_t0']
-    ma60_slope = float(row_t0['MA60斜率'])
-    consolidation_days = int(row_t0['打底沉澱天數'])
-    trust_5d_val = float(row_t0['投信近5日累計(張)'])
+    ma60_slope = float(row_t0['ma60_slope'])
+    consolidation_days = int(row_t0['base_consolidation_days'])
+    trust_5d_val = float(row_t0['trust_5d_shares_sum'])
 
     amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
     
@@ -1642,8 +1644,8 @@ def st_qiantang_f3_after_shakeout_20261029(
     # ---------------------------------------------------------------------
     # 關卡 7：個股年線乖離率 & 輕鬆線 OLS 強勢斜率豁免
     # ---------------------------------------------------------------------
-    easy_ols_slope = float(row_t0.get("easy_line_slope", row_t0.get("輕鬆線OLS斜率", 0.0)))
-    ma240_bias = float(row_t0.get("ma240_bias", row_t0.get("年線乖離率(%)", 0.0)))
+    easy_ols_slope = float(row_t0.get("easy_line_slope"))
+    ma240_bias = float(row_t0.get("ma240_bias"))
     bias_threshold = max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
     is_ma240_normal_ok = ma240_bias <= bias_threshold
     is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
@@ -1652,17 +1654,17 @@ def st_qiantang_f3_after_shakeout_20261029(
     # ---------------------------------------------------------------------
     # 關卡 8：🌟 核心雙軌位階與籌碼過濾 (Double Track Filter)
     # ---------------------------------------------------------------------
-    dist_52w_high_val = float(row_t0.get("dist_to_52w_high_pct", row_t0.get("距52週高點(%)", -99.0)))
-    base_days = int(row_t0.get("base_consolidation_days", row_t0.get("打底沉澱天數", 0)))
+    dist_52w_high_val = float(row_t0.get("dist_to_52w_high_pct"))
+    base_days = int(row_t0.get("base_consolidation_days"))
 
     # 籌碼數據讀取 (單位：張)
-    foreign_raw = float(row_t0.get("foreign_5d_shares_sum", row_t0.get("外資近5日累計(張)", 0.0)))
+    foreign_raw = float(row_t0.get("foreign_5d_shares_sum"))
     foreign_5d = foreign_raw / 1000.0 if abs(foreign_raw) > 50000 else foreign_raw
 
-    trust_raw = float(row_t0.get("trust_5d_shares_sum", row_t0.get("投信近5日累計(張)", 0.0)))
+    trust_raw = float(row_t0.get("trust_5d_shares_sum"))
     trust_5d = trust_raw / 1000.0 if abs(trust_raw) > 50000 else trust_raw
 
-    main_raw = float(row_t0.get("major_5d_shares_sum", row_t0.get("主力近5日累計(張)", 0.0)))
+    main_raw = float(row_t0.get("major_5d_shares_sum"))
     main_5d = main_raw / 1000.0 if abs(main_raw) > 50000 else main_raw
 
     # 第一軌：強勢高位軌 (距 52 週高點 >= -15.0%)
@@ -1689,7 +1691,7 @@ def st_qiantang_f3_after_shakeout_20261029(
     # 關卡 9：大盤年線風控
     # ---------------------------------------------------------------------
     m_info = market_info or {}
-    market_bias_val = float(m_info.get("taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct", row_t0.get("大盤年線乖離率(%)", 0.0))))
+    market_bias_val = float(m_info.get("taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct")))
     market_bias_pct = market_bias_val if abs(market_bias_val) > 1.0 else market_bias_val * 100.0
     m_threshold = max_market_ma240_bias * 100.0 if max_market_ma240_bias <= 1.0 else max_market_ma240_bias
     cond9_market_ma240_ok = market_bias_pct <= m_threshold
@@ -1697,7 +1699,7 @@ def st_qiantang_f3_after_shakeout_20261029(
     # ---------------------------------------------------------------------
     # 關卡 10：長線年線扣抵位置防線一
     # ---------------------------------------------------------------------
-    ma240_deduction_val = float(row_t0.get("ma240_deduct_bias", row_t0.get("年線扣抵位置(%)", 0.0)))
+    ma240_deduction_val = float(row_t0.get("ma240_deduct_bias"))
     cond10_ma240_deduction_ok = ma240_deduction_val <= max_ma240_deduction_pos
 
     # 基礎過濾匯總
@@ -1725,9 +1727,9 @@ def st_qiantang_f3_after_shakeout_20261029(
     # 最終戰略總判定
     is_hit = base_hit and cond11_right_confirm_ok
 
-    stock_id = str(row_t0.get("stock_id", row_t0.get("股票代號", "")))
-    date_t0_str = str(row_t0.get("date", row_t0.get("日期", "")))
-    date_confirm_str = str(row_confirm.get("date", row_confirm.get("日期", "")))
+    stock_id = str(row_t0.get("stock_id"))
+    date_t0_str = str(row_t0.get("date"))
+    date_confirm_str = str(row_confirm.get("date"))
 
     # ---------------------------------------------------------------------
     # 修正後的 Debug 訊息 Console 輸出機制 (精準區分第一軌與第二軌)
