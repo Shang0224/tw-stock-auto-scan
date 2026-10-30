@@ -1429,7 +1429,7 @@ def st_qiantang_f3_after_shakeout_20261029_1(
     # 4. Step 2: 雙軌特徵指標計算與分流
     close_t0 = base_metrics['close_t0']
     vol_t0 = base_metrics['vol_t0']
-    ma60_slope = float(row_t0.get('MA60斜率', 0.0))
+    ma60_slope = float(row_t0.get('ma60_slope'))
     amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
 
     max_52w_high = float(df_past['close'].iloc[-240:].max()) if len(df_past) >= 240 else close_t0
@@ -1437,7 +1437,7 @@ def st_qiantang_f3_after_shakeout_20261029_1(
 
     price_240d_ago = float(df_past['close'].iloc[-240]) if len(df_past) >= 240 else close_t0
     ma240_deduction_val = float((price_240d_ago - close_t0) / close_t0 * 100.0) if close_t0 > 0 else 0.0
-    consolidation_days = int(row_t0.get('打底沉澱天數', 40))
+    consolidation_days = int(row_t0.get('base_consolidation_days'))
 
     is_track1 = (dist_52w_high_val >= min_dist_52w_high)
     if is_track1:
@@ -1457,8 +1457,8 @@ def st_qiantang_f3_after_shakeout_20261029_1(
 
     info = {
         '選股公式': 'st_qiantang_f3_after_shakeout_20261029_1_內嵌內部函數版',
-        '股票代號': str(row_t0.get('stock_id', row_t0.get('股票代號', ''))),
-        '訊號日期': str(row_t0.get('date', row_t0.get('日期', ''))),
+        '股票代號': str(row_t0.get('stock_id')),
+        '訊號日期': str(row_t0.get('date')),
         '觸發價格': close_t0,
         '所屬軌道': track_tag,
         '距52W高點': f"{dist_52w_high_val:.1f}%",
