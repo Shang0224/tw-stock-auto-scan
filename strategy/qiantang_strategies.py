@@ -1064,8 +1064,8 @@ def st_qiantang_f3_after_shakeout_20261030_1(
     # 4. 雙軌特徵指標讀取與計算
     close_t0 = base_metrics['close_t0']
     vol_t0 = base_metrics['vol_t0']
-    ma60_slope = float(row_t0['MA60斜率'])
-    consolidation_days = int(row_t0['打底沉澱天數'])
+    ma60_slope = float(row_t0['ma60_slope'])
+    consolidation_days = int(row_t0['base_consolidation_days'])
 
     amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
     max_52w_high = float(df_past['close'].iloc[-240:].max()) if len(df_past) >= 240 else close_t0
@@ -1410,7 +1410,7 @@ def st_qiantang_f3_after_shakeout_20261029_1(
         # 輕鬆線斜率與動能計算 (近 5 日)
         easy_series_5 = df_past['easy_line'].iloc[-5:]
         easy_slope = float(linregress(np.arange(len(easy_series_5)), easy_series_5.values).slope)
-        easy_growth = float((easy_series_5.iloc[-1] - easy_series_5.iloc) / easy_series_5.iloc)
+        easy_growth = float((easy_series_5.iloc[-1] - easy_series_5.iloc[0]) / easy_series_5.iloc[0])
 
         # 價格與量能門檻
         cond_price_ok = (close_t0 >= 5.0)
