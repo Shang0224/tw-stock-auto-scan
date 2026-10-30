@@ -944,7 +944,7 @@ def st_qiantang_f3_after_shakeout_1029_1_1(
     delay_days: int = 3,                    # T+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.02,           # T+3 右側確認最低允許報酬率 (-2.0%)
     min_dist_52w_high: float = -15.0,       # 第一軌：強勢高位門檻 (>= -15.0%)
-    t1_min_amount_100m: float = 5.0,        # 第一軌大資金金額門檻 (>= 5.0 億元)
+    #t1_min_amount_100m: float = 5.0,        # 第一軌大資金金額門檻 (>= 5.0 億元)
     min_base_days: int = 35,                # 第二軌子條件 A：打底沉澱天數門檻 (>= 35 天)
     max_track2_deduction_pos: float = 10.0, # 第二軌子條件 B：年線扣抵位置安全門檻 (<= 10.0%)
     max_ma240_deduction_pos: float = 25.0,  # 黃金風控一：年線扣抵位置上限 (<= 25.0%)
@@ -1091,14 +1091,14 @@ def st_qiantang_f3_after_shakeout_1029_1_1(
     amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
 
     # 4. 第一軌 vs 第二軌 雙軌分流條件檢測
+    # 第一軌：強勢高位突破 (>= -15.0%)，直接放行
     is_track1_pass = (dist_52w_high_val >= min_dist_52w_high)
 
-    if is_track1_pass:
-        cond8_track_pass = (ma60_slope > 0) or (amount_100m >= t1_min_amount_100m)
-    else:
-        cond8_track_pass = (consolidation_days >= min_base_days) or (ma240_deduct_bias <= max_track2_deduction_pos)
+    # 第二軌：低位打底/年線安全軌 (打底 >= 35天 OR 年線扣抵 <= 10.0%)
+    cond_base_days_ok = (consolidation_days >= min_base_days)
+    cond_deduct_safe = (ma240_deduct_bias <= max_track2_deduction_pos)
+    is_track2_pass = (not is_track1_pass) and (cond_base_days_ok or cond_deduct_safe)
 
-    is_track2_pass = (not is_track1_pass) and cond8_track_pass
     cond8_double_track_ok = is_track1_pass or is_track2_pass
 
     track_passed_label = (
