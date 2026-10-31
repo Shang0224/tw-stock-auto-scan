@@ -1264,7 +1264,7 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     # 1~5 基礎技術面關卡
     cond1_trend = close_t0 > ma60_t0
     cond2_price_ok = close_t0 >= 5.0
-    cond3_vol_ok = (vol_t0 >= 350 *1000) and (vol_ma5 >= vol_ma5 * 1.2)
+    cond3_vol_ok = (vol_t0 >= 350 *1000) and (vol_t0 >= vol_ma5 * 1.2)
     cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
 
     was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
