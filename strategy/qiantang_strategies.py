@@ -940,7 +940,7 @@ from scipy.stats import linregress  # 用於計算 OLS 斜率
 def st_qiantang_f3_after_shakeout_1029_1_1(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                    # T+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.02,           # T+3 右側確認最低允許報酬率 (-2.0%)
     min_dist_52w_high: float = -15.0,       # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -1185,7 +1185,7 @@ def st_qiantang_f3_after_shakeout_1029_1_1(
 def st_qiantang_f3_after_shakeout_1029_1_old(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                    # T+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.02,           # T+3 右側確認最低允許報酬率 (-2.0%)
     min_dist_52w_high: float = -15.0,       # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -1367,7 +1367,7 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
         result_str = f"🔥 [{track_passed_label} 通關建倉]" if is_hit else "⚪ [未通過過濾]"
 
         print("\n" + "=" * 70)
-        print(f"🔔 [st_qiantang_f3_after_shakeout_1029_1] 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日: {date_confirm_str}")
+        print(f"🔔 [st_qiantang_f3_after_shakeout_1029_1_old] 股票: {stock_id} | 觸發日: {date_t0_str} -> 確認日: {date_confirm_str}")
         print("-" * 70)
         print(f"  [{c1_m}] 1. 季線趨勢 : Close_T > MA60 (${close_t0:.2f} > ${ma60_t0:.2f})")
         print(f"  [{c2_m}] 2. 價格底線 : ${close_t0:.2f} >= $5.0")
