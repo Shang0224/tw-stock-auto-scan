@@ -1220,12 +1220,17 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     ========================================================================================
     """
     profile = profile or {}
-
+    
+    """
     min_required_len = 240 + 5 + delay_days
     if len(df_single) < min_required_len:
         if verbose:
             print(f"❌ [策略 1029_1] 資料筆數不足 ({len(df_single)} 筆 < 需求 {min_required_len} 筆)")
         return False, {}
+    """
+
+    if len(df_single) < 60 or len(df_single) <= delay_days:
+      return False, {}
 
     df_single = df_single.copy()
 
