@@ -1894,7 +1894,7 @@ def st_qiantang_f3_after_shakeout_20261030_1_new(
 
         easy_series_5 = df_past['easy_line'].iloc[-5:]
         easy_slope = float(linregress(np.arange(len(easy_series_5)), easy_series_5.values).slope)
-        easy_growth = float((easy_series_5.iloc[-1] - easy_series_5.iloc) / easy_series_5.iloc)
+        easy_growth = float((easy_series_5.iloc[-1] - easy_series_5.iloc[0]) / easy_series_5.iloc[0])
 
         cond_price_ok = (close_t0 >= 5.0)
         cond_vol_ok = (vol_t0 >= 350 * 1000) and (vol_t0 >= vol_ma5 * 1.2)
@@ -2310,7 +2310,7 @@ def st_qiantang_f3_after_shakeout_20261030_new(
 
         easy_series_5 = df_past['easy_line'].iloc[-5:]
         easy_slope = float(linregress(np.arange(len(easy_series_5)), easy_series_5.values).slope)
-        easy_growth = float((easy_series_5.iloc[-1] - easy_series_5.iloc) / easy_series_5.iloc)
+        easy_growth = float((easy_series_5.iloc[-1] - easy_series_5.iloc[0]) / easy_series_5.iloc[0])
 
         cond_price_ok = (close_t0 >= 5.0)
         cond_vol_ok = (vol_t0 >= 350 * 1000) and (vol_t0 >= vol_ma5 * 1.2)
