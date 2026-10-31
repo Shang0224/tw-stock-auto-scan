@@ -999,7 +999,7 @@ def st_qiantang_f3_after_shakeout_1029_1_1(
         easy_t0 = float(row_t0['easy_line'])
         vol_t0 = float(row_t0['Trading_Volume'])
         ma60_t0 = float(row_t0['MA60'])
-        vol_ma5 = float(df_past['Trading_Volume'].iloc[-5:].mean())
+        vol_ma5 = float(df_past['Trading_Volume'].iloc[-6:-1].mean())
 
         close_prev1 = float(df_past['close'].iloc[-2])
         easy_prev1 = float(df_past['easy_line'].iloc[-2])
@@ -1019,12 +1019,12 @@ def st_qiantang_f3_after_shakeout_1029_1_1(
         cond4_continuous = (close_t0 > easy_t0) and (close_prev1 > easy_prev1)
 
         # 4. 洗盤甩轎軌跡 (T-2, T-3, T-4 曾跌破輕鬆線)
-        close_p2 = float(df_past['close'].iloc[-2])
-        easy_p2 = float(df_past['easy_line'].iloc[-2])
-        close_p3 = float(df_past['close'].iloc[-3])
-        easy_p3 = float(df_past['easy_line'].iloc[-3])
-        close_p4 = float(df_past['close'].iloc[-4])
-        easy_p4 = float(df_past['easy_line'].iloc[-4])
+        close_p2 = float(df_past['close'].iloc[-3])  #T-2
+        easy_p2 = float(df_past['easy_line'].iloc[-3])
+        close_p3 = float(df_past['close'].iloc[-4])  #T-3
+        easy_p3 = float(df_past['easy_line'].iloc[-4])
+        close_p4 = float(df_past['close'].iloc[-5])  #T-3
+        easy_p4 = float(df_past['easy_line'].iloc[-5])
 
         was_below_tm2 = close_p2 <= easy_p2
         was_below_tm3 = close_p3 <= easy_p3
