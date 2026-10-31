@@ -1836,6 +1836,317 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     return is_hit, info
 
 
+def st_qiantang_f3_after_shakeout_20261030_1_new(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = True,
+    delay_days: int = 3,  # T+3 右側觀察天數 (預設 3 天)
+    threshold_pct: float = -0.01,  # Combo A 門檻：T+3 右側確認報酬率 >= -1.0%
+    min_dist_52w_high: float = (
+        -15.0
+    ),  # 雙軌分流門檻 (距 52 週高點 >= -15.0% 為第一軌)
+    t1_min_amount_100m: float = 5.0,  # 第一軌大資金金額門檻 (>= 5.0 億元)
+    t2_max_ma240_deduction: float = (
+        10.0  # 第二軌年線扣抵安全門檻 (<= 10.0%)
+    ),
+    t2_min_base_days: int = 35,  # 第二軌底座打底天數門檻 (>= 35 天)
+    min_market_ma60_bias: float = (
+        1.5  # Combo A 門檻：大盤季線乖離率 >= 1.5% (大盤順風多頭氣氛)
+    ),
+    market_info: dict = None,  # 當日大盤秒查資料字典
+) -> tuple[bool, dict]:
+  """===========================================================================
+
+  【主策略：st_qiantang_f3_after_shakeout_20261030_1 (黃金組合 A 旗艦版)】
+  ===========================================================================
+  一、 Tbase 基礎價格/量能與洗盤甩轎型態門檻 (_check_f3_base_signal)
+      1. 價格門檻: Tbase 收盤價 (close) >= 5.0 元
+      2. 帶量門檻: Tbase 成交量 (Trading_Volume) >= 350,000 股 (350 張) 且 >= 近
+      5 日均量 (vol_ma5) * 1.2
+      3. 連續站穩輕鬆線: Tbase 與 T-1 日收盤價均大於輕鬆線 (close > easy_line)
+      4. 洗盤甩轎軌跡: T-2, T-3, T-4 曾至少有 1 日收盤價跌破或低於輕鬆線 (was_below)
+      5. 輕鬆線動能: 近 5 日輕鬆線 OLS 斜率 (輕鬆線OLS斜率) > 0 且 5 日成長率 >=
+      1.5%
+
+  二、 雙軌位階分流與防線過濾 (以距 52 週高點 = -15.0% 切分)
+      1. 第一軌（強勢高位突破軌：距 52 週高點 >= -15.0%）：
+         - 條件: (MA60斜率 > 0) OR (當日成交金額 >= 5.0 億元)
+      2. 第二軌（低位打底/年線安全軌：距 52 週高點 < -15.0%）：
+         - 條件: (打底沉澱天數 >= 35 天) OR (年線扣抵位置 <= 10.0%)
+
+  三、 黃金組合 A 雙重風控與 Confirmation 過濾
+      1. 大盤順風風控: 大盤季線乖離率 (taiex_ma60_bias_pct) >= 1.5%
+      2. Tbase+3 右側 Confirmation: Tbase+3 右側觀察期報酬率 (confirm_return) >=
+      -1.0%
+
+  ===========================================================================
+  【開發與除錯規範 (對齊 20261023 架構)】
+  - _check_f3_base_signal 內嵌於函數內部，僅進行純數據判斷。
+  - 除錯訊息統一由主函數主導與顯示 (100% 採用 20261023 / 1029_1_1 經典卡牌格式)。
+  - 確定的個股欄位 (`close`, `easy_line`, `Trading_Volume`, `ma60_slope`,
+  `base_consolidation_days`, `stock_id`, `date`)
+    與大盤欄位 (`taiex_ma60_bias_pct`) 直接索引存取，缺少時由 Python 原生拋出 KeyError。
+  ===========================================================================
+  """
+  profile = profile or {}
+
+  # 1. 內嵌內部私有輔助函式 (純數據判斷)
+  def _check_f3_base_signal(
+      df_past: pd.DataFrame, row_t0: pd.Series
+  ) -> tuple[bool, dict]:
+    if len(df_past) < 60:
+      return False, {}
+
+    # 確定個股欄位直接索引存取，缺失即拋出 KeyError
+    close_t0 = float(row_t0['close'])
+    easy_t0 = float(row_t0['easy_line'])
+    vol_t0 = float(row_t0['Trading_Volume'])
+    vol_ma5 = float(df_past['Trading_Volume'].iloc[-5:].mean())
+
+    easy_series_5 = df_past['easy_line'].iloc[-5:]
+    easy_slope = float(
+        linregress(np.arange(len(easy_series_5)), easy_series_5.values).slope
+    )
+    easy_growth = (
+        float(
+            (easy_series_5.iloc[-1] - easy_series_5.iloc)
+            / easy_series_5.iloc
+        )
+        if easy_series_5.iloc > 0
+        else 0.0
+    )
+
+    cond_price_ok = close_t0 >= 5.0
+    cond_vol_ok = (vol_t0 >= 350 * 1000) and (vol_t0 >= vol_ma5 * 1.2)
+
+    close_prev1 = float(df_past['close'].iloc[-2])
+    easy_prev1 = float(df_past['easy_line'].iloc[-2])
+    cond_continuous_easy = (close_t0 > easy_t0) and (close_prev1 > easy_prev1)
+
+    close_p3 = float(df_past['close'].iloc[-3])
+    easy_p3 = float(df_past['easy_line'].iloc[-3])
+    close_p4 = float(df_past['close'].iloc[-4])
+    easy_p4 = float(df_past['easy_line'].iloc[-4])
+    close_p5 = float(df_past['close'].iloc[-5])
+    easy_p5 = float(df_past['easy_line'].iloc[-5])
+
+    was_below_p3 = close_p3 <= easy_p3
+    was_below_p4 = close_p4 <= easy_p4
+    was_below_p5 = close_p5 <= easy_p5
+    was_below = was_below_p3 or was_below_p4 or was_below_p5
+
+    cond_easy_momentum = (easy_slope > 0.0) and (easy_growth >= 0.015)
+
+    is_base_pass = bool(
+        cond_price_ok
+        and cond_vol_ok
+        and cond_continuous_easy
+        and was_below
+        and cond_easy_momentum
+    )
+
+    base_metrics = {
+        'close_t0': close_t0,
+        'vol_t0': vol_t0,
+        'vol_ma5': vol_ma5,
+        'easy_slope': easy_slope,
+        'easy_growth': easy_growth,
+        'cond_price_ok': cond_price_ok,
+        'cond_vol_ok': cond_vol_ok,
+        'cond_continuous_easy': cond_continuous_easy,
+        'was_below_p3': was_below_p3,
+        'was_below_p4': was_below_p4,
+        'was_below_p5': was_below_p5,
+        'was_below': was_below,
+        'cond_easy_momentum': cond_easy_momentum,
+    }
+
+    return is_base_pass, base_metrics
+
+  # 2. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
+  if len(df_single) < 60 or len(df_single) <= delay_days:
+    return False, {}
+
+  row_t0 = df_single.iloc[-(delay_days + 1)]
+  row_today = df_single.iloc[-1]
+  df_past = df_single.iloc[:-delay_days]
+
+  # 確定個股識別欄位直接索引存取
+  stock_id_str = str(row_t0['stock_id'])
+  date_str = str(row_t0['date'])
+  date_confirm_str = str(row_today['date'])
+
+  # 3. 呼叫內嵌輔助函式進行底座訊號運算
+  is_base_pass, base_metrics = _check_f3_base_signal(
+      df_past=df_past, row_t0=row_t0
+  )
+
+  # 4. 雙軌特徵指標讀取與計算
+  close_t0 = base_metrics['close_t0'] if base_metrics else float(row_t0['close'])
+  vol_t0 = (
+      base_metrics['vol_t0']
+      if base_metrics
+      else float(row_t0['Trading_Volume'])
+  )
+  ma60_slope = float(row_t0['ma60_slope'])
+  consolidation_days = int(row_t0['base_consolidation_days'])
+
+  amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
+  max_52w_high = (
+      float(df_past['close'].iloc[-240:].max())
+      if len(df_past) >= 240
+      else close_t0
+  )
+  dist_52w_high_val = (
+      float((close_t0 - max_52w_high) / max_52w_high * 100.0)
+      if max_52w_high > 0
+      else 0.0
+  )
+
+  price_240d_ago = (
+      float(df_past['close'].iloc[-240]) if len(df_past) >= 240 else close_t0
+  )
+  ma240_deduction_val = (
+      float((price_240d_ago - close_t0) / close_t0 * 100.0)
+      if close_t0 > 0
+      else 0.0
+  )
+
+  # 5. 雙軌位階分流過濾
+  is_track1 = dist_52w_high_val >= min_dist_52w_high
+
+  if is_track1:
+    is_track_pass = (ma60_slope > 0) or (amount_100m >= t1_min_amount_100m)
+    track_tag = '第一軌(高位突破)'
+  else:
+    is_track_pass = (consolidation_days >= t2_min_base_days) or (
+        ma240_deduction_val <= t2_max_ma240_deduction
+    )
+    track_tag = '第二軌(低位打底)'
+
+  is_dual_track_pass = is_track_pass
+
+  # 6. 大盤風控欄位直接讀取
+  m_info = market_info or {}
+  market_ma60_bias = float(
+      m_info.get('taiex_ma60_bias_pct', row_t0.get('大盤季線乖離率(%)', 0.0))
+  )
+  cond_market_wind_ok = market_ma60_bias >= min_market_ma60_bias
+
+  # 7. Tbase+3 右側 Confirmation 價格確認 (報酬率 >= -1.0%)
+  close_confirm = float(row_today['close'])
+  confirm_return = (
+      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
+  )
+  cond_right_confirm_ok = confirm_return >= threshold_pct
+
+  is_hit = (
+      is_base_pass
+      and is_dual_track_pass
+      and cond_market_wind_ok
+      and cond_right_confirm_ok
+  )
+
+  # 8. 統一由主函數輸出 100% 對齊 1029_1_1 的經典卡牌除錯格式
+  if verbose:
+    c1_m = '✓' if base_metrics.get('cond_price_ok', False) else '✕'
+    c2_m = '✓' if base_metrics.get('cond_vol_ok', False) else '✕'
+    c3_m = '✓' if base_metrics.get('cond_continuous_easy', False) else '✕'
+    c4_m = '✓' if base_metrics.get('was_below', False) else '✕'
+    c5_m = '✓' if base_metrics.get('cond_easy_momentum', False) else '✕'
+    c6_m = '✓' if is_dual_track_pass else '✕'
+    c7_m = '✓' if cond_market_wind_ok else '✕'
+    c8_m = '✓' if cond_right_confirm_ok else '✕'
+
+    t1_m = '✓' if (is_track1 and is_dual_track_pass) else '✕'
+    t2_m = '✓' if ((not is_track1) and is_dual_track_pass) else '✕'
+
+    track_passed_label = track_tag if is_dual_track_pass else '未通過雙軌門檻'
+    result_str = (
+        f'🔥 [{track_passed_label} 通關建倉]' if is_hit else '⚪ [未通過過濾]'
+    )
+
+    vol_lots_t0 = vol_t0 / 1000.0
+    vol_ma5_lots = (
+        (base_metrics.get('vol_ma5', vol_t0) / 1000.0)
+        if base_metrics
+        else vol_lots_t0
+    )
+
+    print()
+    print('=' * 65)
+    print(
+        f'🔔 [st_qiantang_f3_after_shakeout_20261030_1_new] 股票: {stock_id_str} |'
+        f' 觸發日: {date_str} -> 確認日: {date_confirm_str}'
+    )
+    print('-' * 65)
+    print(f'  [{c1_m}] 1. 收盤價 >= 5元 : ${close_t0:.2f}')
+    print(
+        f'  [{c2_m}] 2. 量能過濾 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍'
+        f' {vol_ma5_lots*1.2:,.0f}張 且 >=350張)'
+    )
+    print(f'  [{c3_m}] 3. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
+    print(
+        '  [{c4_m}] 4. 洗盤甩轎軌跡 :'
+        f' T-2({base_metrics.get("was_below_p3", False)}) |'
+        f' T-3({base_metrics.get("was_below_p4", False)}) |'
+        f' T-4({base_metrics.get("was_below_p5", False)})'
+    )
+    print(
+        f'  [{c5_m}] 5. 輕鬆線動能 : OLS斜率'
+        f' ({base_metrics.get("easy_slope", 0.0):.4f}) > 0 且 5日成長率'
+        f' ({base_metrics.get("easy_growth", 0.0)*100:.2f}%) >= 1.5%'
+    )
+    print(
+        f'  [{c6_m}] 6. 🌟 雙軌位階機制 : 通過軌道 ➔ 【{track_passed_label}】'
+    )
+    print(
+        f'       ├─ [{t1_m}] [第一軌-強勢高位突破] 距52週高點:'
+        f' {dist_52w_high_val:.2f}% (門檻 >= {min_dist_52w_high:.1f}%) | MA60斜率:'
+        f' {ma60_slope:.4f} | 金額: {amount_100m:.2f}億元'
+    )
+    print(
+        f'       └─ [{t2_m}] [第二軌-低位打底] 打底:'
+        f' {consolidation_days}天 (門檻>={t2_min_base_days}天) | 年線扣抵:'
+        f' {ma240_deduction_val:.2f}% (門檻<={t2_max_ma240_deduction:.1f}%)'
+    )
+    print(
+        f'  [{c7_m}] 7. 🌟 大盤順風風控 : 大盤季線乖離率={market_ma60_bias:.2f}%'
+        f' (門檻 >= {min_market_ma60_bias:.1f}%)'
+    )
+    print(
+        f'  [{c8_m}] 8. 🌟 右側二次確認 (T+{delay_days} 報酬 >='
+        f' {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%'
+    )
+    print('-' * 65)
+    print(f'🎯 最終觸發結果: {result_str}')
+    print('=' * 65)
+    print()
+
+  # 9. 回傳訊號與資訊
+  info = (
+      {
+          '選股公式': 'st_qiantang_f3_after_shakeout_20261030_1_黃金組合A版',
+          '股票代號': stock_id_str,
+          '訊號日期': date_str,
+          '觸發價格': close_t0,
+          '所屬軌道': track_tag,
+          '距52W高點': f'{dist_52w_high_val:.1f}%',
+          '當日成交金額': f'{amount_100m:.2f}億元',
+          '大盤季線乖離率': f'{market_ma60_bias:.2f}%',
+          f'T+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
+          '操作建議': (
+              f'通過 20261030_1 (黃金組合A: 大盤順風季線乖離'
+              f' {market_ma60_bias:.1f}% + 輕度T+3確認'
+              f' {confirm_return * 100:.1f}%)。建議配合 -10%'
+              ' 硬停損與移動停利紀律執行。'
+          ),
+      }
+      if is_hit
+      else {}
+  )
+
+  return is_hit, info
 
 def st_qiantang_f3_after_shakeout_20261030_1(
     df_single: pd.DataFrame,
@@ -2031,6 +2342,352 @@ def st_qiantang_f3_after_shakeout_20261030_1(
     } if is_hit else {}
 
     return is_hit, info
+
+def st_qiantang_f3_after_shakeout_20261030_new(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = True,
+    delay_days: int = 3,  # T+3 右側觀察天數 (預設 3 天)
+    threshold_pct: float = -0.02,  # T+3 右側觀察期門檻 (報酬率 >= -2.0%)
+    min_dist_52w_high: float = (
+        -15.0
+    ),  # 雙軌分流門檻 (距 52 週高點 >= -15.0% 為第一軌，< -15.0% 為第二軌)
+    t1_min_ma240_bias: float = 5.0,  # 第一軌年線動能擴張門檻 (年線乖離率 >= 5.0%)
+    t1_min_amount_100m: float = 5.0,  # 第一軌大資金門檻 (成交金額 >= 5.0 億元)
+    t2_max_ma240_deduction: float = (
+        10.0  # 第二軌低位扣抵安全上限 (<= 10.0%)
+    ),
+    t2_min_base_days: int = 35,  # 第二軌低位打底沉澱天數下限 (>= 35 天)
+    t2_max_market_ma60_ma240_bias: float = (
+        2.0  # 第二軌大盤長線結構門檻 (大盤季年乖離 <= 2.0%)
+    ),
+    market_info: dict = None,  # 當日大盤秒查資料字典
+) -> tuple[bool, dict]:
+  """===========================================================================
+
+  【主策略：st_qiantang_f3_after_shakeout_20261030 (雙軌分流獨立優化旗艦版)】
+  ===========================================================================
+  一、 Tbase 基礎價格/量能與洗盤甩轎型態門檻 (_check_f3_base_signal)
+      1. 價格門檻: Tbase 收盤價 (close) >= 5.0 元
+      2. 帶量門檻: Tbase 成交量 (Trading_Volume) >= 350,000 股 (350 張) 且 >= 近
+      5 日均量 (vol_ma5) * 1.2
+      3. 連續站穩輕鬆線: Tbase 與 T-1 日收盤價均大於輕鬆線 (close > easy_line)
+      4. 洗盤甩轎軌跡: T-2, T-3, T-4 曾至少有 1 日收盤價跌破或低於輕鬆線 (was_below)
+      5. 輕鬆線動能: 近 5 日輕鬆線 OLS 斜率 (輕鬆線OLS斜率) > 0 且 5 日成長率 >=
+      1.5%
+
+  二、 雙軌分流獨立優化防線 (以距 52 週高點 = -15.0% 切分)
+      1. 第一軌（強勢高位突破軌：距 52 週高點 >= -15.0%）：
+         - 量價/趨勢防線: (MA60斜率 > 0) OR (當日成交金額 >= 5.0 億元)
+         - 長線動能擴張防線: 年線乖離率 (ma240_bias) >= 5.0%
+         - 通過判定: 量價/趨勢防線 AND 長線動能擴張防線
+      2. 第二軌（低位打底/年線安全軌：距 52 週高點 < -15.0%）：
+         - 底部結構防線: (打底沉澱天數 >= 35 天) OR (年線扣抵位置 <= 10.0%)
+         - 黃金護城河防線: (大盤季年乖離率 taiex_ma60_ma240_bias_pct <= 2.0%)
+                          OR (投信近5日累計買超 投信近5日累計(張) > 0 張)
+         - 通過判定: 底部結構防線 AND 黃金護城河防線
+
+  三、 Tbase+3 右側 Confirmation 觀察期確認
+      1. 右側確認門檻: Tbase+3 右側觀察期累積報酬率 >= -2.0%
+
+  ===========================================================================
+  【開發與除錯規範 (對齊 20261023 架構)】
+  - _check_f3_base_signal 內嵌於函數內部，僅進行純數據判斷。
+  - 除錯訊息統一由主函數主導與顯示 (100% 採用 20261023 / 1029_1_1 經典卡牌格式)。
+  - 確定的個股欄位 (`close`, `easy_line`, `Trading_Volume`, `ma60_slope`,
+  `base_consolidation_days`, `trust_5d_shares_sum`, `stock_id`, `date`)
+    與大盤欄位 (`taiex_ma60_ma240_bias_pct`) 直接索引存取，缺少時由 Python 原生拋出
+    KeyError。
+  ===========================================================================
+  """
+  profile = profile or {}
+
+  # 1. 內嵌內部私有輔助函式 (純數據判斷)
+  def _check_f3_base_signal(
+      df_past: pd.DataFrame, row_t0: pd.Series
+  ) -> tuple[bool, dict]:
+    if len(df_past) < 60:
+      return False, {}
+
+    # 確定個股欄位直接索引存取，缺失即拋出 KeyError
+    close_t0 = float(row_t0['close'])
+    easy_t0 = float(row_t0['easy_line'])
+    vol_t0 = float(row_t0['Trading_Volume'])
+    vol_ma5 = float(df_past['Trading_Volume'].iloc[-5:].mean())
+
+    easy_series_5 = df_past['easy_line'].iloc[-5:]
+    easy_slope = float(
+        linregress(np.arange(len(easy_series_5)), easy_series_5.values).slope
+    )
+    easy_growth = (
+        float(
+            (easy_series_5.iloc[-1] - easy_series_5.iloc)
+            / easy_series_5.iloc
+        )
+        if easy_series_5.iloc > 0
+        else 0.0
+    )
+
+    cond_price_ok = close_t0 >= 5.0
+    cond_vol_ok = (vol_t0 >= 350 * 1000) and (vol_t0 >= vol_ma5 * 1.2)
+
+    close_prev1 = float(df_past['close'].iloc[-2])
+    easy_prev1 = float(df_past['easy_line'].iloc[-2])
+    cond_continuous_easy = (close_t0 > easy_t0) and (close_prev1 > easy_prev1)
+
+    close_p3 = float(df_past['close'].iloc[-3])
+    easy_p3 = float(df_past['easy_line'].iloc[-3])
+    close_p4 = float(df_past['close'].iloc[-4])
+    easy_p4 = float(df_past['easy_line'].iloc[-4])
+    close_p5 = float(df_past['close'].iloc[-5])
+    easy_p5 = float(df_past['easy_line'].iloc[-5])
+
+    was_below_p3 = close_p3 <= easy_p3
+    was_below_p4 = close_p4 <= easy_p4
+    was_below_p5 = close_p5 <= easy_p5
+    was_below = was_below_p3 or was_below_p4 or was_below_p5
+
+    cond_easy_momentum = (easy_slope > 0.0) and (easy_growth >= 0.015)
+
+    is_base_pass = bool(
+        cond_price_ok
+        and cond_vol_ok
+        and cond_continuous_easy
+        and was_below
+        and cond_easy_momentum
+    )
+
+    base_metrics = {
+        'close_t0': close_t0,
+        'vol_t0': vol_t0,
+        'vol_ma5': vol_ma5,
+        'easy_slope': easy_slope,
+        'easy_growth': easy_growth,
+        'cond_price_ok': cond_price_ok,
+        'cond_vol_ok': cond_vol_ok,
+        'cond_continuous_easy': cond_continuous_easy,
+        'was_below_p3': was_below_p3,
+        'was_below_p4': was_below_p4,
+        'was_below_p5': was_below_p5,
+        'was_below': was_below,
+        'cond_easy_momentum': cond_easy_momentum,
+    }
+
+    return is_base_pass, base_metrics
+
+  # 2. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
+  if len(df_single) < 60 or len(df_single) <= delay_days:
+    return False, {}
+
+  row_t0 = df_single.iloc[-(delay_days + 1)]
+  row_today = df_single.iloc[-1]
+  df_past = df_single.iloc[:-delay_days]
+
+  # 確定個股識別欄位直接索引存取
+  stock_id_str = str(row_t0['stock_id'])
+  date_str = str(row_t0['date'])
+  date_confirm_str = str(row_today['date'])
+
+  # 3. 呼叫內嵌輔助函式進行底座訊號運算
+  is_base_pass, base_metrics = _check_f3_base_signal(
+      df_past=df_past, row_t0=row_t0
+  )
+
+  # 4. 雙軌特徵指標讀取與計算
+  close_t0 = base_metrics['close_t0'] if base_metrics else float(row_t0['close'])
+  vol_t0 = (
+      base_metrics['vol_t0']
+      if base_metrics
+      else float(row_t0['Trading_Volume'])
+  )
+  ma60_slope = float(row_t0['ma60_slope'])
+  consolidation_days = int(row_t0['base_consolidation_days'])
+
+  # 籌碼指標 (投信近 5 日累計張數 - 優先直接讀取)
+  trust_raw = float(
+      row_t0.get('trust_5d_shares_sum', row_t0.get('投信近5日累計(張)', 0.0))
+  )
+  trust_5d_val = trust_raw / 1000.0 if abs(trust_raw) > 50000 else trust_raw
+
+  amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
+
+  ma240_t0 = (
+      float(df_past['close'].iloc[-240:].mean())
+      if len(df_past) >= 240
+      else close_t0
+  )
+  ma240_bias = float(
+      row_t0.get(
+          'ma240_bias',
+          (close_t0 - ma240_t0) / ma240_t0 * 100.0 if ma240_t0 > 0 else 0.0,
+      )
+  )
+
+  max_52w_high = (
+      float(df_past['close'].iloc[-240:].max())
+      if len(df_past) >= 240
+      else close_t0
+  )
+  dist_52w_high_val = float(
+      row_t0.get(
+          'dist_to_52w_high_pct',
+          (close_t0 - max_52w_high) / max_52w_high * 100.0
+          if max_52w_high > 0
+          else 0.0,
+      )
+  )
+
+  price_240d_ago = (
+      float(df_past['close'].iloc[-240]) if len(df_past) >= 240 else close_t0
+  )
+  ma240_deduction_val = float(
+      row_t0.get(
+          'ma240_deduct_bias',
+          (price_240d_ago - close_t0) / close_t0 * 100.0 if close_t0 > 0 else 0.0,
+      )
+  )
+
+  # 大盤欄位讀取 (優先自 market_info 讀取)
+  m_info = market_info or {}
+  market_ma60_ma240_bias = float(
+      m_info.get(
+          'taiex_ma60_ma240_bias_pct', row_t0.get('大盤季線與年線乖離率(%)', 0.0)
+      )
+  )
+
+  # 5. 雙軌分流獨立優化閘門檢測
+  is_track1 = dist_52w_high_val >= min_dist_52w_high
+
+  if is_track1:
+    # 第一軌 (強勢高位突破)
+    cond_t1_base_filter = (ma60_slope > 0) or (amount_100m >= t1_min_amount_100m)
+    cond_t1_ma240_bias_ok = ma240_bias >= t1_min_ma240_bias
+    is_track_pass = cond_t1_base_filter and cond_t1_ma240_bias_ok
+    track_tag = '第一軌(高位動能突破)'
+  else:
+    # 第二軌 (低位打底轉折)
+    cond_t2_base_safety = (consolidation_days >= t2_min_base_days) or (
+        ma240_deduction_val <= t2_max_ma240_deduction
+    )
+    cond_t2_golden_moat = (
+        market_ma60_ma240_bias <= t2_max_market_ma60_ma240_bias
+    ) or (trust_5d_val > 0.0)
+    is_track_pass = cond_t2_base_safety and cond_t2_golden_moat
+    track_tag = '第二軌(低位轉折/年線安全)'
+
+  is_dual_track_pass = is_track_pass
+
+  # 6. Tbase+3 右側 Confirmation 價格確認 (報酬率 >= -2.0%)
+  close_confirm = float(row_today['close'])
+  confirm_return = (
+      (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
+  )
+  cond_right_confirm_ok = confirm_return >= threshold_pct
+
+  is_hit = is_base_pass and is_dual_track_pass and cond_right_confirm_ok
+
+  # 7. 統一由主函數輸出 100% 對齊 1029_1_1 的經典卡牌除錯格式
+  if verbose:
+    c1_m = '✓' if base_metrics.get('cond_price_ok', False) else '✕'
+    c2_m = '✓' if base_metrics.get('cond_vol_ok', False) else '✕'
+    c3_m = '✓' if base_metrics.get('cond_continuous_easy', False) else '✕'
+    c4_m = '✓' if base_metrics.get('was_below', False) else '✕'
+    c5_m = '✓' if base_metrics.get('cond_easy_momentum', False) else '✕'
+    c6_m = '✓' if is_dual_track_pass else '✕'
+    c7_m = '✓' if cond_right_confirm_ok else '✕'
+
+    t1_m = '✓' if (is_track1 and is_dual_track_pass) else '✕'
+    t2_m = '✓' if ((not is_track1) and is_dual_track_pass) else '✕'
+
+    track_passed_label = track_tag if is_dual_track_pass else '未通過雙軌門檻'
+    result_str = (
+        f'🔥 [{track_passed_label} 通關建倉]' if is_hit else '⚪ [未通過過濾]'
+    )
+
+    vol_lots_t0 = vol_t0 / 1000.0
+    vol_ma5_lots = (
+        (base_metrics.get('vol_ma5', vol_t0) / 1000.0)
+        if base_metrics
+        else vol_lots_t0
+    )
+
+    print()
+    print('=' * 65)
+    print(
+        f'🔔 [st_qiantang_f3_after_shakeout_20261030] 股票: {stock_id_str} |'
+        f' 觸發日: {date_str} -> 確認日: {date_confirm_str}'
+    )
+    print('-' * 65)
+    print(f'  [{c1_m}] 1. 收盤價 >= 5元 : ${close_t0:.2f}')
+    print(
+        f'  [{c2_m}] 2. 量能過濾 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍'
+        f' {vol_ma5_lots*1.2:,.0f}張 且 >=350張)'
+    )
+    print(f'  [{c3_m}] 3. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
+    print(
+        '  [{c4_m}] 4. 洗盤甩轎軌跡 :'
+        f' T-2({base_metrics.get("was_below_p3", False)}) |'
+        f' T-3({base_metrics.get("was_below_p4", False)}) |'
+        f' T-4({base_metrics.get("was_below_p5", False)})'
+    )
+    print(
+        f'  [{c5_m}] 5. 輕鬆線動能 : OLS斜率'
+        f' ({base_metrics.get("easy_slope", 0.0):.4f}) > 0 且 5日成長率'
+        f' ({base_metrics.get("easy_growth", 0.0)*100:.2f}%) >= 1.5%'
+    )
+    print(
+        f'  [{c6_m}] 6. 🌟 雙軌獨立優化閘門 : 通過軌道 ➔ 【{track_passed_label}】'
+    )
+    print(
+        f'       ├─ [{t1_m}] [第一軌-高位動能突破] 距52W高點:'
+        f' {dist_52w_high_val:.2f}% (門檻 >= {min_dist_52w_high:.1f}%) | 年線乖離:'
+        f' {ma240_bias:.2f}% (門檻 >= {t1_min_ma240_bias:.1f}%) | MA60斜率:'
+        f' {ma60_slope:.4f} | 金額: {amount_100m:.2f}億元'
+    )
+    print(
+        f'       └─ [{t2_m}] [第二軌-低位轉折/年線安全] 打底:'
+        f' {consolidation_days}天 (門檻>={t2_min_base_days}天) | 年線扣抵:'
+        f' {ma240_deduction_val:.2f}% (門檻<={t2_max_ma240_deduction:.1f}%) |'
+        f' 大盤季年乖離: {market_ma60_ma240_bias:.2f}%'
+        f' (門檻<={t2_max_market_ma60_ma240_bias:.1f}%) | 投信5日:'
+        f' {trust_5d_val:,.0f}張'
+    )
+    print(
+        f'  [{c7_m}] 7. 🌟 右側二次確認 (T+{delay_days} 報酬 >='
+        f' {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%'
+    )
+    print('-' * 65)
+    print(f'🎯 最終觸發結果: {result_str}')
+    print('=' * 65)
+    print()
+
+  # 8. 回傳資訊與質化建議
+  info = (
+      {
+          '選股公式': 'st_qiantang_f3_after_shakeout_20261030_雙軌分流獨立優化旗艦版',
+          '股票代號': stock_id_str,
+          '訊號日期': date_str,
+          '觸發價格': close_t0,
+          '所屬軌道': track_tag,
+          '距52W高點': f'{dist_52w_high_val:.1f}%',
+          '年線乖離率': f'{ma240_bias:.2f}%',
+          '年線扣抵位置': f'{ma240_deduction_val:.2f}%',
+          '當日成交金額': f'{amount_100m:.2f}億元',
+          '投信近5日買超': f'{trust_5d_val:,.0f}張',
+          '大盤季年乖離率': f'{market_ma60_ma240_bias:.2f}%',
+          f'T+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
+          '操作建議': (
+              f'通過 20261030 雙軌獨立優化過濾（{track_tag}）。'
+              f'位階 {dist_52w_high_val:.1f}%，T+{delay_days}右側確認報酬'
+              f' {confirm_return * 100:.1f}%。'
+              '建議配合持倉 -10% 硬停損與移動停利紀律執行。'
+          ),
+      }
+      if is_hit
+      else {}
+  )
+
+  return is_hit, info
 
 
 def st_qiantang_f3_after_shakeout_20261030(
