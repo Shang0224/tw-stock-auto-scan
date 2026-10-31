@@ -1371,7 +1371,7 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
         print("-" * 70)
         print(f"  [{c1_m}] 1. 季線趨勢 : Close_T > MA60 (${close_t0:.2f} > ${ma60_t0:.2f})")
         print(f"  [{c2_m}] 2. 價格底線 : ${close_t0:.2f} >= $5.0")
-        print(f"  [{c3_m}] 3. 成交量能 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍 {vol_ma5_lots*1.2:,.0f}張 且 >=350張)")
+        print(f"  [{c3_m}] 3. 成交量能 : {vol_t0/1000.0 :,.0f} 張 (>5日均量1.2倍 {vol_ma5/1000.0*1.2:,.0f}張 且 >=350張)")
         print(f"  [{c4_m}] 4. 連續站穩輕鬆線 : Day T 與 Day T-1 均站上")
         print(f"  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({was_below_tm2}) | T-3({was_below_tm3}) | T-4({was_below_tm4})")
         print(f"  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({osc_t0:.3f}) > 0 且 T-1 OSC ({osc_tm1:.3f}) <= 0")
