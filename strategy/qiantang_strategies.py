@@ -1379,7 +1379,7 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
         print(f"  [{c8_m}] 8. 🌟 雙軌位階機制 : 通過軌道 ➔ 【{track_passed_label}】")
         print(f"       ├─ [{t1_m}] [第一軌-強勢高位] 距52週高點: {dist_52w_high_val:.2f}% (門檻 >= {min_dist_52w_high:.1f}%)")
         print(f"       └─ [{t2_m}] [第二軌-低位打底/年線安全] 打底: {base_days}天 (門檻>=35天) | 年線扣抵: {ma240_deduction_val:.2f}% (門檻<=10%)")
-        print(f"  [{c9_m}] 9. 🌟 大盤年線風控 : 乖離率={market_bias_pct:.2f}% (門檻 <= {max_market_ma240_bias*100:.1f}%)")
+        print(f"  [{c9_m}] 9. 🌟 大盤年線風控 : 乖離率={market_bias_pct:.2f}% (門檻 <= {max_market_ma240_bias:.1f}%)")
         print(f"  [{c10_m}] 10. 🌟 年線扣抵上限 : {ma240_deduction_val:.2f}% (門檻 <= {max_ma240_deduction_pos:.1f}%)")
         print(f"  [{c11_m}] 11. 🌟 右側二次確認 (T+{delay_days} 報酬 >= {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%")
         print("-" * 70)
@@ -1426,7 +1426,7 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
 def st_qiantang_f3_after_shakeout_20261030_1(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                 # T+3 右側觀察天數 (預設 3 天)
     threshold_pct: float = -0.01,        # Combo A 門檻：T+3 右側確認報酬率 >= -1.0%
     min_dist_52w_high: float = -15.0,    # 雙軌分流門檻 (距 52 週高點 >= -15.0% 為第一軌)
@@ -1622,7 +1622,7 @@ def st_qiantang_f3_after_shakeout_20261030_1(
 def st_qiantang_f3_after_shakeout_20261030(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                 # T+3 右側觀察天數 (預設 3 天)
     threshold_pct: float = -0.02,        # T+3 右側觀察期門檻 (報酬率 >= -2.0%)
     min_dist_52w_high: float = -15.0,    # 雙軌分流門檻 (距 52 週高點 >= -15.0% 為第一軌，< -15.0% 為第二軌)
