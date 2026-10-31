@@ -1192,8 +1192,8 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     min_base_days: int = 35,                # 第二軌子條件 A：打底沉澱天數門檻 (>= 35 天)
     max_track2_deduction_pos: float = 10.0, # 第二軌子條件 B：年線扣抵位置安全門檻 (<= 10.0%)
     max_ma240_deduction_pos: float = 25.0,  # 黃金風控一：年線扣抵位置上限 (<= 25.0%)
-    max_ma240_bias: float = 0.25,           # 黃金風控二：個股年線乖離率上限 (25.0%)
-    max_market_ma240_bias: float = 0.12,    # 黃金風控三：大盤年線乖離率上限 (12.0%)
+    max_ma240_bias: float = 25.0,           # 黃金風控二：個股年線乖離率上限 (25.0%)
+    max_market_ma240_bias: float = 12.0,    # 黃金風控三：大盤年線乖離率上限 (12.0%)
     min_exempt_ols_slope: float = 1.0,      # 飆股強勢 OLS 斜率豁免門檻 (>= 1.0)
     market_info: dict = None,               # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
@@ -1256,15 +1256,15 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     close_tm1 = float(row_tm1["close"])
     easy_tm1 = float(row_tm1["easy_line"])
 
-    vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
+    #vol_lots_t0 = vol_t0 / 1000.0 if vol_t0 > 10000 else vol_t0
     recent_vols = df_single["Trading_Volume"].iloc[t0_pos - 5 : t0_pos]
     vol_ma5 = float(recent_vols.mean())
-    vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
+    #vol_ma5_lots = vol_ma5 / 1000.0 if vol_ma5 > 10000 else vol_ma5
 
     # 1~5 基礎技術面關卡
     cond1_trend = close_t0 > ma60_t0
     cond2_price_ok = close_t0 >= 5.0
-    cond3_vol_ok = (vol_lots_t0 >= 350) and (vol_lots_t0 >= vol_ma5_lots * 1.2)
+    cond3_vol_ok = (vol_t0 >= 350 *1000) and (vol_ma5 >= vol_ma5 * 1.2)
     cond4_continuous = (close_t0 > easy_t0) and (close_tm1 > easy_tm1)
 
     was_below_tm2 = float(row_tm2["close"]) <= float(row_tm2["easy_line"])
@@ -1281,11 +1281,10 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
     easy_ols_slope = float(row_t0.get("easy_line_slope"))
     ma240_bias = float(row_t0.get("ma240_bias"))    
     
-    #easy_ols_slope = float(row_t0.get("easy_line_slope", row_t0.get("輕鬆線OLS斜率", 0.0)))    
-    #ma240_bias = float(row_t0.get("ma240_bias", row_t0.get("年線乖離率(%)", 0.0)))
-
-    bias_threshold = max_ma240_bias * 100.0 if max_ma240_bias <= 1.0 else max_ma240_bias
-    is_ma240_normal_ok = ma240_bias <= bias_threshold
+    #easy_ols_slope = float(row_t0.get("easy_line_slope"))    
+    #ma240_bias = float(row_t0.get("ma240_bias"))
+    
+    is_ma240_normal_ok = ma240_bias <= max_ma240_bias
     is_ols_exempt_ok = easy_ols_slope >= min_exempt_ols_slope
     cond7_ma240_bias_ok = is_ma240_normal_ok or is_ols_exempt_ok
 
@@ -1316,13 +1315,13 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
 
     # 9. 大盤風控
     m_info = market_info or {}
-    market_bias_val = float(m_info.get("taiex_ma240_bias_pct"))
+    market_bias_pct = float(m_info.get("taiex_ma240_bias_pct"))
     
     #market_bias_val = float(m_info.get("taiex_ma240_bias_pct", m_info.get("market_ma240_bias_pct", row_t0.get("大盤年線乖離率(%)", 0.0))))
     
-    market_bias_pct = market_bias_val if abs(market_bias_val) > 1.0 else market_bias_val * 100.0
-    m_threshold = max_market_ma240_bias * 100.0 if max_market_ma240_bias <= 1.0 else max_market_ma240_bias
-    cond9_market_ma240_ok = market_bias_pct <= m_threshold
+    #market_bias_pct = market_bias_val
+    #m_threshold = max_market_ma240_bias
+    cond9_market_ma240_ok = market_bias_pct <= max_market_ma240_bias
 
     # 10. 年線扣抵位置上限 (<= 25%)
     cond10_ma240_deduction_ok = ma240_deduction_val <= max_ma240_deduction_pos
