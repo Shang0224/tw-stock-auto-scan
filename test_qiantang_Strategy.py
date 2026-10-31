@@ -46,8 +46,11 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout_20261029_1,
     st_qiantang_f3_after_shakeout_20261030,
     st_qiantang_f3_after_shakeout_20261030_1,
+    st_qiantang_f3_after_shakeout_20261030_new,
+    st_qiantang_f3_after_shakeout_20261030_1_new,
     st_qiantang_f3_after_shakeout_1029_1_old, #AI原始版
     st_qiantang_f3_after_shakeout_1029_1_1,
+    st_qiantang_f3_after_shakeout_1029_1_1_1,
 
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
@@ -98,6 +101,8 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_20261029_1,
     st_qiantang_f3_after_shakeout_20261030,
     st_qiantang_f3_after_shakeout_20261030_1,
+    st_qiantang_f3_after_shakeout_20261030_new,
+    st_qiantang_f3_after_shakeout_20261030_1_new,
     #st_qiantang_f3_after_shakeout_1029_1_old,
     st_qiantang_f3_after_shakeout_1029_1_1,
     st_qiantang_f3_after_shakeout_1029_1_1_1,
