@@ -7072,13 +7072,14 @@ def st_qiantang_f3_after_shakeout_20261020_1(
       '觸發價格': close_t0,
       '距52W高點': f'{dist_52w:.1f}%',
       'delay_days': delay_days,
-      f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
+      f'Tbase+{delay_days}觀察期報酬': f'{ret_delay * 100:.2f}%',
       '操作建議': (
           f'強勢波段發動，短線站穩輕鬆線且右側沉澱安全 (52W位階:'
           f' {dist_52w:.1f}%, T+3報酬: {ret_delay*100:.2f}%)'
       ),
   } if is_hit else {}
 
+  print(f"info={info}")
   return is_hit, info
 
 def st_qiantang_f3_after_shakeout_20261018_1(
@@ -7236,8 +7237,8 @@ def st_qiantang_f3_after_shakeout_20261018_1(
             f'雙線斜率共振向上 (季線斜率:{ma60_slope:.3f}, 輕鬆線斜率:{ols_slope:.3f})，'
             f'股價位居 52 週高點強勢區 ({dist_52w_high:.1f}%) 且洗盤沉澱完成，具備強烈主升段飆股特徵。'
         )
-    } if is_hit else {}
-
+    } if is_hit else {}    
+    
     return is_hit, info
 
 
