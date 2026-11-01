@@ -5841,7 +5841,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
           "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
           "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
-          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
+          'delay_days': delay_days,
+          f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
           "操作建議": (
               f"個股年線乖離 {details['ma240_bias']:.1f}%"
               f" ({'正常區間' if details['is_ma240_normal_ok'] else '飆股OLS強勢豁免'})，"
@@ -7026,7 +7027,7 @@ def st_qiantang_f3_after_shakeout_20261020_1(
     date_str = str(row_t0.get('date', ''))
     print('\n' + '=' * 60)
     print(
-        f'🔔 [F3_策略一修正版 (強勢高位+右側 confirmation)] 股票: {stock_id} |'
+        f'🔔 [F3_20261020_1 策略一修正版 (強勢高位+右側 confirmation)] 股票: {stock_id} |'
         f' 訊號日: {date_str}'
     )
     print('-' * 60)
@@ -7064,7 +7065,7 @@ def st_qiantang_f3_after_shakeout_20261020_1(
     print('=' * 60 + '\n')
 
   info = {
-      '選股公式': 'F3_洗盤後_強勢高位與右側 confirmation 旗艦融合版',
+      '選股公式': 'F3_洗盤後_20261020_1_強勢高位與右側 confirmation 旗艦融合版',
       '股票代號': str(row_t0.get('stock_id', '')),
       '訊號日期': str(row_t0.get('date', '')),
       '觸發價格': close_t0,
