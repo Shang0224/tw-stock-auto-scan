@@ -7024,12 +7024,17 @@ def st_qiantang_f3_after_shakeout_20261020_1(
   )
 
   if verbose:
+
+    row_confirm = df_single.iloc[-1]
+    
+    date_confirm_str = str(row_confirm['date'])
+      
     stock_id = str(row_t0.get('stock_id', ''))
     date_str = str(row_t0.get('date', ''))
     print('\n' + '=' * 60)
     print(
         f'🔔 [F3_20261020_1 策略一修正版 (強勢高位+右側 confirmation)] 股票: {stock_id} |'
-        f' 訊號日: {date_str}'
+        f' 訊號日: {date_str} ----> 確認日: {date_confirm_str}''
     )
     print('-' * 60)
     print(
@@ -7075,11 +7080,10 @@ def st_qiantang_f3_after_shakeout_20261020_1(
       f'Tbase+{delay_days}觀察期報酬': f'{ret_delay * 100:.2f}%',
       '操作建議': (
           f'強勢波段發動，短線站穩輕鬆線且右側沉澱安全 (52W位階:'
-          f' {dist_52w:.1f}%, T+3報酬: {ret_delay*100:.2f}%)'
+          f' {dist_52w:.1f}%, Tbase+{delay_days} 報酬: {ret_delay*100:.2f}%)'
       ),
   } if is_hit else {}
 
-  print(f"info={info}")
   return is_hit, info
 
 def st_qiantang_f3_after_shakeout_20261018_1(
