@@ -7034,7 +7034,7 @@ def st_qiantang_f3_after_shakeout_20261020_1(
     print('\n' + '=' * 60)
     print(
         f'🔔 [F3_20261020_1 策略一修正版 (強勢高位+右側 confirmation)] 股票: {stock_id} |'
-        f' 訊號日: {date_str} ----> 確認日: {date_confirm_str}''
+        f' 訊號日: {date_str} ----> 確認日: {date_confirm_str}'
     )
     print('-' * 60)
     print(
