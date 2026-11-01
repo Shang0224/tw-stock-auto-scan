@@ -52,6 +52,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout_1029_1_1,
     st_qiantang_f3_after_shakeout_1029_1_1_1,
     st_qiantang_f3_after_shakeout_1029_1_2,
+    st_qiantang_f3_after_shakeout_1101, #st_qiantang_f3_after_shakeout_1029_1_1策略的後續改進版本
 
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
@@ -98,7 +99,7 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
     #st_qiantang_f3_after_shakeout_20261022_1_1_6, #從st_qiantang_f3_after_shakeout_20261001_1_1_2修改, 籌碼共振與高位強勢旗艦版
     #st_qiantang_f3_after_shakeout_20261023, #20261020_1（強勢高位+T+3） 與 1_1_5（黃金雙防線版） 融合版
-    st_qiantang_f3_after_shakeout_20261029,
+    #st_qiantang_f3_after_shakeout_20261029,
     st_qiantang_f3_after_shakeout_20261029_1,
     #st_qiantang_f3_after_shakeout_20261030,
     #st_qiantang_f3_after_shakeout_20261030_1,
@@ -108,6 +109,7 @@ TEST_QIANTANG_STRATEGY = [
     st_qiantang_f3_after_shakeout_1029_1_1,
     #st_qiantang_f3_after_shakeout_1029_1_1_1,
     #st_qiantang_f3_after_shakeout_1029_1_2,
+    st_qiantang_f3_after_shakeout_1029_1_1
         
     
     #st_qiantang_f3_after_shakeout_20261001_1,
@@ -246,11 +248,118 @@ def scan_qiantang_strategy_day(
       extreme_perf = calculate_one_year_extremes(
           stock_id=sid, trigger_date_str=day_str, global_df=global_df
       )
-       
+
       for hit in hits:
         strat_func_name = hit.get("strategy_name", "")
         formula_label = hit.get("選股公式", strat_func_name)
 
+        for hit in hits:
+    strat_func_name = hit.get("strategy_name", "")
+    formula_label = hit.get("選股公式", strat_func_name)
+
+    # -----------------------------------------------------------------
+    # 📌 步驟 1：建立前半段基礎欄位（到「操作建議」為止）
+    # -----------------------------------------------------------------
+    hit_record = {
+        "日期": day_str,
+        "股票代號": sid,
+        "名稱": stock_name,
+        "選股池分類": stock_cat,
+        "今日收盤": close_price,
+        "今日成交量(張)": vol_lots,
+        "選股公式": formula_label,
+        "strategy_name": strat_func_name,
+        "操作建議": hit.get("操作建議", hit.get("detail", "")),
+    }
+
+    # -----------------------------------------------------------------
+    # 🌟 步驟 2：緊跟在「操作建議」後面：只有在 hit 包含 delay_days 時才插入右側觀察期欄位
+    # -----------------------------------------------------------------
+    if "delay_days" in hit:
+        delay_days_val = hit["delay_days"]
+        formal_ret_key = f"Tbase+{delay_days_val}觀察期報酬"
+        
+        hit_record["右側觀察天數"] = delay_days_val
+        hit_record[formal_ret_key] = hit.get(formal_ret_key, "N/A")
+
+    # -----------------------------------------------------------------
+    # 🎯 步驟 3：使用 .update() 接續寫入剩餘的技術、籌碼與大盤欄位
+    # -----------------------------------------------------------------
+    hit_record.update({
+        # 1. 輕鬆線動能
+        "輕鬆線價格": round(float(latest_row.get("easy_line", 0)), 2),
+        "輕鬆線乖離率(%)": round(float(latest_row.get("easy_line_bias", 0)), 2),
+        "輕鬆線OLS斜率": round(float(latest_row.get("easy_line_slope", 0)), 4),
+        # 2. 均線位階與扣抵
+        "MA60季線": round(float(latest_row.get("MA60", 0)), 2),
+        "季線乖離率(%)": round(float(latest_row.get("ma60_bias", 0)), 2),
+        "季線扣抵位置(%)": round(float(latest_row.get("ma60_deduct_bias", 0)), 2),
+        "MA240年線": (
+            round(float(latest_row["MA240"]), 2)
+            if ("MA240" in latest_row and pd.notnull(latest_row["MA240"]))
+            else "N/A"
+        ),
+        "年線乖離率(%)": (
+            round(float(latest_row["ma240_bias"]), 2)
+            if ("ma240_bias" in latest_row and pd.notnull(latest_row["ma240_bias"]))
+            else "N/A"
+        ),
+        "年線扣抵位置(%)": (
+            round(float(latest_row["ma240_deduct_bias"]), 2)
+            if ("ma240_deduct_bias" in latest_row and pd.notnull(latest_row["ma240_deduct_bias"]))
+            else "N/A"
+        ),
+        "MA60斜率": round(float(latest_row.get("ma60_slope", 0)), 4),
+        "MA240斜率": round(float(latest_row.get("ma240_slope", 0)), 4),
+        "均線多頭排列": bool(latest_row.get("is_bull_alignment", False)),
+        "均線糾結度(%)": (
+            round(float(latest_row["ma_tangle_ratio"]), 2)
+            if ("ma_tangle_ratio" in latest_row and pd.notnull(latest_row["ma_tangle_ratio"]))
+            else "N/A"
+        ),
+        # 3. K線型態與特徵
+        "實體K棒比例(%)": round(float(latest_row.get("body_ratio", 0)), 2),
+        "上影線比例(%)": round(float(latest_row.get("upper_shadow_ratio", 0)), 2),
+        "是否紅K": bool(latest_row.get("is_red_k", True)),
+        # 4. 成交金額與型態沉澱
+        "成交金額(億元)": round(float(latest_row.get("amount_100m", 0)), 2),
+        "單筆均張(SPT)": round(float(latest_row.get("shares_per_trans", 0)), 2),
+        "距52週高點(%)": (
+            round(float(latest_row["dist_to_52w_high_pct"]), 2)
+            if ("dist_to_52w_high_pct" in latest_row and pd.notnull(latest_row["dist_to_52w_high_pct"]))
+            else "N/A"
+        ),
+        "打底沉澱天數": int(latest_row.get("base_consolidation_days", 0)),
+        # 5. 外部大盤環境特徵
+        "大盤位階": ("大盤>MA60" if m_close > m_ma60 else "大盤<=MA60"),
+        "大盤當日漲跌幅(%)": round(float(m_info.get("taiex_change_pct", 0)), 2),
+        "大盤月線乖離率(%)": round(float(m_info.get("taiex_ma20_bias_pct", 0)), 2),
+        "大盤季線乖離率(%)": round(float(m_info.get("taiex_ma60_bias_pct", 0)), 2),
+        "大盤年線乖離率(%)": round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2),
+        "大盤季線與年線乖離率(%)": round(float(m_info.get("taiex_ma60_ma240_bias_pct", 0)), 2),
+        # 6. 籌碼特徵
+        "外資買超(張)": safe_lots_from_shares(latest_row.get("Foreign_Investor")),
+        "投信買超(張)": safe_lots_from_shares(latest_row.get("Investment_Trust")),
+        "自營商買超(張)": safe_lots_from_shares(latest_row.get("Dealer_self")),
+        "主力買超(張)": safe_lots_from_shares(latest_row.get("major_net")),
+        "外資近5日累計(張)": safe_lots_from_shares(latest_row.get("foreign_5d_shares_sum")),
+        "投信近5日累計(張)": safe_lots_from_shares(latest_row.get("trust_5d_shares_sum")),
+        "主力近5日累計(張)": safe_lots_from_shares(latest_row.get("major_5d_shares_sum")),
+        "融資餘額(張)": safe_lots_from_lots(latest_row.get("MarginPurchaseTodayBalance")),
+        "融資當日增減(張)": safe_lots_from_lots(latest_row.get("margin_diff_shares")),
+        "融券餘額(張)": safe_lots_from_lots(latest_row.get("ShortSaleTodayBalance")),
+        "融券當日增減(張)": safe_lots_from_lots(latest_row.get("short_diff_shares")),
+    })
+
+    # -----------------------------------------------------------------
+    # ⏱️ 步驟 4：追加進場後前瞻與極值績效欄位
+    # -----------------------------------------------------------------
+    hit_record.update(fwd_perf)
+    hit_record.update(extreme_perf)
+
+    day_hits.append(hit_record)
+          
+        """
         hit_record = {
             # -----------------------------------------------------------------
             # 📌 基礎標示欄位
@@ -262,8 +371,9 @@ def scan_qiantang_strategy_day(
             "今日收盤": close_price,
             "今日成交量(張)": vol_lots,
             "選股公式": formula_label,
-            "strategy_name": strat_func_name,
+            "strategy_name": strat_func_name,            
             "操作建議": hit.get("操作建議", hit.get("detail", "")),
+
             # -----------------------------------------------------------------
             # 🎯 第一類：觸發當下 (Day T) 技術與籌碼特徵 (因)
             # -----------------------------------------------------------------
@@ -378,7 +488,8 @@ def scan_qiantang_strategy_day(
             "融資當日增減(張)": safe_lots_from_lots(latest_row.get("margin_diff_shares")),
             "融券餘額(張)": safe_lots_from_lots(latest_row.get("ShortSaleTodayBalance")),
             "融券當日增減(張)": safe_lots_from_lots(latest_row.get("short_diff_shares")),
-        }
+        }   
+        """
 
         # -----------------------------------------------------------------
         # ⏱️ 第二類：進場後績效與軌跡細節 (果)
