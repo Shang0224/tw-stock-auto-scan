@@ -5228,7 +5228,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
           "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
           "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
-          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
+          'delay_days': delay_days,
+          f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
           "操作建議": (
               f"1_1_2 基底升級 1_1_5 黃金雙防線版通過：年線扣抵 {details['ma240_deduction_val']:.1f}%"
               f" (<=25%)，T+{delay_days}右側確認報酬 {confirm_return * 100:.1f}%"
@@ -7068,6 +7069,8 @@ def st_qiantang_f3_after_shakeout_20261020_1(
       '訊號日期': str(row_t0.get('date', '')),
       '觸發價格': close_t0,
       '距52W高點': f'{dist_52w:.1f}%',
+      'delay_days': delay_days,
+      f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
       'T+3觀察期報酬': f'{ret_delay*100:.2f}%',
       '操作建議': (
           f'強勢波段發動，短線站穩輕鬆線且右側沉澱安全 (52W位階:'
