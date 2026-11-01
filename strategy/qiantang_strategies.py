@@ -6902,10 +6902,10 @@ def st_qiantang_f3_after_shakeout_20261020_2(
 
 def st_qiantang_f3_after_shakeout_20261020_1(
     df_single: pd.DataFrame,
-    delay_days: int = 3,  # 🌟 彈性右側觀察天數 (預設 T+3 觀察期)
-    threshold_pct: float = -0.005,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%), 改為
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 3,  # 🌟 彈性右側觀察天數 (預設 T+3 觀察期)
+    threshold_pct: float = -0.02,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%), 改為
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (策略一修正版：強勢高位 + T+3 右側二次確認 旗艦融合版)】
 
@@ -7072,7 +7072,6 @@ def st_qiantang_f3_after_shakeout_20261020_1(
       '距52W高點': f'{dist_52w:.1f}%',
       'delay_days': delay_days,
       f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
-      'T+3觀察期報酬': f'{ret_delay*100:.2f}%',
       '操作建議': (
           f'強勢波段發動，短線站穩輕鬆線且右側沉澱安全 (52W位階:'
           f' {dist_52w:.1f}%, T+3報酬: {ret_delay*100:.2f}%)'
