@@ -4324,7 +4324,8 @@ def st_qiantang_f3_after_shakeout_20261023(
           "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
           "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
-          f"T+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
+          "delay_days": delay_days,
+          f"Tbase+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
           "操作建議": (
               f"20261020_1 與 1_1_5 終極融合策略通關：距52週高點 {details['dist_52w_high_val']:.1f}%"
               f" (>= -15%)，年線扣抵 {details['ma240_deduction_val']:.1f}%"
@@ -5228,8 +5229,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
           "輕鬆線OLS斜率": f"{details['easy_ols_slope']:.4f}",
           "大盤年線乖離率": f"{details['market_bias_pct']:.2f}%",
           "飆股豁免啟動": "是" if details["is_ols_exempt_ok"] else "否",
-          'delay_days': delay_days,
-          f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
+          "delay_days": delay_days,
+          f"Tbase+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%",
           "操作建議": (
               f"1_1_2 基底升級 1_1_5 黃金雙防線版通過：年線扣抵 {details['ma240_deduction_val']:.1f}%"
               f" (<=25%)，T+{delay_days}右側確認報酬 {confirm_return * 100:.1f}%"
