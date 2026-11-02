@@ -6906,7 +6906,7 @@ def st_qiantang_f3_after_shakeout_20261020_1(
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,  # 🌟 彈性右側觀察天數 (預設 T+3 觀察期)
-    threshold_pct: float = 0.02,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%), 改為
+    threshold_pct: float = -0.03,  # 🌟 觀察期最大允許跌幅 (預設不超過 -2.0%), 改為
 ) -> tuple[bool, dict]:
   """【F3_洗盤後 (策略一修正版：強勢高位 + T+3 右側二次確認 旗艦融合版)】
 
