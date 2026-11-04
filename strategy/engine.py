@@ -211,6 +211,16 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   df['dif'] = exp1 - exp2
   df['dem'] = df['dif'].ewm(span=9, adjust=False).mean()
   df['osc'] = (df['dif'] - df['dem']) * 2.0  # MACD 柱狀體
+
+  # 1. 截至昨日之 5 日與 20 日均量 (單位：股數)
+  df['vol_ma5_prior'] = df['Trading_Volume'].shift(1).rolling(5, min_periods=1).mean()
+  df['vol_ma20_prior'] = df['Trading_Volume'].shift(1).rolling(20, min_periods=1).mean()
+
+  # 2. 截至昨日 5 日均量線之 OLS 斜率
+  df['vol_ma5_slope'] = calc_ols_slope(df['vol_ma5_prior'], window=5)
+
+  # 3. T-2~T-4 甩轎期最大成交量
+  df['vol_shakeout_max'] = df['Trading_Volume'].shift(2).rolling(3, min_periods=1).max()
     
   return df
 
