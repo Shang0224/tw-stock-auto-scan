@@ -1050,7 +1050,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
         # 動態量價共振 4 子條件計算
         cond_vol_ma_spread = (vol_ma5_prior > vol_ma20_prior)
-        cond_vol_slope_up = (vol_ma5_slope > 0)
+        cond_vol_slope_up = (vol_ma5_slope_prior > 0)
         cond_vol_surge = (vol_t0 >= vol_ma5_prior * 1.2)
         cond_shakeout_vol = (vol_shakeout_max < vol_ma5_prior)
         vol_resonance_tag = bool(cond_vol_ma_spread and cond_vol_slope_up and cond_vol_surge and cond_shakeout_vol)
