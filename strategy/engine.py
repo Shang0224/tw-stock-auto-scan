@@ -278,20 +278,25 @@ def scan_single_stock(
 
     hits = []
     for run_func in func_list:
-        sig_params = inspect.signature(run_func).parameters
+        try:
+            sig_params = inspect.signature(run_func).parameters
         
-        if 'profile' in sig_params and 'market_info' not in sig_params:
-            is_hit, info = run_func(df_single, profile=profile)
-        elif 'market_info' in sig_params:
-            is_hit, info = run_func(df_single, market_info=market_info)      
-        else:
-            is_hit, info = run_func(df_single)
+            if 'profile' in sig_params and 'market_info' not in sig_params:
+                is_hit, info = run_func(df_single, profile=profile)
+            elif 'market_info' in sig_params:
+                is_hit, info = run_func(df_single, market_info=market_info)      
+            else:
+                is_hit, info = run_func(df_single)
 
-        if is_hit:
-            res_info = info if isinstance(info, dict) else {"detail": str(info)}
-            res_info["strategy_name"] = run_func.__name__
-            res_info["category"] = category
-            hits.append(res_info)
-
+            if is_hit:
+                res_info = info if isinstance(info, dict) else {"detail": str(info)}
+                res_info["strategy_name"] = run_func.__name__
+                res_info["category"] = category
+                hits.append(res_info)
+        except Exception as strat_err:
+            # 🌟 內層防線：策略層級隔離機制
+            print(f"⚠️ [策略獨立跳過] 股票: {stock_id} | 策略: {strategy_func.__name__} 執行異常: {strat_err}")
+            continue
+  
     return hits
 
