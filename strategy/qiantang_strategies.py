@@ -1104,6 +1104,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
             'cond_vol_ma20_sediment': cond_vol_ma20_sediment,
             'cond_vol_ma5_expansion': cond_vol_ma5_expansion,
             'cond_vol_ma_spread': cond_vol_ma_spread,
+            'vol_ma5_slope_pct': vol_ma5_slope_pct,
             
         
             """
@@ -1189,46 +1190,95 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
     # 6. Console Log 訊息輸出 (100% 經典卡牌格式，含量價共振診斷資訊)
     if verbose:
-        c1_m = '✓' if bm.get('cond1_trend', False) else '✕'
-        c2_m = '✓' if bm.get('cond2_price_ok', False) else '✕'
-        c3_m = '✓' if bm.get('cond3_vol_ok', False) else '✕'
-        c4_m = '✓' if bm.get('cond4_continuous', False) else '✕'
-        c5_m = '✓' if bm.get('cond5_shakeout', False) else '✕'
-        c6_m = '✓' if bm.get('cond6_macd_ok', False) else '✕'
-        c7_m = '✓' if cond7_ma240_bias_ok else '✕'
+        # 1. 勾選符號判斷（直接存取布林值，無預設值）
+        c1_m = '✓' if bm['cond1_trend'] else '✕'
+        c2_m = '✓' if bm['cond2_price_ok'] else '✕'
+        c3_m = '✓' if bm['cond3_vol_ok'] else '✕'
+        c4_m = '✓' if bm['cond4_continuous'] else '✕'
+        c5_m = '✓' if bm['cond5_shakeout'] else '✕'
+        c6_m = '✓' if bm['cond6_macd_ok'] else '✕'
+        c7_m = '✓' if cond7_ma240_bias_ok else '✕'       
         c8_m = '✓' if cond8_double_track_ok else '✕'
         c9_m = '✓' if cond9_market_ma240_ok else '✕'
         c10_m = '✓' if cond10_ma240_deduction_ok else '✕'
         c11_m = '✓' if cond11_right_confirm_ok else '✕'
 
-        c_vtag = '✓' if bm.get('vol_resonance_tag', False) else '✕'
+        c_vtag = '✓' if bm['vol_resonance_tag'] else '✕'
 
         t1_m = '✓' if is_track1_pass else '✕'
         t2_m = '✓' if is_track2_pass else '✕'
 
-        result_str = f'🔥 [{track_passed_label} 1102_1通關建倉]' if is_hit else '⚪ [未通過過濾]'
+        result_str = (
+            f'🔥 [{track_passed_label} 1102_1通關建倉]'
+            if is_hit
+            else '⚪ [未通過過濾]'
+        )
 
         vol_lots_t0 = vol_t0 / 1000.0
-        vol_ma5_lots = (bm.get('vol_ma5', vol_t0) / 1000.0) if bm else vol_lots_t0
+        vol_ma5_lots = bm['vol_ma5'] / 1000.0
 
         print()
         print('=' * 65)
-        print(f'🔔 [st_qiantang_f3_after_shakeout_1102_1] 股票: {stock_id_str} | 觸發日: {date_t0_str} -> 確認日: {date_confirm_str}')
+        print(
+            f'🔔 [st_qiantang_f3_after_shakeout_1102_1] 股票: {stock_id_str} | 觸發日:'
+            f' {date_t0_str} -> 確認日: {date_confirm_str}'
+        )
         print('-' * 65)
-        print(f'  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${close_t0:.2f} > ${bm.get("ma60_t0", 0.0):.2f})')
+        print(
+            f'  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${close_t0:.2f} >'
+            f' ${bm["ma60_t0"]:.2f})'
+        )        
         print(f'  [{c2_m}] 2. 收盤價 >= 5元 : ${close_t0:.2f}')
-        print(f'  [{c3_m}] 3. 量能過濾 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍 {vol_ma5_lots*1.2:,.0f}張 且 >=350張)')
-        print(f'  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
-        print(f'  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({bm.get("was_below_tm2", False)}) | T-3({bm.get("was_below_tm3", False)}) | T-4({bm.get("was_below_tm4", False)})')
-        print(f'  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({bm.get("osc_t0", 0.0):.3f}) > 0 且 T-1 OSC ({bm.get("osc_tm1", 0.0):.3f}) <= 0')
-        print(f'  [{c_vtag}] 🌟 動態量價共振診斷 : 標記={bm.get("vol_resonance_tag", False)} (均量發散:{bm.get("cond_vol_ma_spread", False)} | 斜率:{bm.get("vol_ma5_slope", 0.0):.4f} | 甩轎量縮:{bm.get("cond_shakeout_vol", False)})')
-        print(f'  [{c7_m}] 7. 個股年線乖離 & OLS豁免 : 乖離率={ma240_bias:.2f}% (門檻<={max_ma240_bias:.1f}%) | OLS斜率={easy_slope:.4f}')
+        print(
+            f'  [{c3_m}] 3. 量能過濾 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍'
+            f' {vol_ma5_lots*1.2:,.0f}張 且 >=350張)'
+        )
+        print('  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
+        print(
+            f'  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({bm["was_below_tm2"]}) |'        
+            f' T-3({bm["was_below_tm3"]}) | T-4({bm["was_below_tm4"]})'
+        )
+        print(
+            f'  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({bm["osc_t0"]:.3f}) > 0 且 T-1 OSC'
+            f' ({bm["osc_tm1"]:.3f}) <= 0'
+        )
+
+        # 🌟 動態量價共振診斷：完全改為中括號直接索引存取 bm['key']，無預設值！
+        print(
+            f'  [{c_vtag}] 🌟 動態量價共振診斷 :'
+            f' 標記={bm["vol_resonance_tag"]}'
+            f' (MA20沉澱:{bm["cond_vol_ma20_sediment"]} |'
+            f' MA5斜率:{bm["vol_ma5_slope_pct"]:.2f}%/日 |'
+            f' MA5帶量:{bm["cond_vol_ma5_expansion"]} |'
+            f' 均量交叉:{bm["cond_vol_ma_spread"]})'
+        )
+
+        print(
+            f'  [{c7_m}] 7. 個股年線乖離 & OLS豁免 :'
+            f' 乖離率={ma240_bias:.2f}% (門檻<={max_ma240_bias:.1f}%) |'
+            f' OLS斜率={easy_slope:.4f}'
+        )
         print(f'  [{c8_m}] 8. 🌟 雙軌位階機制 : 通過軌道 ➔ 【{track_passed_label}】')
-        print(f'       ├─ [{t1_m}] [第一軌-強勢高位] 距52週高點: {dist_52w_high_val:.2f}% (門檻 >= {min_dist_52w_high:.1f}%)')
-        print(f'       └─ [{t2_m}] [第二軌-1102防守] 打底: {consolidation_days}天 | 上影線: {upper_shadow_pct:.1f}% (門檻<={max_upper_shadow_pct:.1f}%)')
-        print(f'  [{c9_m}] 9. 大盤年線風控 : 乖離率={market_ma240_bias:.2f}% (門檻 <= {max_market_ma240_bias:.1f}%)')
-        print(f'  [{c10_m}] 10. 年線扣抵位置 : {ma240_deduct_bias:.2f}% (門檻 <= {max_ma240_deduction_pos:.1f}%)')
-        print(f'  [{c11_m}] 11. 右側二次確認 (T+{delay_days} 報酬 >= {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%')
+        print(
+            f'       ├─ [{t1_m}] [第一軌-強勢高位] 距52週高點:'
+            f' {dist_52w_high_val:.2f}% (門檻 >= {min_dist_52w_high:.1f}%)'
+        )
+        print(
+            f'       └─ [{t2_m}] [第二軌-1102防守] 打底: {consolidation_days}天 |'
+            f' 上影線: {upper_shadow_pct:.1f}% (門檻<={max_upper_shadow_pct:.1f}%)'
+        )
+        print(
+            f'  [{c9_m}] 9. 大盤年線風控 : 乖離率={market_ma240_bias:.2f}% (門檻'
+            f' <= {max_market_ma240_bias:.1f}%)'
+        )
+        print(
+            f'  [{c10_m}] 10. 年線扣抵位置 : {ma240_deduct_bias:.2f}% (門檻'
+            f' <= {max_ma240_deduction_pos:.1f}%)'
+        )
+        print(
+            f'  [{c11_m}] 11. 右側二次確認 (T+{delay_days} 報酬'
+            f' >= {threshold_pct*100:.1f}%) : 報酬 {confirm_return*100:.2f}%'
+        )
         print('-' * 65)
         print(f'🎯 最終觸發結果: {result_str}')
         print('=' * 65)
