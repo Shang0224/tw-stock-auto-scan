@@ -4426,10 +4426,11 @@ def st_qiantang_f3_after_shakeout_20261023(
 
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
-    if verbose:
-      raise ValueError(
-        f"[策略 20261023_Fusion] K線歷史資料筆數不足！(目前: {len(df_single)} 筆 < 需求: {min_required_len} 筆)"
-      )
+    T0 = df_single.iloc[-1]
+    date_T0_str = str(T0["date"])
+    raise ValueError(
+        f"[策略 20261023_Fusion] date_T0_str K線歷史資料筆數不足！(目前: {len(df_single)} 筆 < 需求: {min_required_len} 筆)"
+    )
     return False, {}
 
   df_single = df_single.copy()
@@ -5341,10 +5342,11 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
 
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
-    if verbose:
-      raise ValueError(
-        f"[策略 20261001_1_1_5] K線歷史資料筆數不足！(目前: {len(df_single)} 筆 < 需求: {min_required_len} 筆)"
-      )
+    T0 = df_single.iloc[-1]
+    date_T0_str = str(T0["date"])
+    raise ValueError(
+      f"[策略 20261001_1_1_5] K線歷史資料筆數不足！(目前: {len(df_single)} 筆 < 需求: {min_required_len} 筆)"
+    )
     return False, {}
 
   df_single = df_single.copy()
