@@ -218,8 +218,8 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   df['vol_ma20_prior'] = df['Trading_Volume'].shift(1).rolling(20, min_periods=1).mean()
 
   # 2. 截至昨日 5 日 20 日均量線之 OLS 斜率
-  df['vol_ma5_slope'] = df['vol_ma5_prior'].rolling(window=5, min_periods=5).apply(_calc_slope_5, raw=False)
-  df['vol_ma20_slope'] = df['vol_ma20_prior'].rolling(window=20, min_periods=20).apply(_calc_slope_20, raw=False)
+  df['vol_ma5_slope_prior'] = df['vol_ma5_prior'].rolling(window=5, min_periods=5).apply(_calc_slope_5, raw=False)
+  df['vol_ma20_slope_prior'] = df['vol_ma20_prior'].rolling(window=20, min_periods=20).apply(_calc_slope_20, raw=False)
 
   # 3. T-2~T-4 甩轎期最大成交量
   df['vol_shakeout_max'] = df['Trading_Volume'].shift(2).rolling(3, min_periods=1).max()
