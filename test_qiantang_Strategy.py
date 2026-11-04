@@ -339,7 +339,7 @@ def scan_qiantang_strategy_day(
             "大盤季線乖離率(%)": round(float(m_info.get("taiex_ma60_bias_pct", 0)), 2),
             "大盤年線乖離率(%)": round(float(m_info.get("taiex_ma240_bias_pct", 0)), 2),
             "大盤季線與年線乖離率(%)": round(float(m_info.get("taiex_ma60_ma240_bias_pct", 0)), 2),
-            # 6. 籌碼特徵
+            # 6. 籌碼特徵    
             "外資買超(張)": safe_lots_from_shares(latest_row.get("Foreign_Investor")),
             "投信買超(張)": safe_lots_from_shares(latest_row.get("Investment_Trust")),
             "自營商買超(張)": safe_lots_from_shares(latest_row.get("Dealer_self")),
@@ -353,7 +353,7 @@ def scan_qiantang_strategy_day(
             "融券當日增減(張)": safe_lots_from_lots(latest_row.get("short_diff_shares")),
         })
 
-        if "前5日均量(張)" in latest_row:
+        if "vol_ma5_prior" in latest_row
             hit_record['前5日均量(張)'] = int(round(float(latest_row['vol_ma5_prior']) / 1000.0))
             hit_record['前20日均量(張)'] = int(round(float(latest_row['vol_ma20_prior']) / 1000.0))
             hit_record['前5日均量斜率'] = round(float(latest_row['vol_ma5_slope_prior']), 4)
