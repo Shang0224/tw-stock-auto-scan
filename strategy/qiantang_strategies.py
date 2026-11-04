@@ -1020,6 +1020,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         vol_ma5_slope_prior = float(row_t0['vol_ma5_slope_prior'])
         vol_ma5_slope_pct = float(row_t0['vol_ma5_slope_pct'])
         vol_ma20_slope_prior = float(row_t0['vol_ma20_slope_prior'])
+        vol_ma20_slope_pct = float(row_t0['vol_ma20_slope_pct])
         vol_shakeout_max = float(row_t0['vol_shakeout_max']) 
 
         close_prev1 = float(df_past['close'].iloc[-2])
@@ -1063,9 +1064,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         
         """
         cond_vol_ma_spread = (vol_ma5_prior > vol_ma20_prior)
-        cond_vol_slope_up = (vol_ma5_slope_pct > 0.0)  # 均量擴張 (大於 0%/日)
-
-        
+        cond_vol_slope_up = (vol_ma5_slope_pct > 0.0)  # 均量擴張 (大於 0%/日)      
         cond_vol_surge = (vol_t0 >= vol_ma5_prior * 1.2)
         cond_shakeout_vol = (vol_shakeout_max < vol_ma5_prior)
         vol_resonance_tag = bool(cond_vol_ma_spread and cond_vol_slope_up and cond_vol_surge and cond_shakeout_vol)
@@ -1101,10 +1100,18 @@ def st_qiantang_f3_after_shakeout_1102_1(
             'vol_ma5_slope_prior': vol_ma5_slope_prior,
             'vol_ma20_slope_prior': vol_ma20_slope_prior,
             'vol_shakeout_max': vol_shakeout_max,
+
+            'cond_vol_ma20_sediment': cond_vol_ma20_sediment,
+            'cond_vol_ma5_expansion': cond_vol_ma5_expansion,
+            'cond_vol_ma_spread': cond_vol_ma_spread,
+            
+        
+            """
             'cond_vol_ma_spread': cond_vol_ma_spread,
             'cond_vol_slope_up': cond_vol_slope_up,
-            'cond_vol_surge': cond_vol_surge,
+            'cond_vol_surge': cond_vol_surge,            
             'cond_shakeout_vol': cond_shakeout_vol,
+            """
             'vol_resonance_tag': vol_resonance_tag,
         }
 
