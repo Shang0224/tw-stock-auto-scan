@@ -1050,6 +1050,18 @@ def st_qiantang_f3_after_shakeout_1102_1(
         cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
 
         # 動態量價共振 4 子條件計算
+        # 1. 長線沉澱：前 20 日均量斜率 <= +0.5%/日 (籌碼沉澱/甩轎完畢)
+        cond_vol_ma20_sediment = (vol_ma20_slope_pct <= 0.5)
+
+        # 2. 短線溫和帶量：前 5 日均量斜率介於 5.0% ~ 20.0%/日 (避開 >20% 失控爆量)
+        cond_vol_ma5_expansion = (5.0 <= vol_ma5_slope_pct <= 20.0)
+
+        # 3. 均量多頭發散：前 5 日均量 > 前 20 日均量 * 1.05
+        cond_vol_ma_spread = (vol_ma5_prior > vol_ma20_prior * 1.05)
+
+        vol_resonance_tag = bool(cond_vol_ma20_sediment and cond_vol_ma5_expansion and cond_vol_ma_spread)
+        
+        """
         cond_vol_ma_spread = (vol_ma5_prior > vol_ma20_prior)
         cond_vol_slope_up = (vol_ma5_slope_pct > 0.0)  # 均量擴張 (大於 0%/日)
 
@@ -1057,6 +1069,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         cond_vol_surge = (vol_t0 >= vol_ma5_prior * 1.2)
         cond_shakeout_vol = (vol_shakeout_max < vol_ma5_prior)
         vol_resonance_tag = bool(cond_vol_ma_spread and cond_vol_slope_up and cond_vol_surge and cond_shakeout_vol)
+        """
 
         base_hit = bool(
             cond1_trend and cond2_price_ok and cond3_vol_ok and
