@@ -961,9 +961,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
     【修改說明與量能升級】：
     1. 保持 1102 雙軌與黃金風控選股邏輯 100% 不變，確保回測樣本基底一致。
     2. 新增動態量價共振指標（vol_ma5_prior, vol_ma20_prior, vol_ma5_slope, vol_shakeout_max）。
-    3. 計算「量價共振標記」（均量發散 + 均量斜率向上 + 當日1.2倍增量 + 甩轎期量縮）。
-    4. 依據驗證 SOP，量價共振標記僅紀錄於輸出欄位與 Console 日誌，不放進 cond_base 硬過濾，
-       以便於回測報表中直接交叉驗證「量價共振標記」對 Cat3 陷阱率之過濾效果。
+    3. 計算「量價共振標記」（長線沉澱 + 短線溫和帶量 + 均量多頭交叉）。
+    4. 正式納入【方案 1：沉澱純化型】硬過濾門檻，精準過濾 Cat3 深跌陷阱。
     ===========================================================================
     一、 Tbase 基礎價格/量能與洗盤甩轎型態門檻 (_check_f3_base_signal 內嵌函式)
         1. 價格門檻: Tbase 收盤價 (close) >= 5.0 元
@@ -971,15 +970,13 @@ def st_qiantang_f3_after_shakeout_1102_1(
         3. 連續站穩輕鬆線: Tbase 與 T-1 日收盤價均大於輕鬆線 (close > easy_line)
         4. 洗盤甩轎軌跡: T-2, T-3, T-4 曾至少有 1 日收盤價跌破或低於輕鬆線 (was_below)
         5. MACD 動能過濾: T0 OSC > 0 且 T-1 OSC <= 0 (綠柱翻紅)
-        6. 🌟 動態量價共振標記 (記錄驗證):
-           - 均量發散: vol_ma5_prior > vol_ma20_prior
-           - 均量斜率: vol_ma5_slope > 0
-           - 當日突破: Trading_Volume >= vol_ma5_prior * 1.2
-           - 甩轎量縮: vol_shakeout_max < vol_ma5_prior
+        6. 🌟 動態量價共振標記:
+           - 長線沉澱: 前 20 日均量斜率 <= +0.5%/日
+           - 短線帶量: 前 5 日均量斜率介於 5.0% ~ 20.0%/日
+           - 均量發散: 前 5 日均量 > 前 20 日均量 * 1.05
 
     二、 雙軌位階分流與第二軌 1102 防守升級 (以距 52 週高點 = -15.0% 切分)
-        1. 第一軌（強勢高位突破軌：距 52 週高點 >= -15.0%）：
-           - 位階達標直接放行。
+        1. 第一軌（強勢高位突破軌：距 52 週高點 >= -15.0%）：位階達標直接放行。
         2. 第二軌（低位打底/1102防守升級軌：距 52 週高點 < -15.0%）：
            - (A) 底部結構門檻: (打底沉澱天數 >= 35 天) OR (年線扣抵位置 <= 10.0%)
            - (B) 上影線防偽過濾: 當日上影線比例 (upper_shadow_pct) <= 35.0%
@@ -1000,28 +997,27 @@ def st_qiantang_f3_after_shakeout_1102_1(
     """
     profile = profile or {}
 
-    # 內嵌私有輔助函式 (純數據運算，不印出除錯日誌)
+    # 內嵌私有輔助函式 (純數據運算，不執行 print)
     def _check_f3_base_signal(df_past: pd.DataFrame, row_t0: pd.Series) -> tuple[bool, dict]:
         if len(df_past) < 60:
             return False, {}
 
-        # 確定欄位直接索引存取，缺失即拋出 KeyError 報錯
+        # 確定欄位直接索引存取，缺失即拋出 KeyError
         close_t0 = float(row_t0['close'])
         easy_t0 = float(row_t0['easy_line'])
         vol_t0 = float(row_t0['Trading_Volume'])
         ma60_t0 = float(row_t0['MA60'])
 
-        # 截至昨日 5 日均量
         vol_ma5 = float(df_past['Trading_Volume'].iloc[-6:-1].mean())
 
-        # 動態量價共振指標讀取 (由 engine.py 預處理產生)
+        # 確定量價共振預處理欄位直接存取
         vol_ma5_prior = float(row_t0['vol_ma5_prior'])
         vol_ma20_prior = float(row_t0['vol_ma20_prior'])
         vol_ma5_slope_prior = float(row_t0['vol_ma5_slope_prior'])
         vol_ma5_slope_pct = float(row_t0['vol_ma5_slope_pct'])
         vol_ma20_slope_prior = float(row_t0['vol_ma20_slope_prior'])
         vol_ma20_slope_pct = float(row_t0['vol_ma20_slope_pct'])
-        vol_shakeout_max = float(row_t0['vol_shakeout_max']) 
+        vol_shakeout_max = float(row_t0['vol_shakeout_max'])
 
         close_prev1 = float(df_past['close'].iloc[-2])
         easy_prev1 = float(df_past['easy_line'].iloc[-2])
@@ -1050,25 +1046,12 @@ def st_qiantang_f3_after_shakeout_1102_1(
         osc_tm1 = float(df_past['osc'].iloc[-2])
         cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
 
-        # 動態量價共振 4 子條件計算
-        # 1. 長線沉澱：前 20 日均量斜率 <= +0.5%/日 (籌碼沉澱/甩轎完畢)
+        # 動態量價共振 3 子條件計算 (方案 1)
         cond_vol_ma20_sediment = (vol_ma20_slope_pct <= 0.5)
-
-        # 2. 短線溫和帶量：前 5 日均量斜率介於 5.0% ~ 20.0%/日 (避開 >20% 失控爆量)
         cond_vol_ma5_expansion = (5.0 <= vol_ma5_slope_pct <= 20.0)
-
-        # 3. 均量多頭發散：前 5 日均量 > 前 20 日均量 * 1.05
         cond_vol_ma_spread = (vol_ma5_prior > vol_ma20_prior * 1.05)
 
         vol_resonance_tag = bool(cond_vol_ma20_sediment and cond_vol_ma5_expansion and cond_vol_ma_spread)
-        
-        """
-        cond_vol_ma_spread = (vol_ma5_prior > vol_ma20_prior)
-        cond_vol_slope_up = (vol_ma5_slope_pct > 0.0)  # 均量擴張 (大於 0%/日)      
-        cond_vol_surge = (vol_t0 >= vol_ma5_prior * 1.2)
-        cond_shakeout_vol = (vol_shakeout_max < vol_ma5_prior)
-        vol_resonance_tag = bool(cond_vol_ma_spread and cond_vol_slope_up and cond_vol_surge and cond_shakeout_vol)
-        """
 
         base_hit = bool(
             cond1_trend and cond2_price_ok and cond3_vol_ok and
@@ -1094,37 +1077,27 @@ def st_qiantang_f3_after_shakeout_1102_1(
             'cond5_shakeout': cond5_shakeout,
             'cond6_macd_ok': cond6_macd_ok,
             'base_hit': base_hit,
-            # 量能特徵傳遞
             'vol_ma5_prior': vol_ma5_prior,
             'vol_ma20_prior': vol_ma20_prior,
             'vol_ma5_slope_prior': vol_ma5_slope_prior,
             'vol_ma20_slope_prior': vol_ma20_slope_prior,
             'vol_shakeout_max': vol_shakeout_max,
-
             'cond_vol_ma20_sediment': cond_vol_ma20_sediment,
             'cond_vol_ma5_expansion': cond_vol_ma5_expansion,
             'cond_vol_ma_spread': cond_vol_ma_spread,
             'vol_ma5_slope_pct': vol_ma5_slope_pct,
-            
-        
-            """
-            'cond_vol_ma_spread': cond_vol_ma_spread,
-            'cond_vol_slope_up': cond_vol_slope_up,
-            'cond_vol_surge': cond_vol_surge,            
-            'cond_shakeout_vol': cond_shakeout_vol,
-            """
             'vol_resonance_tag': vol_resonance_tag,
         }
 
         return base_hit, base_metrics
 
-    # 1. 歷史 K 線總筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
+    # 1. 歷史 K 線筆數判斷 (保持原始寫法，不額外增加多餘檢查機制)
     if len(df_single) < 60 or len(df_single) <= delay_days:
         return False, {}
 
     row_t0 = df_single.iloc[-(delay_days + 1)]
     row_today = df_single.iloc[-1]
-    df_past = df_single.iloc[: -(delay_days)]
+    df_past = df_single.iloc[:-delay_days]
 
     stock_id_str = str(row_t0['stock_id'])
     date_t0_str = str(row_t0['date'])
@@ -1133,9 +1106,9 @@ def st_qiantang_f3_after_shakeout_1102_1(
     # 2. 呼叫內嵌輔助函式進行底座訊號運算
     base_hit, bm = _check_f3_base_signal(df_past=df_past, row_t0=row_t0)
 
-    close_t0 = bm['close_t0'] if bm else float(row_t0['close'])
-    vol_t0 = bm['vol_t0'] if bm else float(row_t0['Trading_Volume'])
-    easy_slope = bm['easy_slope'] if bm else 0.0
+    close_t0 = bm['close_t0']
+    vol_t0 = bm['vol_t0']
+    easy_slope = bm['easy_slope']
 
     ma60_slope = float(row_t0['ma60_slope'])
     consolidation_days = int(row_t0['base_consolidation_days'])
@@ -1165,7 +1138,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         '第一軌(強勢高位突破)' if is_track1_pass else ('第二軌(低位打底/1102防守)' if is_track2_pass else '未通過雙軌門檻')
     )
 
-    # 4. 大盤與三大黃金風控檢測
+    # 4. 大盤與三大黃金風控檢測 (確定欄位直接索引存取)
     market_ma240_bias = float(market_info['taiex_ma240_bias_pct'])
 
     cond7_ma240_bias_ok = (ma240_bias <= max_ma240_bias) or (easy_slope >= min_exempt_ols_slope)
@@ -1177,10 +1150,10 @@ def st_qiantang_f3_after_shakeout_1102_1(
     confirm_return = (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
     cond11_right_confirm_ok = (confirm_return >= threshold_pct)
 
-    # 5. 最終觸發判斷 (正式納入方案 1 量價共振硬過濾門檻)
+    # 6. 最終觸發判斷
     is_hit = (
         base_hit
-        and bm['vol_resonance_tag']       # 🌟 正式納入硬過濾：沒通過【方案1：沉澱純化型】量價共振直接淘汰！
+        and bm['vol_resonance_tag']
         and cond8_double_track_ok
         and cond7_ma240_bias_ok
         and cond9_market_ma240_ok
@@ -1188,16 +1161,15 @@ def st_qiantang_f3_after_shakeout_1102_1(
         and cond11_right_confirm_ok
     )
 
-    # 6. Console Log 訊息輸出 (100% 經典卡牌格式，含量價共振診斷資訊)
+    # 7. Console Log 訊息輸出 (100% 經典卡牌格式，直接索引中括號，無預設值)
     if verbose:
-        # 1. 勾選符號判斷（直接存取布林值，無預設值）
         c1_m = '✓' if bm['cond1_trend'] else '✕'
         c2_m = '✓' if bm['cond2_price_ok'] else '✕'
         c3_m = '✓' if bm['cond3_vol_ok'] else '✕'
         c4_m = '✓' if bm['cond4_continuous'] else '✕'
         c5_m = '✓' if bm['cond5_shakeout'] else '✕'
         c6_m = '✓' if bm['cond6_macd_ok'] else '✕'
-        c7_m = '✓' if cond7_ma240_bias_ok else '✕'       
+        c7_m = '✓' if cond7_ma240_bias_ok else '✕'
         c8_m = '✓' if cond8_double_track_ok else '✕'
         c9_m = '✓' if cond9_market_ma240_ok else '✕'
         c10_m = '✓' if cond10_ma240_deduction_ok else '✕'
@@ -1227,7 +1199,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         print(
             f'  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${close_t0:.2f} >'
             f' ${bm["ma60_t0"]:.2f})'
-        )        
+        )
         print(f'  [{c2_m}] 2. 收盤價 >= 5元 : ${close_t0:.2f}')
         print(
             f'  [{c3_m}] 3. 量能過濾 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍'
@@ -1235,15 +1207,13 @@ def st_qiantang_f3_after_shakeout_1102_1(
         )
         print('  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
         print(
-            f'  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({bm["was_below_tm2"]}) |'        
+            f'  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({bm["was_below_tm2"]}) |'
             f' T-3({bm["was_below_tm3"]}) | T-4({bm["was_below_tm4"]})'
         )
         print(
             f'  [{c6_m}] 6. MACD綠翻紅 : T0 OSC ({bm["osc_t0"]:.3f}) > 0 且 T-1 OSC'
             f' ({bm["osc_tm1"]:.3f}) <= 0'
         )
-
-        # 🌟 動態量價共振診斷：完全改為中括號直接索引存取 bm['key']，無預設值！
         print(
             f'  [{c_vtag}] 🌟 動態量價共振診斷 :'
             f' 標記={bm["vol_resonance_tag"]}'
@@ -1252,7 +1222,6 @@ def st_qiantang_f3_after_shakeout_1102_1(
             f' MA5帶量:{bm["cond_vol_ma5_expansion"]} |'
             f' 均量交叉:{bm["cond_vol_ma_spread"]})'
         )
-
         print(
             f'  [{c7_m}] 7. 個股年線乖離 & OLS豁免 :'
             f' 乖離率={ma240_bias:.2f}% (門檻<={max_ma240_bias:.1f}%) |'
@@ -1284,7 +1253,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         print('=' * 65)
         print()
 
-    # 7. 回傳 info 字典 (包含量價共振驗證欄位)
+    # 8. 回傳 info 字典 (直接存取中括號，無預設值 .get)
     info = (
         {
             '選股公式': 'st_qiantang_f3_after_shakeout_1102_1',
@@ -1301,12 +1270,12 @@ def st_qiantang_f3_after_shakeout_1102_1(
             '前20日均量(張)': int(round(bm['vol_ma20_prior'] / 1000.0)),
             '前5日均量斜率': round(bm['vol_ma5_slope_prior'], 4),
             '前20日均量斜率': round(bm['vol_ma20_slope_prior'], 4),
-            '量價共振標記': bm['vol_resonance_tag'[,
+            '量價共振標記': bm['vol_resonance_tag'],
             'delay_days': delay_days,
             f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
             '操作建議': (
                 f'通過 1102_1 雙軌過濾 ({track_passed_label})，'
-                f'量價共振標記: {bm.get("vol_resonance_tag", False)}，請配合右側動能執行操作。'
+                f'量價共振標記: {bm["vol_resonance_tag"]}，請配合右側動能執行操作。'
             ),
         }
         if is_hit
@@ -1314,7 +1283,6 @@ def st_qiantang_f3_after_shakeout_1102_1(
     )
 
     return is_hit, info
-
 
 def st_qiantang_f3_after_shakeout_1102(
     df_single: pd.DataFrame,
