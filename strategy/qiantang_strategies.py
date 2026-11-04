@@ -1205,7 +1205,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
             f'  [{c3_m}] 3. 量能過濾 : {vol_lots_t0:,.0f} 張 (>5日均量1.2倍'
             f' {vol_ma5_lots*1.2:,.0f}張 且 >=350張)'
         )
-        print('  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
+        print(f'  [{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
         print(
             f'  [{c5_m}] 5. 洗盤甩轎軌跡 : T-2({bm["was_below_tm2"]}) |'
             f' T-3({bm["was_below_tm3"]}) | T-4({bm["was_below_tm4"]})'
