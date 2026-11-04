@@ -1221,6 +1221,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
             '前5日均量(張)': int(round(bm.get('vol_ma5_prior', vol_t0) / 1000.0)),
             '前20日均量(張)': int(round(bm.get('vol_ma20_prior', vol_t0) / 1000.0)),
             '均量5日斜率': round(bm.get('vol_ma5_slope', 0.0), 4),
+            '均量20日斜率': round(bm.get('vol_ma20_slope', 0.0), 4),
             '量價共振標記': bm.get('vol_resonance_tag', False),
             'delay_days': delay_days,
             f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
