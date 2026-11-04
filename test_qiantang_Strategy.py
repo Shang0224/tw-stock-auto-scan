@@ -285,6 +285,15 @@ def scan_qiantang_strategy_day(
             hit_record["右側觀察天數"] = delay_days_val
             hit_record[formal_ret_key] = hit.get(formal_ret_key, "N/A")
 
+        if "vol_ma5_prior" in latest_row :
+            hit_record['前5日均量(張)'] = int(round(float(latest_row['vol_ma5_prior']) / 1000.0))
+            hit_record['前20日均量(張)'] = int(round(float(latest_row['vol_ma20_prior']) / 1000.0))
+            hit_record['前5日均量斜率(%/日)'] = round(float(latest_row['vol_ma5_slope_pct']), 2)
+            hit_record['前20日均量斜率(%/日)'] = round(float(latest_row['vol_ma20_slope_pct']), 2)
+            hit_record['前5日均量斜率(張/日)'] = round(float(latest_row['vol_ma5_slope_lots']), 1)
+            hit_record['前20日均量斜率(張/日)'] = round(float(latest_row['vol_ma20_slope_lots']), 1)
+            hit_record['量價共振標記'] = bool(hit.get('量價共振標記'))
+          
         # -----------------------------------------------------------------
         # 🎯 步驟 3：使用 .update() 接續寫入剩餘的技術、籌碼與大盤欄位
         # -----------------------------------------------------------------
@@ -354,14 +363,6 @@ def scan_qiantang_strategy_day(
             "融券當日增減(張)": safe_lots_from_lots(latest_row.get("short_diff_shares")),
         })
 
-        if "vol_ma5_prior" in latest_row :
-            hit_record['前5日均量(張)'] = int(round(float(latest_row['vol_ma5_prior']) / 1000.0))
-            hit_record['前20日均量(張)'] = int(round(float(latest_row['vol_ma20_prior']) / 1000.0))
-            hit_record['前5日均量斜率(%/日)'] = round(float(latest_row['vol_ma5_slope_pct']), 2)
-            hit_record['前20日均量斜率(%/日)'] = round(float(latest_row['vol_ma20_slope_pct']), 2)
-            hit_record['前5日均量斜率(張/日)'] = round(float(latest_row['vol_ma5_slope_lots']), 1)
-            hit_record['前20日均量斜率(張/日)'] = round(float(latest_row['vol_ma20_slope_lots']), 1)
-            hit_record['量價共振標記'] = bool(hit.get('量價共振標記'))
 
 
 
