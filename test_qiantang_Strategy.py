@@ -350,7 +350,12 @@ def scan_qiantang_strategy_day(
             "融券餘額(張)": safe_lots_from_lots(latest_row.get("ShortSaleTodayBalance")),
             "融券當日增減(張)": safe_lots_from_lots(latest_row.get("short_diff_shares")),
         })
-          
+
+        hit_record['前5日均量(張)'] = int(round(float(latest_row['vol_ma5_prior']) / 1000.0))
+        hit_record['前20日均量(張)'] = int(round(float(latest_row['vol_ma20_prior']) / 1000.0))
+        hit_record['均量5日斜率'] = round(float(latest_row['vol_ma5_slope']), 4)
+        hit_record['量價共振標記'] = bool(latest_row['量價共振標記'])
+        
         """
         hit_record = {
             # -----------------------------------------------------------------
