@@ -1118,7 +1118,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
     ma240_bias = float(row_t0['ma240_bias'])
     ma240_deduct_bias = float(row_t0['ma240_deduct_bias'])
     dist_52w_high_val = float(row_t0['dist_to_52w_high_pct'])
-    upper_shadow_pct = float(row_t0['upper_shadow_pct'])
+    upper_shadow_pct = float(row_t0['upper_shadow_ratio'])
 
     amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
 
