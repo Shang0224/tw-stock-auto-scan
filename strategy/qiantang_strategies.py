@@ -1017,7 +1017,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
         # 動態量價共振指標讀取 (由 engine.py 預處理產生)
         vol_ma5_prior = float(row_t0['vol_ma5_prior'])
         vol_ma20_prior = float(row_t0['vol_ma20_prior'])
-        vol_ma5_slope = float(row_t0['vol_ma5_slope'])
+        vol_ma5_slope_prior' = float(row_t0['vol_ma5_slope_prior'])
+        vol_ma20_slope_prior' = float(row_t0['vol_ma20_slope_prior'])
         vol_shakeout_max = float(row_t0['vol_shakeout_max'])
 
         close_prev1 = float(df_past['close'].iloc[-2])
@@ -1081,7 +1082,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
             # 量能特徵傳遞
             'vol_ma5_prior': vol_ma5_prior,
             'vol_ma20_prior': vol_ma20_prior,
-            'vol_ma5_slope': vol_ma5_slope,
+            'vol_ma5_slope_prior': vol_ma5_slope_prior,
+            'vol_ma20_slope_prior': vol_ma20_slope_prior,
             'vol_shakeout_max': vol_shakeout_max,
             'cond_vol_ma_spread': cond_vol_ma_spread,
             'cond_vol_slope_up': cond_vol_slope_up,
@@ -1220,8 +1222,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
             '當日成交金額': f'{amount_100m:.2f}億元',
             '前5日均量(張)': int(round(bm.get('vol_ma5_prior', vol_t0) / 1000.0)),
             '前20日均量(張)': int(round(bm.get('vol_ma20_prior', vol_t0) / 1000.0)),
-            '均量5日斜率': round(bm.get('vol_ma5_slope', 0.0), 4),
-            '均量20日斜率': round(bm.get('vol_ma20_slope', 0.0), 4),
+            '均量5日斜率': round(bm.get('vol_ma5_slope_prior', 0.0), 4),
+            '均量20日斜率': round(bm.get('vol_ma20_slope_prior', 0.0), 4),
             '量價共振標記': bm.get('vol_resonance_tag', False),
             'delay_days': delay_days,
             f'Tbase+{delay_days}觀察期報酬': f'{confirm_return * 100:.2f}%',
