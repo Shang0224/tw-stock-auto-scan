@@ -266,6 +266,8 @@ def scan_single_stock(
     if len(df_single) < 5:
         return []
 
+    stock_id = str(df_single.iloc[-1].get("stock_id"))
+  
     category = str(category).strip()
     if category not in param_profiles:
         raise ValueError(
@@ -295,7 +297,7 @@ def scan_single_stock(
                 hits.append(res_info)
         except Exception as strat_err:
             # 🌟 內層防線：策略層級隔離機制
-            print(f"⚠️ [策略獨立跳過] 股票: {stock_id} | 策略: {strategy_func.__name__} 執行異常: {strat_err}")
+            print(f"⚠️ [策略獨立跳過] 股票: {stock_id} | 策略: {run_func.__name__} 執行異常: {strat_err}")
             continue
   
     return hits
