@@ -1156,11 +1156,15 @@ def st_qiantang_f3_after_shakeout_1102_1(
     confirm_return = (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
     cond11_right_confirm_ok = (confirm_return >= threshold_pct)
 
-    # 最終觸發判斷 (未加入量價共振過濾，僅記錄)
+    # 5. 最終觸發判斷 (正式納入方案 1 量價共振硬過濾門檻)
     is_hit = (
-        base_hit and cond8_double_track_ok and
-        cond7_ma240_bias_ok and cond9_market_ma240_ok and
-        cond10_ma240_deduction_ok and cond11_right_confirm_ok
+        base_hit
+        and bm['vol_resonance_tag']       # 🌟 正式納入硬過濾：沒通過【方案1：沉澱純化型】量價共振直接淘汰！
+        and cond8_double_track_ok
+        and cond7_ma240_bias_ok
+        and cond9_market_ma240_ok
+        and cond10_ma240_deduction_ok
+        and cond11_right_confirm_ok
     )
 
     # 6. Console Log 訊息輸出 (100% 經典卡牌格式，含量價共振診斷資訊)
@@ -1177,7 +1181,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         c10_m = '✓' if cond10_ma240_deduction_ok else '✕'
         c11_m = '✓' if cond11_right_confirm_ok else '✕'
 
-        c_vtag = '✓' if bm.get('vol_resonance_tag', False) else '⚪'
+        c_vtag = '✓' if bm.get('vol_resonance_tag', False) else '✕'
 
         t1_m = '✓' if is_track1_pass else '✕'
         t2_m = '✓' if is_track2_pass else '✕'
