@@ -113,7 +113,7 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_20261029,
     st_qiantang_f3_after_shakeout_1029_1_1, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
     #st_qiantang_f3_after_shakeout_1101,
-    st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
+    #st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
     st_qiantang_f3_after_shakeout_1102_1,
         
     
@@ -131,7 +131,7 @@ TEST_QIANTANG_STRATEGY = [
 ]
 
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2015-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD) 2025/9/30
 DAYS_BEFORE = 400               # 歷史技術指標計算緩衝天數, 配合某些策略要T+N日, 故從365天向前增加至400
 
@@ -151,8 +151,8 @@ EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 # 模式 A：CSV 檔案載入模式
 STOCK_MODE = "csv"
 
-#STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
-STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
+STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
+#STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #STOCK_INPUT = "data/MID100.csv"
