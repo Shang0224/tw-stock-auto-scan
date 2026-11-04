@@ -3079,6 +3079,9 @@ def st_qiantang_f3_after_shakeout_20261030_1_new(
     # 內嵌內部私有輔助函式 (純數據判斷，不印出除錯訊息)
     def _check_f3_base_signal(df_past: pd.DataFrame, row_t0: pd.Series) -> tuple[bool, dict]:
         if len(df_past) < 60:
+            raise ValueError(
+                f"[策略 20261030_1_new] K線歷史資料筆數不足！(目前: {len(df_past)} 筆 < 需求: 60 筆)"
+            )            
             return False, {}
 
         # 確定欄位直接索引存取，缺失即拋出 KeyError
@@ -4382,9 +4385,8 @@ def st_qiantang_f3_after_shakeout_20261023(
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
     if verbose:
-      print(
-          f"❌ [策略 20261023_Fusion] 資料 {len(df_single)}筆不足, 需"
-          f" {min_required_len} 筆"
+      raise ValueError(
+        f"[策略 20261023_Fusion] K線歷史資料筆數不足！(目前: {len(df_single)} 筆 < 需求: {min_required_len} 筆)"
       )
     return False, {}
 
@@ -5298,8 +5300,8 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
   min_required_len = 240 + 5 + delay_days
   if len(df_single) < min_required_len:
     if verbose:
-      print(
-          f"❌ [策略 20261001_1_1_5] 資料 {len(df_single)}筆不足, 需 {min_required_len} 筆"
+      raise ValueError(
+        f"[策略 20261001_1_1_5] K線歷史資料筆數不足！(目前: {len(df_single)} 筆 < 需求: {min_required_len} 筆)"
       )
     return False, {}
 
