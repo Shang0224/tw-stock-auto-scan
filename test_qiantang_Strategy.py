@@ -358,7 +358,7 @@ def scan_qiantang_strategy_day(
             hit_record['前20日均量(張)'] = int(round(float(latest_row['vol_ma20_prior']) / 1000.0))
             hit_record['前5日均量斜率'] = round(float(latest_row['vol_ma5_slope_prior']), 4)
             hit_record['前20日均量斜率'] = round(float(latest_row['vol_ma20_slope_prior']), 4)
-            hit_record['量價共振標記'] = bool(latest_row['量價共振標記'])
+            hit_record['量價共振標記'] = bool(hit.get('量價共振標記'))
         
         """
         hit_record = {
