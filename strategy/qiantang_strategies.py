@@ -1020,7 +1020,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
         vol_ma5_slope_prior = float(row_t0['vol_ma5_slope_prior'])
         vol_ma5_slope_pct = float(row_t0['vol_ma5_slope_pct'])
         vol_ma20_slope_prior = float(row_t0['vol_ma20_slope_prior'])
-        vol_ma20_slope_pct = float(row_t0['vol_ma20_slope_pct])
+        vol_ma20_slope_pct = float(row_t0['vol_ma20_slope_pct'])
         vol_shakeout_max = float(row_t0['vol_shakeout_max']) 
 
         close_prev1 = float(df_past['close'].iloc[-2])
