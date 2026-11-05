@@ -1057,7 +1057,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
   ) -> tuple[bool, dict]:
   
     if len(df_past) < 60:
-      print(f'len(df_past) < 60: {len(df_past) < 60}")
+      print(f"len(df_past) < 60: {len(df_past) < 60}")
       stock_id_sub = str(df_past['stock_id'].iloc[-1])
       date_sub = str(df_past['date'].iloc[-1])
       
