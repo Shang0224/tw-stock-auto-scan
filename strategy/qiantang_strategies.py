@@ -1184,10 +1184,12 @@ def st_qiantang_f3_after_shakeout_1102_1(
   cond_deduct_safe = ma240_deduct_bias <= max_track2_deduction_pos
   cond_t2_structure = cond_base_days_ok or cond_deduct_safe
 
-  cond_t2_shadow_ok = upper_shadow_pct <= max_upper_shadow_pct
+  #cond_t2_shadow_ok = upper_shadow_pct <= max_upper_shadow_pct
+  cond_t2_shadow_ok = True #取消上影線限制, 直接通過    
 
   cond_t2_vol_slope_ok = vol_ma5_slope_prior_pct_val >= min_track2_vol_ma5_slope
-  cond_t2_body_ratio_ok = body_ratio_pct >= min_track2_body_ratio
+  #cond_t2_body_ratio_ok = body_ratio_pct >= min_track2_body_ratio
+  cond_t2_body_ratio_ok = True #取消實體K棒限制, 直接通過  
   cond_t2_momentum_ok = cond_t2_vol_slope_ok and cond_t2_body_ratio_ok
 
   is_track2_pass = (
