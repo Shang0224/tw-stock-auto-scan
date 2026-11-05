@@ -222,14 +222,14 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   df['vol_ma20_slope_prior'] = df['vol_ma20_prior'].rolling(window=20, min_periods=20).apply(_calc_slope_20, raw=False)
 
   # 1. 均量相對斜率 (%/日) - 供策略核心邏輯過濾使用
-  raw_slope_5 = df['vol_ma5_prior'].rolling(window=5, min_periods=5).apply(_calc_slope_5, raw=False)
-  df['vol_ma5_slope_pct'] = np.where(df['vol_ma5_prior'] > 0, (raw_slope_5 / df['vol_ma5_prior']) * 100.0, 0.0)
-  raw_slope_20 = df['vol_ma20_prior'].rolling(window=20, min_periods=20).apply(_calc_slope_20, raw=False)
-  df['vol_ma20_slope_pct'] = np.where(df['vol_ma20_prior'] > 0, (raw_slope_20 / df['vol_ma20_prior']) * 100.0, 0.0)
+  raw_slope_prior_5 = df['vol_ma5_prior'].rolling(window=5, min_periods=5).apply(_calc_slope_5, raw=False)
+  df['vol_ma5_slope_prior_pct'] = np.where(df['vol_ma5_prior'] > 0, (raw_slope_5 / df['vol_ma5_prior']) * 100.0, 0.0)
+  raw_slope_prior_20 = df['vol_ma20_prior'].rolling(window=20, min_periods=20).apply(_calc_slope_20, raw=False)
+  df['vol_ma20_slope_prior_pct'] = np.where(df['vol_ma20_prior'] > 0, (raw_slope_20 / df['vol_ma20_prior']) * 100.0, 0.0)
 
   # 2. 均量張數斜率 (張/日) - 供視覺化報表輔助參考
-  df['vol_ma5_slope_lots'] = raw_slope_5 / 1000.0
-  df['vol_ma20_slope_lots'] = raw_slope_20 / 1000.0
+  df['vol_ma5_slope_prior_lots'] = raw_slope_prior_5 / 1000.0
+  df['vol_ma20_slope_prior_lots'] = raw_slope_prior_20 / 1000.0
 
   # 3. T-2~T-4 甩轎期最大成交量  
   df['vol_shakeout_max'] = df['Trading_Volume'].shift(2).rolling(3, min_periods=1).max()
