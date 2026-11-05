@@ -223,9 +223,9 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
 
   # 1. 均量相對斜率 (%/日) - 供策略核心邏輯過濾使用
   raw_slope_prior_5 = df['vol_ma5_prior'].rolling(window=5, min_periods=5).apply(_calc_slope_5, raw=False)
-  df['vol_ma5_slope_prior_pct'] = np.where(df['vol_ma5_prior'] > 0, (raw_slope_5 / df['vol_ma5_prior']) * 100.0, 0.0)
+  df['vol_ma5_slope_prior_pct'] = np.where(df['vol_ma5_prior'] > 0, (raw_slope_prior_5 / df['vol_ma5_prior']) * 100.0, 0.0)
   raw_slope_prior_20 = df['vol_ma20_prior'].rolling(window=20, min_periods=20).apply(_calc_slope_20, raw=False)
-  df['vol_ma20_slope_prior_pct'] = np.where(df['vol_ma20_prior'] > 0, (raw_slope_20 / df['vol_ma20_prior']) * 100.0, 0.0)
+  df['vol_ma20_slope_prior_pct'] = np.where(df['vol_ma20_prior'] > 0, (raw_slope_prior_20 / df['vol_ma20_prior']) * 100.0, 0.0)
 
   # 2. 均量張數斜率 (張/日) - 供視覺化報表輔助參考
   df['vol_ma5_slope_prior_lots'] = raw_slope_prior_5 / 1000.0
