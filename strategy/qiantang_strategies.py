@@ -1174,7 +1174,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
   ma240_deduct_bias = float(row_t0['ma240_deduct_bias'])
   dist_52w_high_val = float(row_t0['dist_to_52w_high_pct'])
   vol_ma5_slope_pct = float(row_t0['vol_ma5_slope_pct'])
-  spt_val = float(row_t0['single_lot_avg'])
+
+  spt_val = float(row_t0['shares_per_trans'])
   vol_ma5_val = float(row_t0['vol_ma5'])
   vol_ma20_val = float(row_t0['vol_ma20'])
   ma5_to_ma20_ratio = vol_ma5_val / vol_ma20_val if vol_ma20_val > 0 else 0.0
