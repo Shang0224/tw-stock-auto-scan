@@ -983,20 +983,23 @@ def st_qiantang_f3_after_shakeout_1102_1(
   分別配置相互匹配的專屬量能與籌碼過濾門檻：
 
   1. 🌟 第一軌（強勢高位突破：距 52 週高點 >= -15.0%，採方案 C）： - 門檻: (單筆均張
-  spt <= 2.0 張) AND (MA5/MA20 均量發散比 >= 1.15 倍)。 - 理由:
-  第一軌高位突破需要短線均量多頭發散 (MA5/MA20 >= 1.15) 帶動推力，同時限制單筆均張
-  <= 2.0 防止主力拉高大單對倒倒貨。此門檻保留了第一軌核心飆股，將第一軌勝率拉升至
-  75.0%、1Y MFE 中位數推升至 +84.49%。
+  shares_per_trans <= 2.0 張) AND (vol_ma5_prior / vol_ma20_prior >= 1.15
+  倍)。 - 理由: 第一軌高位突破需要短線均量多頭發散 (vol_ma5_prior /
+  vol_ma20_prior >= 1.15) 帶動推力， 同時限制單筆均張 (shares_per_trans) <=
+  2.0 防止主力拉高大單對倒倒貨。
+       此門檻保留了第一軌核心飆股，將第一軌勝率拉升至 75.0%、1Y MFE 中位數推升至
+       +84.49%。
 
   2. 🌟 第二軌（低位打底轉折：距 52 週高點 < -15.0%，採方案 T2-B）： - 門檻:
   (打底 >= 35天 OR 年線扣抵 <= 10.0%) AND (上影線 <= 35.0%) AND
-             (前 5 日均量斜率 >= 10.0%/日) AND (當日實體 K 棒比例 >= 35.0%)。 -
-             理由: 第二軌個股打底沉澱已久，發動時需明確的帶量攻擊與實體紅 K
-             換手。此門檻將第二軌勝率衝上 87.5%、1Y MFE 均值衝上 +264.26%。
+             (前 5 日均量斜率 vol_ma5_slope_prior_pct >= 10.0%/日) AND (當日實體
+             K 棒比例 body_ratio >= 35.0%)。 - 理由:
+             第二軌個股打底沉澱已久，發動時需明確的帶量攻擊與實體紅 K 換手。
+             此門檻將第二軌勝率衝上 87.5%、1Y MFE 均值衝上 +264.26%。
 
   【全策略綜合表現】： 全策略總勝率由 1102 的 61.4% 大幅跨越至 77.9% (+16.5%)，深跌陷阱率降至
   19.1% (-8.1%)， 飆陷比達到 2.92 (+108.6%)，1Y MFE 中位數達 +72.40% (原版
-  +36.77% 翻倍成長)，全策略 1Y MFE 均值高達 +168.60%。
+  +36.77% 翻倍成長)。
 
   一、 Tbase 基礎價格/量能與洗盤甩轎型態門檻 (_check_f3_base_signal 內嵌函式) 1.
   價格門檻: Tbase 收盤價 (close) >= 5.0 元 2. 帶量門檻: Tbase 成交量
@@ -1007,10 +1010,11 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
   二、 雙軌分軌匹配過濾防線 (以距 52 週高點 = -15.0% 切分) 1. 🌟
   第一軌（強勢高位突破軌/T1-C籌碼動能優化）： - 門檻: (距 52 週高點 >= -15.0%)
-  AND (單筆均張 spt <= 2.0 張) AND (MA5/MA20 均量比 >= 1.15 倍) 2. 🌟
-  第二軌（低位打底轉折軌/T2-B量價動能優化）： - 門檻: (距 52 週高點 < -15.0%)
-  AND (打底 >= 35天 OR 年線扣抵 <= 10.0%) AND (上影線 <= 35.0%) AND
-                 (前 5 日均量斜率 >= 10.0%/日) AND (實體 K 棒 >= 35.0%)
+  AND (單筆均張 shares_per_trans <= 2.0 張) AND (vol_ma5_prior /
+  vol_ma20_prior >= 1.15 倍) 2. 🌟 第二軌（低位打底轉折軌/T2-B量價動能優化）：
+  - 門檻: (距 52 週高點 < -15.0%) AND (打底 >= 35天 OR 年線扣抵 <= 10.0%) AND
+  (上影線 <= 35.0%) AND (前 5 日均量斜率 vol_ma5_slope_prior_pct >= 10.0%/日)
+  AND (實體 K 棒 >= 35.0%)
 
   三、 三大黃金風控防線 1. 風控一 (年線扣抵位置): 個股年線扣抵位置
   (ma240_deduct_bias) <= 25.0% 2. 風控二 (個股年線乖離過熱與飆股豁免):
@@ -1021,11 +1025,10 @@ def st_qiantang_f3_after_shakeout_1102_1(
   累積觀察期報酬率 (confirm_return) >= -2.0%
 
   ===========================================================================
-  【開發與除錯規範 (嚴格依據《策略程式開發規範.docx》)】
+  【開發與除錯規範 (嚴格依據《策略程式開發規範.docx》與《欄位規格對照報告》)】
   - _check_f3_base_signal
   內嵌於主函數內部，僅進行純數據判斷與特徵回傳，絕不印出 Log。
-  - 確定的個股與大盤欄位直接使用中括號索引存取，缺失時由 Python 原生拋出 KeyError
-  例外，絕不補值。
+  - 確定的個股與大盤欄位直接使用中括號索引存取，變數名稱與資料庫欄位 100% 一對一對齊。
   - 當資料筆數不足時，動態帶入股票代號與日期並明確拋出 ValueError 例外。
   - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
   ===========================================================================
@@ -1064,6 +1067,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
           f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
       )
 
+    # 確定的個股欄位直接索引存取，缺失即拋出 KeyError (遵循《策略程式開發規範.docx》)
     close_t0 = float(row_t0['close'])
     open_t0 = float(row_t0['open'])
     high_t0 = float(row_t0['max'])
@@ -1159,6 +1163,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
   close_t0 = bm['close_t0'] if bm else float(row_t0['close'])
   vol_t0 = bm['vol_t0'] if bm else float(row_t0['Trading_Volume'])
   easy_slope = bm['easy_slope'] if bm else 0.0
+
+  # 🌟【完全對齊 engine.py 欄位名稱】：直接索引存取預處理產出之真實欄位
   upper_shadow_pct = (
       bm['upper_shadow_pct']
       if bm
@@ -1173,28 +1179,38 @@ def st_qiantang_f3_after_shakeout_1102_1(
   ma240_bias = float(row_t0['ma240_bias'])
   ma240_deduct_bias = float(row_t0['ma240_deduct_bias'])
   dist_52w_high_val = float(row_t0['dist_to_52w_high_pct'])
-  vol_ma5_slope_pct = float(row_t0['vol_ma5_slope_pct'])
 
-  spt_val = float(row_t0['shares_per_trans'])
-  vol_ma5_val = float(row_t0['vol_ma5'])
-  vol_ma20_val = float(row_t0['vol_ma20'])
-  ma5_to_ma20_ratio = vol_ma5_val / vol_ma20_val if vol_ma20_val > 0 else 0.0
+  # 🌟【完全對齊 engine.py 欄位名稱】：一對一精準讀取籌碼與均量欄位
+  shares_per_trans_val = float(row_t0['shares_per_trans'])  # 單筆均張 (SPT)
+  vol_ma5_prior_val = float(row_t0['vol_ma5_prior'])  # 前 5 日均量 (股)
+  vol_ma20_prior_val = float(row_t0['vol_ma20_prior'])  # 前 20 日均量 (股)
+  vol_ma5_slope_prior_pct_val = float(
+      row_t0['vol_ma5_slope_prior_pct']
+  )  # 🌟 修正：對齊 engine.py 之 vol_ma5_slope_prior_pct
 
+  ma5_to_ma20_ratio = (
+      vol_ma5_prior_val / vol_ma20_prior_val if vol_ma20_prior_val > 0 else 0.0
+  )
   amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
 
   # 4. 第一軌 vs 第二軌 雙軌分軌匹配過濾檢測
+  # 🌟 第一軌（方案 C）：強勢高位突破 (>= -15.0%) + 防對倒 (SPT <= 2.0) + 均量發散 (MA5/MA20 >= 1.15)
   cond_t1_high = dist_52w_high_val >= min_dist_52w_high
-  cond_t1_spt_ok = spt_val <= max_track1_spt
+  cond_t1_spt_ok = shares_per_trans_val <= max_track1_spt
   cond_t1_ratio_ok = ma5_to_ma20_ratio >= min_track1_ma5_to_ma20
   is_track1_pass = cond_t1_high and cond_t1_spt_ok and cond_t1_ratio_ok
 
+  # 🌟 第二軌（方案 T2-B）：低位打底/T2-B 量價動能優化軌
+  # (A) 基礎結構門檻: 打底 >= 35天 OR 年線扣抵 <= 10.0%
   cond_base_days_ok = consolidation_days >= min_base_days
   cond_deduct_safe = ma240_deduct_bias <= max_track2_deduction_pos
   cond_t2_structure = cond_base_days_ok or cond_deduct_safe
 
+  # (B) K 棒防偽門檻: 當日上影線比例 <= 35.0%
   cond_t2_shadow_ok = upper_shadow_pct <= max_upper_shadow_pct
 
-  cond_t2_vol_slope_ok = vol_ma5_slope_pct >= min_track2_vol_ma5_slope
+  # (C) T2-B 量價動能過濾: 前 5 日均量斜率 (vol_ma5_slope_prior_pct) >= 10.0%/日 且 實體 K 棒比例 (body_ratio) >= 35.0%
+  cond_t2_vol_slope_ok = vol_ma5_slope_prior_pct_val >= min_track2_vol_ma5_slope
   cond_t2_body_ratio_ok = body_ratio_pct >= min_track2_body_ratio
   cond_t2_momentum_ok = cond_t2_vol_slope_ok and cond_t2_body_ratio_ok
 
@@ -1213,6 +1229,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
       else ('第二軌(低位打底/T2-B優化)' if is_track2_pass else '未通過雙軌門檻')
   )
 
+  # 5. 大盤與三大黃金風控檢測 (確定的欄位直接索引存取，對齊 build_market_dict 之 taiex_ma240_bias_pct)
   market_ma240_bias = float(market_info['taiex_ma240_bias_pct'])
 
   cond7_ma240_bias_ok = (ma240_bias <= max_ma240_bias) or (
@@ -1221,6 +1238,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
   cond9_market_ma240_ok = market_ma240_bias <= max_market_ma240_bias
   cond10_ma240_deduction_ok = ma240_deduct_bias <= max_ma240_deduction_pos
 
+  # 6. Tbase+3 右側 Confirmation 價格確認
   close_confirm = float(row_today['close'])
   confirm_return = (
       (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
@@ -1236,6 +1254,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
       and cond11_right_confirm_ok
   )
 
+  # 7. 統一由主函數輸出對齊經典卡牌之 Console Log 格式
   if verbose:
     c1_m = '✓' if bm.get('cond1_trend', False) else '✕'
     c2_m = '✓' if bm.get('cond2_price_ok', False) else '✕'
@@ -1297,13 +1316,14 @@ def st_qiantang_f3_after_shakeout_1102_1(
     print(
         f'       ├─ [{t1_m}] [第一軌-強勢高位/T1-C優化] 距52週高點:'
         f' {dist_52w_high_val:.2f}% (門檻 >= {min_dist_52w_high:.1f}%) | SPT:'
-        f' {spt_val:.2f}張 (門檻<={max_track1_spt:.1f}張) | MA5/MA20:'
-        f' {ma5_to_ma20_ratio:.2f}倍 (門檻>={min_track1_ma5_to_ma20:.2f}倍)'
+        f' {shares_per_trans_val:.2f}張 (門檻<={max_track1_spt:.1f}張) |'
+        f' MA5/MA20: {ma5_to_ma20_ratio:.2f}倍'
+        f' (門檻>={min_track1_ma5_to_ma20:.2f}倍)'
     )
     print(
         f'       └─ [{t2_m}] [第二軌-低位打底/T2-B優化] 打底:'
         f' {consolidation_days}天 | 5日均量斜率:'
-        f' {vol_ma5_slope_pct:.2f}%/日'
+        f' {vol_ma5_slope_prior_pct_val:.2f}%/日'
         f' (門檻>={min_track2_vol_ma5_slope:.1f}%) | 實體K棒:'
         f' {body_ratio_pct:.1f}% (門檻>={min_track2_body_ratio:.1f}%) |'
         f' 上影線: {upper_shadow_pct:.1f}%'
