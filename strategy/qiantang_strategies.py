@@ -1026,25 +1026,19 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
   ===========================================================================
   【開發與除錯規範 (嚴格依據《策略程式開發規範.docx》與《欄位規格對照報告》)】
-  - _check_f3_base_signal
-  內嵌於主函數內部，僅進行純數據判斷與特徵回傳，絕不印出 Log。
+  - 100% 取消預設值與 Fallback 補值，缺失即原生拋出 KeyError / ValueError 例外！
   - 確定的個股與大盤欄位直接使用中括號索引存取，變數名稱與資料庫欄位 100% 一對一對齊。
-  - 當資料筆數不足時，動態帶入股票代號與日期並明確拋出 ValueError 例外。
+  - 當資料筆數不足時，明確拋出 ValueError 例外。
   - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
   ===========================================================================
   """
   profile = profile or {}
 
-  # 1. 歷史 K 線總筆數驗證 (帶入股票代號與最新日期，筆數不足則拋出 ValueError)
+  # 1. 歷史 K 線總筆數驗證 (直接存取索引，筆數不足即拋出 ValueError)
   min_required_len = 60 + delay_days
   if len(df_single) < min_required_len:
-    stock_id_str = (
-        str(df_single['stock_id'].iloc[-1]) if not df_single.empty else '未知'
-    )
-    date_str = (
-        str(df_single['date'].iloc[-1]) if not df_single.empty else '未知'
-    )
-
+    stock_id_str = str(df_single['stock_id'].iloc[-1])
+    date_str = str(df_single['date'].iloc[-1])
     raise ValueError(
         f'❌ [st_qiantang_f3_after_shakeout_1102_1] 股票: {stock_id_str} |'
         f' 最新日期: {date_str} | K線歷史資料筆數不足！(目前: {len(df_single)} 筆 <'
@@ -1056,18 +1050,14 @@ def st_qiantang_f3_after_shakeout_1102_1(
       df_past: pd.DataFrame, row_t0: pd.Series
   ) -> tuple[bool, dict]:
     if len(df_past) < 60:
-      stock_id_sub = (
-          str(df_past['stock_id'].iloc[-1]) if not df_past.empty else '未知'
-      )
-      date_sub = (
-          str(df_past['date'].iloc[-1]) if not df_past.empty else '未知'
-      )
+      stock_id_sub = str(df_past['stock_id'].iloc[-1])
+      date_sub = str(df_past['date'].iloc[-1])
       raise ValueError(
           f'❌ [_check_f3_base_signal] 股票: {stock_id_sub} | 日期: {date_sub}'
           f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
       )
 
-    # 確定的個股欄位直接索引存取，缺失即拋出 KeyError (遵循《策略程式開發規範.docx》)
+    # 確定的欄位直接中括號索引存取，缺失即原生拋出 KeyError (嚴格遵守規範)
     close_t0 = float(row_t0['close'])
     open_t0 = float(row_t0['open'])
     high_t0 = float(row_t0['max'])
@@ -1160,19 +1150,12 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
   base_hit, bm = _check_f3_base_signal(df_past=df_past, row_t0=row_t0)
 
-  close_t0 = bm['close_t0'] if bm else float(row_t0['close'])
-  vol_t0 = bm['vol_t0'] if bm else float(row_t0['Trading_Volume'])
-  easy_slope = bm['easy_slope'] if bm else 0.0
-
-  # 🌟【完全對齊 engine.py 欄位名稱】：直接索引存取預處理產出之真實欄位
-  upper_shadow_pct = (
-      bm['upper_shadow_pct']
-      if bm
-      else float(row_t0['upper_shadow_ratio'])
-  )
-  body_ratio_pct = (
-      bm['body_ratio_pct'] if bm else float(row_t0['body_ratio'])
-  )
+  # 🌟【取消一切 Fallback】：直接讀取字典值，缺失即報 KeyError
+  close_t0 = float(bm['close_t0'])
+  vol_t0 = float(bm['vol_t0'])
+  easy_slope = float(bm['easy_slope'])
+  upper_shadow_pct = float(bm['upper_shadow_pct'])
+  body_ratio_pct = float(bm['body_ratio_pct'])
 
   ma60_slope = float(row_t0['ma60_slope'])
   consolidation_days = int(row_t0['base_consolidation_days'])
@@ -1180,36 +1163,29 @@ def st_qiantang_f3_after_shakeout_1102_1(
   ma240_deduct_bias = float(row_t0['ma240_deduct_bias'])
   dist_52w_high_val = float(row_t0['dist_to_52w_high_pct'])
 
-  # 🌟【完全對齊 engine.py 欄位名稱】：一對一精準讀取籌碼與均量欄位
+  # 🌟【對齊 engine.py 欄位】：直接索引存取，無任何預設值
   shares_per_trans_val = float(row_t0['shares_per_trans'])  # 單筆均張 (SPT)
   vol_ma5_prior_val = float(row_t0['vol_ma5_prior'])  # 前 5 日均量 (股)
   vol_ma20_prior_val = float(row_t0['vol_ma20_prior'])  # 前 20 日均量 (股)
   vol_ma5_slope_prior_pct_val = float(
       row_t0['vol_ma5_slope_prior_pct']
-  )  # 🌟 修正：對齊 engine.py 之 vol_ma5_slope_prior_pct
+  )  # 前 5 日均量斜率 (%/日)
 
-  ma5_to_ma20_ratio = (
-      vol_ma5_prior_val / vol_ma20_prior_val if vol_ma20_prior_val > 0 else 0.0
-  )
+  ma5_to_ma20_ratio = vol_ma5_prior_val / vol_ma20_prior_val
   amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
 
   # 4. 第一軌 vs 第二軌 雙軌分軌匹配過濾檢測
-  # 🌟 第一軌（方案 C）：強勢高位突破 (>= -15.0%) + 防對倒 (SPT <= 2.0) + 均量發散 (MA5/MA20 >= 1.15)
   cond_t1_high = dist_52w_high_val >= min_dist_52w_high
   cond_t1_spt_ok = shares_per_trans_val <= max_track1_spt
   cond_t1_ratio_ok = ma5_to_ma20_ratio >= min_track1_ma5_to_ma20
   is_track1_pass = cond_t1_high and cond_t1_spt_ok and cond_t1_ratio_ok
 
-  # 🌟 第二軌（方案 T2-B）：低位打底/T2-B 量價動能優化軌
-  # (A) 基礎結構門檻: 打底 >= 35天 OR 年線扣抵 <= 10.0%
   cond_base_days_ok = consolidation_days >= min_base_days
   cond_deduct_safe = ma240_deduct_bias <= max_track2_deduction_pos
   cond_t2_structure = cond_base_days_ok or cond_deduct_safe
 
-  # (B) K 棒防偽門檻: 當日上影線比例 <= 35.0%
   cond_t2_shadow_ok = upper_shadow_pct <= max_upper_shadow_pct
 
-  # (C) T2-B 量價動能過濾: 前 5 日均量斜率 (vol_ma5_slope_prior_pct) >= 10.0%/日 且 實體 K 棒比例 (body_ratio) >= 35.0%
   cond_t2_vol_slope_ok = vol_ma5_slope_prior_pct_val >= min_track2_vol_ma5_slope
   cond_t2_body_ratio_ok = body_ratio_pct >= min_track2_body_ratio
   cond_t2_momentum_ok = cond_t2_vol_slope_ok and cond_t2_body_ratio_ok
@@ -1229,7 +1205,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
       else ('第二軌(低位打底/T2-B優化)' if is_track2_pass else '未通過雙軌門檻')
   )
 
-  # 5. 大盤與三大黃金風控檢測 (確定的欄位直接索引存取，對齊 build_market_dict 之 taiex_ma240_bias_pct)
+  # 5. 大盤與三大黃金風控檢測 (直接中括號讀取 taiex_ma240_bias_pct，缺失即原生拋出 KeyError)
   market_ma240_bias = float(market_info['taiex_ma240_bias_pct'])
 
   cond7_ma240_bias_ok = (ma240_bias <= max_ma240_bias) or (
@@ -1254,14 +1230,14 @@ def st_qiantang_f3_after_shakeout_1102_1(
       and cond11_right_confirm_ok
   )
 
-  # 7. 統一由主函數輸出對齊經典卡牌之 Console Log 格式
+  # 7. 統一由主函數輸出對齊經典卡牌之 Console Log 格式 (取消所有 .get()，全直接索引存取)
   if verbose:
-    c1_m = '✓' if bm.get('cond1_trend', False) else '✕'
-    c2_m = '✓' if bm.get('cond2_price_ok', False) else '✕'
-    c3_m = '✓' if bm.get('cond3_vol_ok', False) else '✕'
-    c4_m = '✓' if bm.get('cond4_continuous', False) else '✕'
-    c5_m = '✓' if bm.get('cond5_shakeout', False) else '✕'
-    c6_m = '✓' if bm.get('cond6_macd_ok', False) else '✕'
+    c1_m = '✓' if bm['cond1_trend'] else '✕'
+    c2_m = '✓' if bm['cond2_price_ok'] else '✕'
+    c3_m = '✓' if bm['cond3_vol_ok'] else '✕'
+    c4_m = '✓' if bm['cond4_continuous'] else '✕'
+    c5_m = '✓' if bm['cond5_shakeout'] else '✕'
+    c6_m = '✓' if bm['cond6_macd_ok'] else '✕'
     c7_m = '✓' if cond7_ma240_bias_ok else '✕'
     c8_m = '✓' if cond8_double_track_ok else '✕'
     c9_m = '✓' if cond9_market_ma240_ok else '✕'
@@ -1278,7 +1254,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
     )
 
     vol_lots_t0 = vol_t0 / 1000.0
-    vol_ma5_lots = (bm.get('vol_ma5', vol_t0) / 1000.0) if bm else vol_lots_t0
+    vol_ma5_lots = float(bm['vol_ma5']) / 1000.0
 
     print()
     print('=' * 65)
@@ -1289,7 +1265,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
     print('-' * 65)
     print(
         f'  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${close_t0:.2f} >'
-        f' ${bm.get("ma60_t0", 0.0):.2f})'
+        f' ${float(bm["ma60_t0"]):.2f})'
     )
     print(f'  [{c2_m}] 2. 收盤價 >= 5元 : ${close_t0:.2f}')
     print(
@@ -1299,14 +1275,14 @@ def st_qiantang_f3_after_shakeout_1102_1(
     print('  [' f'{c4_m}] 4. 連續兩天站上 : Day T 與 Day T-1 均站上輕鬆線')
     print(
         f'  [{c5_m}] 5. 洗盤甩轎軌跡 :'
-        f' T-2({bm.get("was_below_tm2", False)}) |'
-        f' T-3({bm.get("was_below_tm3", False)}) |'
-        f' T-4({bm.get("was_below_tm4", False)})'
+        f' T-2({bm["was_below_tm2"]}) |'
+        f' T-3({bm["was_below_tm3"]}) |'
+        f' T-4({bm["was_below_tm4"]})'
     )
     print(
         '  ['
-        f'{c6_m}] 6. MACD綠翻紅 : T0 OSC ({bm.get("osc_t0", 0.0):.3f}) > 0 且'
-        f' T-1 OSC ({bm.get("osc_tm1", 0.0):.3f}) <= 0'
+        f'{c6_m}] 6. MACD綠翻紅 : T0 OSC ({float(bm["osc_t0"]):.3f}) > 0 且'
+        f' T-1 OSC ({float(bm["osc_tm1"]):.3f}) <= 0'
     )
     print(
         f'  [{c7_m}] 7. 個股年線乖離 & OLS豁免 : 乖離率={ma240_bias:.2f}%'
