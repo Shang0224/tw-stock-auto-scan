@@ -1037,8 +1037,14 @@ def st_qiantang_f3_after_shakeout_1102_1(
   # 1. 歷史 K 線總筆數驗證 (直接存取索引，筆數不足即拋出 ValueError)
   min_required_len = 60 + delay_days
   if len(df_single) < min_required_len:
+    print(f"len(df_single):{len(df_single)}, min_required_len:{min_required_len}"
     stock_id_str = str(df_single['stock_id'].iloc[-1])
     date_str = str(df_single['date'].iloc[-1])
+    print(
+        f'❌ [st_qiantang_f3_after_shakeout_1102_1] 股票: {stock_id_str} |'
+        f' 最新日期: {date_str} | K線歷史資料筆數不足！(目前: {len(df_single)} 筆 <'
+        f' 需求底線: {min_required_len} 筆 [60日基底 + {delay_days}日右側觀察期]), 丟出例外'        
+    )
     raise ValueError(
         f'❌ [st_qiantang_f3_after_shakeout_1102_1] 股票: {stock_id_str} |'
         f' 最新日期: {date_str} | K線歷史資料筆數不足！(目前: {len(df_single)} 筆 <'
@@ -1049,9 +1055,21 @@ def st_qiantang_f3_after_shakeout_1102_1(
   def _check_f3_base_signal(
       df_past: pd.DataFrame, row_t0: pd.Series
   ) -> tuple[bool, dict]:
+  
     if len(df_past) < 60:
+      print(f'len(df_past) < 60: {len(df_past) < 60}")
       stock_id_sub = str(df_past['stock_id'].iloc[-1])
       date_sub = str(df_past['date'].iloc[-1])
+      
+      print(
+          f'❌ [_check_f3_base_signal] 股票: {stock_id_sub} | 日期: {date_sub}'
+          f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
+      )
+      
+      raise ValueError(
+          f'❌ [_check_f3_base_signal] 股票: {stock_id_sub} | 日期: {date_sub}'
+          f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
+      )
       raise ValueError(
           f'❌ [_check_f3_base_signal] 股票: {stock_id_sub} | 日期: {date_sub}'
           f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
@@ -1224,7 +1242,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
       (close_confirm - close_t0) / close_t0 if close_t0 > 0 else -999.0
   )
   cond11_right_confirm_ok = confirm_return >= threshold_pct
-
+  
   is_hit = (
       base_hit
       and cond8_double_track_ok
@@ -1233,6 +1251,8 @@ def st_qiantang_f3_after_shakeout_1102_1(
       and cond10_ma240_deduction_ok
       and cond11_right_confirm_ok
   )
+
+  print(f"is_hit:{is_hit} date_confirm_str {date_confirm_str} stock id {str(df_single['stock_id'].iloc[-1])}")
 
   # 7. 統一由主函數輸出對齊經典卡牌之 Console Log 格式 (取消所有 .get()，全直接索引存取)
   if verbose:
