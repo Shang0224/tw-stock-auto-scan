@@ -1037,7 +1037,9 @@ def st_qiantang_f3_after_shakeout_1102_1(
   # 1. 歷史 K 線總筆數驗證 (直接存取索引，筆數不足即拋出 ValueError)
   min_required_len = 60 + delay_days
   if len(df_single) < min_required_len:
-    print(f"len(df_single):{len(df_single)}, min_required_len:{min_required_len}"
+      
+    print(f"len(df_single):{len(df_single)}, min_required_len:{min_required_len}")
+      
     stock_id_str = str(df_single['stock_id'].iloc[-1])
     date_str = str(df_single['date'].iloc[-1])
     print(
@@ -1058,6 +1060,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
   
     if len(df_past) < 60:
       print(f"len(df_past) < 60: {len(df_past) < 60}")
+        
       stock_id_sub = str(df_past['stock_id'].iloc[-1])
       date_sub = str(df_past['date'].iloc[-1])
       
@@ -1070,10 +1073,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
           f'❌ [_check_f3_base_signal] 股票: {stock_id_sub} | 日期: {date_sub}'
           f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
       )
-      raise ValueError(
-          f'❌ [_check_f3_base_signal] 股票: {stock_id_sub} | 日期: {date_sub}'
-          f' | 底座歷史 K 線資料筆數不足 60 筆 (目前: {len(df_past)} 筆)'
-      )
+
 
     # 確定的欄位直接中括號索引存取，缺失即原生拋出 KeyError (嚴格遵守規範)
     close_t0 = float(row_t0['close'])
