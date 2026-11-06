@@ -1803,7 +1803,9 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
     # 4. MID100 專屬雙軌防線過濾
     cond_ma60_slope_ok = (ma60_slope > 0.0)                                # 季線趨勢向上
     cond_upper_shadow_ok = (upper_shadow_pct <= max_upper_shadow_pct)     # 避雷針防偽 (<= 35%)
-    cond_chip_ok = not (main_5d_val < 0.0 and trust_5d_val < 0.0)           # 排除主力投信雙賣
+    
+    #cond_chip_ok = not (main_5d_val < 0.0 and trust_5d_val < 0.0)           # 排除主力投信雙賣
+    cond_chip_ok = True #廢止這個條件
 
     is_track1 = (dist_52w_high_val >= min_dist_52w_high)
 
