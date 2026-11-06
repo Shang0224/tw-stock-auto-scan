@@ -217,6 +217,8 @@ def scan_qiantang_strategy_day(
     if df_single.empty or len(df_single) < 5:
       continue
 
+    df_single["category"] = stock_cat  # 將股票池分類直接加入df_single
+      
     # 4. 查閱當日大盤環境數據
     m_info = market_dict.get(day_str, {}) if market_dict else {}
 
