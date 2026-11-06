@@ -961,7 +961,7 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
     本策略修改自 st_qiantang_f3_after_shakeout_1102。
     
     【修改核心緣由與專用適配說明】：
-    1. 專屬股票池門檻：第一步優先判定個股選股池分類，非「中型100 (MID100)」標的直接快速退場放行。
+    1. df_single 欄位原生判定：直接自 df_single / row_t0 讀取選股池欄位，非 MID100 標的直接快速退場。
     2. 發揮中型股量能特色：針對中型股主力甩轎突破與下檔極佳防守（MAE 均值 -7.4%）特質客製門檻。
     3. Tbase 洗盤底座與季線趨勢：承襲 F3 洗盤甩轎底座，並強制要求 MA60 季線斜率 > 0，確保季線呈多頭揚升。
     4. 第一軌 (強勢高位): 要求單筆均張 (SPT) <= 2.2 張 (防大單對倒倒貨) 且 當日上影線 <= 35.0% (防避雷針)。
@@ -976,32 +976,42 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
     - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
     ===========================================================================
     """
-    profile = profile or {}
-
-    # -------------------------------------------------------------------------
-    # 關卡 0：股票池專屬門檻檢查 (先判斷股票是否為 MID100)
-    # -------------------------------------------------------------------------
-    current_category = profile.get('category', None)
-    if current_category is not None and current_category != 'MID100':
+    # 1. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
+    if len(df_single) < 60 or len(df_single) <= delay_days:
         return False, {}
 
+    t0_pos = -(1 + delay_days)
+    row_t0 = df_single.iloc[t0_pos]
+    row_today = df_single.iloc[-1]
+    df_past = df_single.iloc[:t0_pos]
+
+    # -------------------------------------------------------------------------
+    # 關卡 0：股票池專屬門檻檢查 (直接從 df_single / row_t0 原生欄位判斷)
+    # -------------------------------------------------------------------------
+    cat_col = 'category' if 'category' in row_t0.index else '選股池分類'
+    current_category = str(row_t0[cat_col]).strip()
+    if current_category != 'MID100':
+        return False, {}
+
+    # -------------------------------------------------------------------------
     # 內嵌內部私有輔助函式 (純數據運算，不輸出除錯訊息)
-    def _check_f3_base_signal(df_past: pd.DataFrame, row_t0: pd.Series) -> tuple[bool, dict]:
-        if len(df_past) < 60:
+    # -------------------------------------------------------------------------
+    def _check_f3_base_signal(df_past_data: pd.DataFrame, target_row: pd.Series) -> tuple[bool, dict]:
+        if len(df_past_data) < 60:
             return False, {}
 
         # 確定欄位直接索引存取 (缺失即原生拋出 KeyError 例外)
-        close_t0 = float(row_t0['close'])
-        easy_t0 = float(row_t0['easy_line'])
-        vol_t0 = float(row_t0['Trading_Volume'])
-        ma60_t0 = float(row_t0['MA60'])
-        vol_ma5 = float(df_past['Trading_Volume'].iloc[-6:-1].mean())
+        close_t0 = float(target_row['close'])
+        easy_t0 = float(target_row['easy_line'])
+        vol_t0 = float(target_row['Trading_Volume'])
+        ma60_t0 = float(target_row['MA60'])
+        vol_ma5 = float(df_past_data['Trading_Volume'].iloc[-5:].mean())
 
-        close_prev1 = float(df_past['close'].iloc[-2])
-        easy_prev1 = float(df_past['easy_line'].iloc[-2])
+        close_prev1 = float(df_past_data['close'].iloc[-1])
+        easy_prev1 = float(df_past_data['easy_line'].iloc[-1])
 
         # 輕鬆線斜率計算 (近 5 日, iloc 必須使用位置索引)
-        easy_series_5 = df_past['easy_line'].iloc[-5:]
+        easy_series_5 = df_past_data['easy_line'].iloc[-5:]
         easy_slope = float(linregress(np.arange(len(easy_series_5)), easy_series_5.values).slope)
 
         # 1. 季線趨勢與價格門檻
@@ -1015,12 +1025,12 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
         cond4_continuous = (close_t0 > easy_t0) and (close_prev1 > easy_prev1)
 
         # 4. 洗盤甩轎軌跡 (T-2, T-3, T-4 曾跌破輕鬆線)
-        close_p2 = float(df_past['close'].iloc[-3])
-        easy_p2 = float(df_past['easy_line'].iloc[-3])
-        close_p3 = float(df_past['close'].iloc[-4])
-        easy_p3 = float(df_past['easy_line'].iloc[-4])
-        close_p4 = float(df_past['close'].iloc[-5])
-        easy_p4 = float(df_past['easy_line'].iloc[-5])
+        close_p2 = float(df_past_data['close'].iloc[-2])
+        easy_p2 = float(df_past_data['easy_line'].iloc[-2])
+        close_p3 = float(df_past_data['close'].iloc[-3])
+        easy_p3 = float(df_past_data['easy_line'].iloc[-3])
+        close_p4 = float(df_past_data['close'].iloc[-4])
+        easy_p4 = float(df_past_data['easy_line'].iloc[-4])
 
         was_below_tm2 = close_p2 <= easy_p2
         was_below_tm3 = close_p3 <= easy_p3
@@ -1028,8 +1038,8 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
         cond5_shakeout = was_below_tm2 or was_below_tm3 or was_below_tm4
 
         # 5. MACD 綠柱翻紅
-        osc_t0 = float(row_t0['osc'])
-        osc_tm1 = float(df_past['osc'].iloc[-2])
+        osc_t0 = float(target_row['osc'])
+        osc_tm1 = float(df_past_data['osc'].iloc[-1])
         cond6_macd_ok = (osc_t0 > 0) and (osc_tm1 <= 0)
 
         base_hit = bool(
@@ -1060,21 +1070,13 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
 
         return base_hit, base_metrics
 
-    # 1. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
-    if len(df_single) < 60 or len(df_single) <= delay_days:
-        return False, {}
-
-    row_t0 = df_single.iloc[-(delay_days + 1)]
-    row_today = df_single.iloc[-1]
-    df_past = df_single.iloc[: -(delay_days)]
-
     # 確定的股票識別欄位直接索引存取 (缺失直接拋出 KeyError)
     stock_id_str = str(row_t0['stock_id'])
     date_t0_str = str(row_t0['date'])
     date_confirm_str = str(row_today['date'])
 
     # 2. 呼叫內嵌輔助函式進行底座訊號運算
-    base_hit, bm = _check_f3_base_signal(df_past=df_past, row_t0=row_t0)
+    base_hit, bm = _check_f3_base_signal(df_past_data=df_past, target_row=row_t0)
 
     # 3. MID100 特徵指標直接索引讀取
     close_t0 = bm['close_t0'] if bm else float(row_t0['close'])
@@ -1170,7 +1172,7 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
             f' {date_t0_str} -> 確認日: {date_confirm_str}'
         )
         print('-' * 65)
-        print('  [✓] 0. 股票池過濾 : 中型100 (MID100 專屬規則通關)')
+        print(f'  [✓] 0. 股票池過濾 : {current_category} (MID100 專屬規則通關)')
         print(
             f'  [{c1_m}] 1. 季線趨勢過濾 : Close_T > MA60 (${close_t0:.2f} >'
             f' ${bm.get("ma60_t0", 0.0):.2f}) | MA60斜率={ma60_slope:.4f} (>0)'
