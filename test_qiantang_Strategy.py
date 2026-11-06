@@ -240,6 +240,7 @@ def scan_qiantang_strategy_day(
       close_price = round(float(latest_row["close"]), 2)
       vol_today = float(latest_row.get("Trading_Volume", 0))
       vol_lots = int(vol_today / 1000)
+      amount_100m = round(float(vol_today * close_price / 100_000_000.0), 2)
 
       # 4. 查閱當日大盤環境數據
       #m_info = market_dict.get(day_str, {}) if market_dict else {}
