@@ -118,8 +118,8 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_1101,
     st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
     st_qiantang_f3_after_shakeout_1102_1,
-    st_qiantang_f3_after_shakeout_mid100_1106,
-    #$st_qiantang_f3_after_shakeout_TW50_1106,
+    #st_qiantang_f3_after_shakeout_mid100_1106,
+    st_qiantang_f3_after_shakeout_TW50_1106,
     #$st_qiantang_f3_after_shakeout_icdesign_1106,
         
     
