@@ -163,7 +163,8 @@ STOCK_MODE = "csv"
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
-STOCK_INPUT = "data/MID100.csv"
+STOCK_INPUT = "data/TW50.csv"
+#STOCK_INPUT = "data/MID100.csv"
 #STOCK_INPUT = "data/ICDesignList.csv"
 
 
