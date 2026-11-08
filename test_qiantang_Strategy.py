@@ -101,9 +101,9 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_20261001_1_1_2, #大盤年線過熱過濾, ols斜率>1.0強勢股豁免
     #st_qiantang_f3_after_shakeout_20261001_1_1_3, #終極精準降噪旗艦版
     #st_qiantang_f3_after_shakeout_20261001_1_1_4,  #終極精準降噪旗艦版, 修正版
-    #st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
+    st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
     #st_qiantang_f3_after_shakeout_20261022_1_1_6, #從st_qiantang_f3_after_shakeout_20261001_1_1_2修改, 籌碼共振與高位強勢旗艦版
-    #$st_qiantang_f3_after_shakeout_20261023, #20261020_1（強勢高位+T+3） 與 1_1_5（黃金雙防線版） 融合版
+    st_qiantang_f3_after_shakeout_20261023, #20261020_1（強勢高位+T+3） 與 1_1_5（黃金雙防線版） 融合版
     #st_qiantang_f3_after_shakeout_20261030,
     #st_qiantang_f3_after_shakeout_20261030_1,
     #st_qiantang_f3_after_shakeout_20261030_new,
@@ -114,10 +114,10 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_20261029_1,
     
     #st_qiantang_f3_after_shakeout_20261029,
-    #$st_qiantang_f3_after_shakeout_1029_1_1, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
+    st_qiantang_f3_after_shakeout_1029_1_1, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
     #st_qiantang_f3_after_shakeout_1101,
     st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
-    #st_qiantang_f3_after_shakeout_1102_1,
+    st_qiantang_f3_after_shakeout_1102_1,
     st_qiantang_f3_after_shakeout_mid100_1106,
     #$st_qiantang_f3_after_shakeout_TW50_1106,
     #$st_qiantang_f3_after_shakeout_icdesign_1106,
