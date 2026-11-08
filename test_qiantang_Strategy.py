@@ -56,8 +56,11 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout_1102,
     st_qiantang_f3_after_shakeout_1102_1,
     st_qiantang_f3_after_shakeout_mid100_1106,
+    st_qiantang_f3_after_shakeout_mid100_1108,
+
     st_qiantang_f3_after_shakeout_TW50_1106,
     st_qiantang_f3_after_shakeout_icdesign_1106,
+    
 
     st_qiantang_f4_strong_rise,     # 強力上
     st_qiantang_f5_major_buy_easy,  # 主外上輕
@@ -113,14 +116,15 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_1029_1_2,
     #st_qiantang_f3_after_shakeout_20261029_1,
     
-    #st_qiantang_f3_after_shakeout_20261029,
+    #$t_qiantang_f3_after_shakeout_20261029,
     st_qiantang_f3_after_shakeout_1029_1_1, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
     #st_qiantang_f3_after_shakeout_1101,
     st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
     st_qiantang_f3_after_shakeout_1102_1,
     #$st_qiantang_f3_after_shakeout_mid100_1106,
+    st_qiantang_f3_after_shakeout_mid100_1108,
     #$st_qiantang_f3_after_shakeout_TW50_1106,
-    st_qiantang_f3_after_shakeout_icdesign_1106,
+    #st_qiantang_f3_after_shakeout_icdesign_1106,
         
     
     #st_qiantang_f3_after_shakeout_20261001_1,
@@ -164,8 +168,8 @@ STOCK_MODE = "csv"
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
 #STOCK_INPUT = "data/TW50.csv"
-#STOCK_INPUT = "data/MID100.csv"
-STOCK_INPUT = "data/ICDesignList.csv"
+STOCK_INPUT = "data/MID100.csv"
+#STOCK_INPUT = "data/ICDesignList.csv"
 
 
 #STOCK_MODE = 'noncsv' 
