@@ -310,13 +310,4 @@ if __name__ == "__main__":
     else:
         print(f"🚀 手動強制測試或者自動排成未傳入檔案")
         
-        run_qiantang_strategy_excel_scan() #手動強制執行, 則執行此段, 執行那些股票由程式開頭的STOCK_INPUT決定        
-        
-    
-
-
-
-
-
-    
-    
+        run_qiantang_strategy_excel_scan() #手動強制執行, 則執行此段, 執行那些股票由程式開頭的STOCK_INPUT決定
