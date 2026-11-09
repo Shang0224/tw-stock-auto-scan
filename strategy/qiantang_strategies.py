@@ -1125,7 +1125,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     dist_52w_high_val = float(row_t0['dist_to_52w_high_pct'])
     body_ratio_pct = float(row_t0['body_ratio'])
     vol_ma5_slope_pct = float(row_t0['vol_ma5_slope_prior_pct'])
-    margin_day_diff = float(row_t0['margin_day_diff'])
+    margin_day_diff = float(row_t0['margin_diff_shares'])
 
     # 衍生歸一化相對指標計算
     vol_lots_t0 = vol_t0 / 1000.0
