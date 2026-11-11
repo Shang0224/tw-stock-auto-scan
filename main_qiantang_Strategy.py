@@ -73,9 +73,9 @@ TEST_END_DATE = "2025-09-30"
 # 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
 STOCK_MODE = "csv"
 STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
-#STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv"
+#STOCK_ICDesignHot_INPUT = "data/TestData/qiantang_ICDesign_hot.csv"
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
-#STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
+STOCK_MID100Hot_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 
 # 模式 B：自訂 dict[str, dict] 載入模式
 """
@@ -311,14 +311,14 @@ GLOBAL_TEST_DATE = "2026-11-06"
 
 if __name__ == "__main__":
 
-    print("mian_qiantang_Strategy.py")
-
     parser = argparse.ArgumentParser(description="錢塘潮選股系統 CLI 介面")
     parser.add_argument("-d", "--target_date", type=str, default=None, help="指定掃描日期 (YYYY-MM-DD)")
     parser.add_argument("-s", "--stock_file", type=str, default=None, help="指定股票池 CSV 檔案路徑")
     parser.add_argument("-m", "--mode", type=str, default=None, help="指定執行模式")
     
     args = parser.parse_args()
+
+    print("main_qiantang_Strategy == args.target_date: {args.target_date; args.mode: {args.mode}; args.stock_file: {args.stock_file};)
 
     # ==========================================================================
     # 📌 1. 第一層：先精準判斷是否為 GitHub Actions 自動排程 (Schedule)
@@ -337,6 +337,9 @@ if __name__ == "__main__":
             # 備援：若排程未帶 -d，嘗試讀取 YAML 環境變數 CREATED_AT_DATE
             target_date = os.getenv("CREATED_AT_DATE")
             print(f"📅 [自動排程] 未帶 -d 引數 ➔ 解析環境變數 Created at 日期: {target_date}")
+
+        scan_kwargs["stock_mode"] = args.mode
+        scan_kwargs["stock_input"] = args.stock_file
     else:
         # 【手動模式】(包含 本地開發測試 / GitHub 網頁手動點擊 workflow_dispatch)
         if args.target_date:
@@ -346,15 +349,20 @@ if __name__ == "__main__":
             target_date = GLOBAL_TEST_DATE
             print(f"🧪 [手動執行] 未傳入日期引數 ➔ 切換為全域測試日期: {target_date}")
 
+        scan_kwargs["stock_mode"] = args.mode
+        scan_kwargs["stock_input"] = args.stock_file
+
     # ==========================================================================
     # 📌 3. 動態建構選股參數並呼叫核心選股函式 [1]
     # ==========================================================================
     scan_kwargs = {"target_date": target_date}
-    
+
+    """
     if args.stock_file:
         scan_kwargs["stock_mode"] = args.mode
         scan_kwargs["stock_input"] = args.stock_file
-
+    """
+    
     print(f"🚀 啟動選股流程，傳入參數: {scan_kwargs}")
     run_qiantang_strategy_excel_scan(**scan_kwargs)
     
