@@ -132,7 +132,7 @@ def run_qiantang_strategy_excel_scan(
     stock_mode=STOCK_MODE,
     stock_data=STOCK_INPUT,
     strategies=TEST_QIANTANG_STRATEGY,
-    
+    target_date: str = None,  # 未傳入時由內部自動判定    
 ):
     """執行錢塘潮多方選股掃描並產出 Excel 儀表板"""
     if not strategies:
