@@ -318,13 +318,15 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    print("main_qiantang_Strategy == args.target_date: {args.target_date; args.mode: {args.mode}; args.stock_file: {args.stock_file}")
+    print(f"main_qiantang_Strategy == args.target_date: {args.target_date; args.mode: {args.mode}; args.stock_file: {args.stock_file}")
 
     # ==========================================================================
     # 📌 1. 第一層：先精準判斷是否為 GitHub Actions 自動排程 (Schedule)
     # ==========================================================================
     is_schedule = (os.getenv("GITHUB_EVENT_NAME") == "schedule")
 
+    scan_kwargs = {}
+    
     # ==========================================================================
     # 📌 2. 第二層：依據執行環境 + CLI 傳參決定最終目標日期
     # ==========================================================================
