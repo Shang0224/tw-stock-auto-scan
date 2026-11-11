@@ -308,64 +308,63 @@ def run_qiantang_strategy_excel_scan(
 # 本地手動測試且未帶參數時使用的全域測試日期
 GLOBAL_TEST_DATE = "2026-11-06"
 
-
 if __name__ == "__main__":
-
+    print("mian_qiantang_Strategy.py")
+    
     parser = argparse.ArgumentParser(description="錢塘潮選股系統 CLI 介面")
     parser.add_argument("-d", "--target_date", type=str, default=None, help="指定掃描日期 (YYYY-MM-DD)")
     parser.add_argument("-s", "--stock_file", type=str, default=None, help="指定股票池 CSV 檔案路徑")
-    parser.add_argument("-m", "--mode", type=str, default=None, help="指定執行模式")
-    
+    parser.add_argument("-m", "--mode", type=str, default=None, help="指定執行模式 (csv / noncsv)")
+
     args = parser.parse_args()
 
-    print(f"main_qiantang_Strategy == args.target_date: {args.target_date}; args.mode: {args.mode}; args.stock_file: {args.stock_file}")
-
-    # ==========================================================================
-    # 📌 1. 第一層：先精準判斷是否為 GitHub Actions 自動排程 (Schedule)
-    # ==========================================================================
+    # 判斷觸發來源是否為 GitHub Actions 自動排程
     is_schedule = (os.getenv("GITHUB_EVENT_NAME") == "schedule")
 
-    scan_kwargs = {}
-    
-    # ==========================================================================
-    # 📌 2. 第二層：依據執行環境 + CLI 傳參決定最終目標日期
-    # ==========================================================================
+    # =====================================================================
+    # 🎯 核心邏輯：自動排程 (3個參數缺一不可) vs 手動執行 (支援免傳參預設值)
+    # =====================================================================
     if is_schedule:
-        # 【排程模式】
-        if args.target_date:
-            target_date = args.target_date.strip()
-            print(f"📅 [自動排程] 採用引數傳入之 Created at 台灣日期: {target_date}")
-        else:
-            # 備援：若排程未帶 -d，嘗試讀取 YAML 環境變數 CREATED_AT_DATE
-            target_date = os.getenv("CREATED_AT_DATE")
-            print(f"📅 [自動排程] 未帶 -d 引數 ➔ 解析環境變數 Created at 日期: {target_date}")
+        # 1. 解析三大參數 (日期可備援讀取環境變數 CREATED_AT_DATE)
+        target_date = args.target_date.strip() if args.target_date else os.getenv("CREATED_AT_DATE")
+        mode = args.mode.strip() if args.mode else None
+        stock_file = args.stock_file.strip() if args.stock_file else None
 
-        scan_kwargs["stock_mode"] = args.mode
-        scan_kwargs["stock_data"] = args.stock_file
+        # 🛑【排程嚴格防呆】檢查 3 個參數是否齊全
+        missing_params = []
+        if not target_date:
+            missing_params.append("日期 (-d / CREATED_AT_DATE)")
+        if not mode:
+            missing_params.append("模式 (-m)")
+        if not stock_file:
+            missing_params.append("股票池檔案 (-s)")
+
+        # 只要缺少任意一個參數，立即中止執行
+        if missing_params:
+            print(f"❌ [安全攔截] 自動排程執行失敗！缺少必要參數：{', '.join(missing_params)}，安全終止。")
+            sys.exit(1)
+
+        print(f"⏰ [自動排程] 三大參數傳入成功 ➔ 日期: {target_date} | 模式: {mode} | 檔案: {stock_file}")
+
     else:
-        # 【手動模式】(包含 本地開發測試 / GitHub 網頁手動點擊 workflow_dispatch)
-        if args.target_date:
-            target_date = args.target_date.strip()
-            print(f"🧪 [手動執行] 採用指定引數日期: {target_date}")
-        else:
-            target_date = GLOBAL_TEST_DATE
-            print(f"🧪 [手動執行] 未傳入日期引數 ➔ 切換為全域測試日期: {target_date}")
+        # 2. 手動執行 (本機 IDE / 終端機 / GitHub UI 點擊)
+        # 未帶參數時，自動使用全域預設值
+        target_date = args.target_date.strip() if args.target_date else GLOBAL_TEST_DATE
+        mode = args.mode if args.mode else STOCK_MODE
+        stock_file = args.stock_file if args.stock_file else STOCK_INPUT
 
-        scan_kwargs["stock_mode"] = args.mode
-        scan_kwargs["stock_data"] = args.stock_file
+        print(f"🧪 [手動執行] 參數載入完成 ➔ 日期: {target_date} | 模式: {mode} | 檔案: {stock_file}")
 
-    # ==========================================================================
-    # 📌 3. 動態建構選股參數並呼叫核心選股函式 [1]
-    # ==========================================================================
-    scan_kwargs["target_date"] = args.target_date
+    # =====================================================================
+    # 🚀 打包參數並啟動選股引擎
+    # =====================================================================
+    scan_kwargs = {
+        "target_date": target_date,
+        "stock_mode": mode,
+        "stock_data": stock_file
+    }
 
-    """
-    if args.stock_file:
-        scan_kwargs["stock_mode"] = args.mode
-        scan_kwargs["stock_input"] = args.stock_file
-    """
-    
-    print(f"🚀 啟動選股流程，傳入參數: {scan_kwargs}")
+    print(f"🚀 啟動選股流程，最終傳入參數: {scan_kwargs}")
     run_qiantang_strategy_excel_scan(**scan_kwargs)
     
 """
