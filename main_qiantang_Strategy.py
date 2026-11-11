@@ -341,7 +341,7 @@ if __name__ == "__main__":
             print(f"📅 [自動排程] 未帶 -d 引數 ➔ 解析環境變數 Created at 日期: {target_date}")
 
         scan_kwargs["stock_mode"] = args.mode
-        scan_kwargs["stock_input"] = args.stock_file
+        scan_kwargs["stock_data"] = args.stock_file
     else:
         # 【手動模式】(包含 本地開發測試 / GitHub 網頁手動點擊 workflow_dispatch)
         if args.target_date:
@@ -352,12 +352,12 @@ if __name__ == "__main__":
             print(f"🧪 [手動執行] 未傳入日期引數 ➔ 切換為全域測試日期: {target_date}")
 
         scan_kwargs["stock_mode"] = args.mode
-        scan_kwargs["stock_input"] = args.stock_file
+        scan_kwargs["stock_data"] = args.stock_file
 
     # ==========================================================================
     # 📌 3. 動態建構選股參數並呼叫核心選股函式 [1]
     # ==========================================================================
-    scan_kwargs = {"target_date": target_date}
+    scan_kwargs["target_date"] = args.target_date
 
     """
     if args.stock_file:
