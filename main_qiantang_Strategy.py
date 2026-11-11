@@ -7,15 +7,19 @@
 
 import os
 import sys
+import argparse
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
-from strategy.engine import scan_single_stock
+from strategy.engine import (
+    scan_single_stock,
+    preprocess_all_technical_indicators,   
+)
 
 # 1. 匯入核心執行引擎與預處理
 from monitor.engine import (
     PARAM_PROFILES,
-    preprocess_all_technical_indicators,
+    #preprocess_all_technical_indicators,
     #scan_single_stock_monitors,
 )
 
@@ -53,7 +57,7 @@ from utils import (
     fm_get_complete_stock_data,
     get_stock_name_dict,
     #parse_stock_ids,
-    preprocess_all_technical_indicators,  # 來自 utils/indicators.py
+    #preprocess_all_technical_indicators,  # 來自 utils/indicators.py
     send_qiantang_7in1_line_summary,
     parse_and_validate_stocks,
 )
@@ -125,9 +129,10 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, stocks_dict, strategies, p
 
 
 def run_qiantang_strategy_excel_scan(
-    stock_source=STOCK_MODE,
+    stock_mode=STOCK_MODE,
     stock_data=STOCK_INPUT,
     strategies=TEST_QIANTANG_STRATEGY,
+    
 ):
     """執行錢塘潮多方選股掃描並產出 Excel 儀表板"""
     if not strategies:
@@ -141,7 +146,7 @@ def run_qiantang_strategy_excel_scan(
 
     # 1. 呼叫函數，傳入模式與數據
     stock_records = parse_and_validate_stocks(
-        stock_source=stock_source, 
+        stock_mode=stock_mode, 
         stock_data=stock_data
     )
    
@@ -248,6 +253,14 @@ def run_qiantang_strategy_excel_scan(
 
             print(f"🎯 {stock_name}({sid}) 觸發訊號！符合：{', '.join(hit_formula_names)}")
 
+    # ====================================================
+    # 1. 檢查今日是否有任何策略觸發個股
+    # ====================================================
+    if not stock_dashboard:
+        print("ℹ️ [提示] 今日無任何策略觸發符合條件之個股，終止 Excel 報表匯出與 NAS 備份。")
+        return  # 若這段程式碼在函數內請用 return；若在主程式層級可用 sys.exit(0)
+
+    
     # =====================================================================
     # 📊 產出 Excel 多工作表 (Multi-Sheet) 報告
     # =====================================================================
@@ -292,10 +305,64 @@ def run_qiantang_strategy_excel_scan(
         except Exception as e:
             print(f"⚠️ NAS 備份跳過或失敗: {e}")
 
+# 本地手動測試且未帶參數時使用的全域測試日期
+GLOBAL_TEST_DATE = "2026-11-06"
+
 
 if __name__ == "__main__":
 
     print("mian_qiantang_Strategy.py")
+
+    parser = argparse.ArgumentParser(description="錢塘潮選股系統 CLI 介面")
+    parser.add_argument("-d", "--target_date", type=str, default=None, help="指定掃描日期 (YYYY-MM-DD)")
+    parser.add_argument("-s", "--stock_file", type=str, default=None, help="指定股票池 CSV 檔案路徑")
+    parser.add_argument("-m", "--mode", type=str, default=None, help="指定執行模式")
+    
+    args = parser.parse_args()
+
+    # ==========================================================================
+    # 📌 1. 第一層：先精準判斷是否為 GitHub Actions 自動排程 (Schedule)
+    # ==========================================================================
+    is_schedule = (os.getenv("GITHUB_EVENT_NAME") == "schedule")
+
+    # ==========================================================================
+    # 📌 2. 第二層：依據執行環境 + CLI 傳參決定最終目標日期
+    # ==========================================================================
+    if is_schedule:
+        # 【排程模式】
+        if args.target_date:
+            target_date = args.target_date.strip()
+            print(f"📅 [自動排程] 採用引數傳入之 Created at 台灣日期: {target_date}")
+        else:
+            # 備援：若排程未帶 -d，嘗試讀取 YAML 環境變數 CREATED_AT_DATE
+            target_date = os.getenv("CREATED_AT_DATE")
+            print(f"📅 [自動排程] 未帶 -d 引數 ➔ 解析環境變數 Created at 日期: {target_date}")
+    else:
+        # 【手動模式】(包含 本地開發測試 / GitHub 網頁手動點擊 workflow_dispatch)
+        if args.date:
+            target_date = args.target_date.strip()
+            print(f"🧪 [手動執行] 採用指定引數日期: {target_date}")
+        else:
+            target_date = GLOBAL_TEST_DATE
+            print(f"🧪 [手動執行] 未傳入日期引數 ➔ 切換為全域測試日期: {target_date}")
+
+    # ==========================================================================
+    # 📌 3. 動態建構選股參數並呼叫核心選股函式 [1]
+    # ==========================================================================
+    scan_kwargs = {"target_date": target_date}
+    
+    if args.stock_file:
+        scan_kwargs["stock_mode"] = args.mode
+        scan_kwargs["stock_input"] = args.stock_file
+
+    print(f"🚀 啟動選股流程，傳入參數: {scan_kwargs}")
+    run_qiantang_strategy_excel_scan(**scan_kwargs)
+    
+"""
+if __name__ == "__main__":
+
+    print("mian_qiantang_Strategy.py")
+    
     # 若 CLI 命令有傳入檔名參數（如 python test_qiantang_Strategy.py data/watch_list.csv）
     # sys.argv[1] 即可拿到第一個參數，否則退回預設值
     if len(sys.argv) > 1: #自動排程會傳入檔案, 執行此敘述
@@ -311,3 +378,4 @@ if __name__ == "__main__":
         print(f"🚀 手動強制測試或者自動排成未傳入檔案")
         
         run_qiantang_strategy_excel_scan() #手動強制執行, 則執行此段, 執行那些股票由程式開頭的STOCK_INPUT決定
+"""
