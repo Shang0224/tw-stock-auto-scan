@@ -70,13 +70,20 @@ jobs:
           NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 1. 抓取 GitHub 官方紀錄該次 Trigger 的 created_at (UTC ISO 格式)
+          CREATED_AT_UTC=$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID --jq '.created_at')
+          
+          # 2. 🌟 在 Shell 裡面直接將 created_at 轉成台灣時間 (Asia/Taipei) 的 YYYY-MM-DD 日期
+          TW_CREATED_DATE=$(TZ='Asia/Taipei' date -d "$CREATED_AT_UTC" +'%Y-%m-%d')
+          echo "📌 官方 Trigger Created at (台灣時間): ${TW_CREATED_DATE}"
+          
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py..."
-            python test_qiantang_Strategy.py
-            #python main_qiantang_Strategy.py
-          else
-            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py..."
+            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py...\n觸發日期為${TW_CREATED_DATE}"
+            #python test_qiantang_Strategy.py
             python main_qiantang_Strategy.py
+          else
+            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py...\n觸發日期為${TW_CREATED_DATE}"
+            python main_qiantang_Strategy.py -d "${TW_CREATED_DATE}"
           fi
  
        # 🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
