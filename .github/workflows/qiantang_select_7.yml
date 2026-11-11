@@ -80,8 +80,8 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo -e "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py...\n觸發日期為${TW_CREATED_DATE}"
             #python -u test_qiantang_Strategy.py
-            #python -u main_qiantang_Strategy.py
-            python -u main_qiantang_Strategy.py -d "${TW_CREATED_DATE}" -m "csv" -s "${STOCK_FILES_TEST}"
+            python -u main_qiantang_Strategy.py
+            #python -u main_qiantang_Strategy.py -d "${TW_CREATED_DATE}" -m "csv" -s "${STOCK_FILES_TEST}"
           else
             echo -e "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py...\n觸發日期為${TW_CREATED_DATE}"
             python main_qiantang_Strategy.py -d "${TW_CREATED_DATE}" -m "csv" -s "${STOCK_FILES}"
