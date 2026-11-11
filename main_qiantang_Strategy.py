@@ -339,7 +339,7 @@ if __name__ == "__main__":
             print(f"📅 [自動排程] 未帶 -d 引數 ➔ 解析環境變數 Created at 日期: {target_date}")
     else:
         # 【手動模式】(包含 本地開發測試 / GitHub 網頁手動點擊 workflow_dispatch)
-        if args.date:
+        if args.target_date:
             target_date = args.target_date.strip()
             print(f"🧪 [手動執行] 採用指定引數日期: {target_date}")
         else:
