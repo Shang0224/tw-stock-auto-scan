@@ -516,7 +516,7 @@ def scan_qiantang_strategy_day(
 
 def run_qiantang_strategy_range_scan(
     source=CHOSEN_SOURCE,
-    stock_source=STOCK_MODE,
+    stock_mode=STOCK_MODE,
     stock_data=STOCK_INPUT,
     strategies=TEST_QIANTANG_STRATEGY,
     start_date_str=TEST_START_DATE,
@@ -539,7 +539,7 @@ def run_qiantang_strategy_range_scan(
 
   # 1. 解析與驗證監控股票清單
   stock_records = parse_and_validate_stocks(
-      stock_source=stock_source, stock_data=stock_data
+      stock_mode=stock_mode, stock_data=stock_data
   )
 
   if not stock_records:
