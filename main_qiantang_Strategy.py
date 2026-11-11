@@ -115,6 +115,8 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, stocks_dict, strategies, p
 
         df_single = group_df.sort_values("date").copy()
 
+        print("https://github.com/Shang0224/tw-stock-auto-scan/blob/main/main_qiantang_Strategy.py")
+        
         # 呼叫引擎執行策略檢測
         hits = scan_single_stock(
             df_single=df_single,https://github.com/Shang0224/tw-stock-auto-scan/blob/main/main_qiantang_Strategy.py
