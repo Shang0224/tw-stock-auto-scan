@@ -63,7 +63,7 @@ from utils import (
 )
 
 # 本地手動測試且未帶參數時使用的全域測試日期
-GLOBAL_TEST_DATE = "2026-11-06"
+GLOBAL_TEST_DATE = "2026-11-03"
 
 # ---------------------------------------------------------------------
 # 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
