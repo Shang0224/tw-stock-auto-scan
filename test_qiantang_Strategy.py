@@ -184,7 +184,6 @@ STOCK_INPUT = {
 }
 """
 
-
 # -----------------------------------------------------------------
 # 型態安全工具函式 (攔截 NaN，自動補 0 維持整數欄位)
 # -----------------------------------------------------------------
@@ -193,7 +192,6 @@ def safe_lots_from_shares(val) -> int:
   if pd.isna(val) or val is None:
     return 0
   return int(round(float(val) / 1000.0))
-
 
 def safe_lots_from_lots(val) -> int:
   """信用交易專用：原生即為「張」，不除以 1000"""
