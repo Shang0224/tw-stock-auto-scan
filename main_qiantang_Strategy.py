@@ -72,7 +72,7 @@ TEST_END_DATE = "2025-09-30"
 # ---------------------------------------------------------------------
 # 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
 STOCK_MODE = "csv"
-STOCK_INPUT = "data/TestData/qiantang_MID100_test.csv"
+STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_ICDesignHot_INPUT = "data/TestData/qiantang_ICDesign_hot.csv"
