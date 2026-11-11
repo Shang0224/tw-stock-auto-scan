@@ -84,7 +84,7 @@ jobs:
             #python -u main_qiantang_Strategy.py -d "${TW_CREATED_DATE}" -m "csv" -s "${STOCK_FILES_TEST}"
           else
             echo -e "📅 [正式環境] 偵測到時間排程觸發，正在執行 main_qiantang_Strategy.py...\n觸發日期為${TW_CREATED_DATE}"
-            python main_qiantang_Strategy.py -d "${TW_CREATED_DATE}" -m "csv" -s "${STOCK_FILES}"
+            python -u main_qiantang_Strategy.py -d "${TW_CREATED_DATE}" -m "csv" -s "${STOCK_FILES}"
           fi
  
        # 🔴 步驟五：當前面任一步驟失敗時，發送 LINE 警報
