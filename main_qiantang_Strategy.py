@@ -62,12 +62,8 @@ from utils import (
     parse_and_validate_stocks,
 )
 
-# =====================================================================
-# 🎛️ 多方策略測試控制面板
-# =====================================================================
-CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2024-01-01"
-TEST_END_DATE = "2025-09-30"
+# 本地手動測試且未帶參數時使用的全域測試日期
+GLOBAL_TEST_DATE = "2026-11-06"
 
 # ---------------------------------------------------------------------
 # 模式 A：CSV 檔案載入模式 (與 test_Monitor.py 相同，預設讀取 watch_list.csv)
@@ -78,6 +74,15 @@ STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 #STOCK_ICDesignHot_INPUT = "data/TestData/qiantang_ICDesign_hot.csv"
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 #STOCK_MID100Hot_INPUT = "data/TestData/qiantang_mid100_hot.csv"
+
+# =====================================================================
+# 🎛️ 多方策略測試控制面板
+# =====================================================================
+
+CHOSEN_SOURCE = "fm"
+TEST_START_DATE = "2024-01-01"
+TEST_END_DATE = "2025-09-30"
+
 
 # 模式 B：自訂 dict[str, dict] 載入模式
 """
@@ -306,9 +311,6 @@ def run_qiantang_strategy_excel_scan(
             print(f"📦 已同步將 Excel 報告備份至 NAS 遠端：{remote_path}")
         except Exception as e:
             print(f"⚠️ NAS 備份跳過或失敗: {e}")
-
-# 本地手動測試且未帶參數時使用的全域測試日期
-GLOBAL_TEST_DATE = "2026-11-06"
 
 if __name__ == "__main__":
     print("mian_qiantang_Strategy.py")
