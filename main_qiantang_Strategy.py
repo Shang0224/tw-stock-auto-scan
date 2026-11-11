@@ -117,7 +117,7 @@ def scan_qiantang_strategy_day(day_str, all_df_slice, stocks_dict, strategies, p
 
         # 呼叫引擎執行策略檢測
         hits = scan_single_stock(
-            df_single=df_single,
+            df_single=df_single,https://github.com/Shang0224/tw-stock-auto-scan/blob/main/main_qiantang_Strategy.py
             category=stock_cat,
             func_list=strategies,
             param_profiles=profiles_map,
@@ -158,7 +158,7 @@ def run_qiantang_strategy_excel_scan(
     )
    
     if not stock_records:
-        print(f"❌ [錯誤] 無照解析股票清單 ({stock_input})。")
+        print(f"❌ [錯誤] 無照解析股票清單 ({stock_data})。")
         return
 
     # 2. 提煉純數字代號串列與 Log 標籤
