@@ -318,7 +318,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    print(f"main_qiantang_Strategy == args.target_date: {args.target_date; args.mode: {args.mode}; args.stock_file: {args.stock_file}")
+    print(f"main_qiantang_Strategy == args.target_date: {args.target_date}; args.mode: {args.mode}; args.stock_file: {args.stock_file}")
 
     # ==========================================================================
     # 📌 1. 第一層：先精準判斷是否為 GitHub Actions 自動排程 (Schedule)
