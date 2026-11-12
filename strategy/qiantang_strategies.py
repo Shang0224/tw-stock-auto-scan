@@ -6375,6 +6375,25 @@ def st_qiantang_f3_after_shakeout_20261023(
   10. 🌟 融入 1_1_5【大盤年線風控】：大盤年線乖離率 <= 12.0% (防範大盤過熱崩跌風險)
   11. 🌟 右側 Confirmation 觀察期：觸發後第 3 日 (T+3) 報酬率 >= -2.0% (主力實質鎖碼)
   """
+
+  if market_info:
+    m_close = float(market_info["close"])
+    m_ema = float(market_info["EMA60"])
+    m_slope = float(market_info["EMA60_slope"])
+
+    func_name = sys._getframe().f_code.co_name
+    if not check_market_trend(market_info, filter_key="EMA60"):          
+        if verbose:
+            print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+            
+        return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+
+    print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
+  else:
+    print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+    
+    
   profile = profile or {}
 
   min_required_len = 240 + 5 + delay_days
