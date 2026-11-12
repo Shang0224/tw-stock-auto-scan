@@ -1061,6 +1061,8 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     # 關卡 0：股票池專屬門檻檢查 (直接自 row_t0['category'] 原生欄位存取，缺失即拋出 KeyError)
     # -------------------------------------------------------------------------
     if str(row_t0['category']).strip() != 'ICDesign':
+        if verbose:
+            print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 為{row_t0['category']).strip()}股票, 非ICDesign ➔ 直接中斷策略。")
         return False, {}
 
     # -------------------------------------------------------------------------
