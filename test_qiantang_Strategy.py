@@ -598,22 +598,31 @@ def run_qiantang_strategy_range_scan(
   while current_day <= end_date:
     day_str = current_day.strftime("%Y-%m-%d")
 
+
+    # =================================================================
+    # 🛡 關卡 2：大盤趨勢第一道防線 (雙重確認：價格 > EMA60 且 斜率 > 0)
+    # =================================================================
+
+    market_info = market_dict.get(day_str)
+    if not market_info:
+       print(f"  [✕] 🛑 {day_str} 日, 無大盤風控資料 ➔ 直接中斷當日掃描！")
+       current_day += timedelta(days=1)
+       continue
+
     # =================================================================
     # 🛑 關卡 1：台股交易日過濾 (非開盤日直接秒過)
     # =================================================================
     if trading_days_set:
       if day_str not in trading_days_set:
+        print(f"  [✕] 🛑 {day_str} 日, 非交易日 ➔ 直接中斷當日掃描！")
         current_day += timedelta(days=1)
         continue
     else:
       if current_day.weekday() >= 5:
         current_day += timedelta(days=1)
         continue
-
-
-    # =================================================================
-    # 🛡 關卡 2：大盤趨勢第一道防線 (雙重確認：價格 > EMA60 且 斜率 > 0)
-    # =================================================================
+   
+    """
     if USE_MARKET_FILTER:
         market_info = market_dict.get(day_str)
         if market_info:
@@ -625,6 +634,8 @@ def run_qiantang_strategy_range_scan(
             if m_close <= m_ema or m_slope <= 0:
                 current_day += timedelta(days=1)
                 continue
+    """
+      
     """
     # =================================================================
     # 🛡 關卡 2：大盤趨勢第一道防線 (當日大盤未站上趨勢防線則暫停選股)
