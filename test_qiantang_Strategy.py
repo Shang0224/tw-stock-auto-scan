@@ -120,8 +120,8 @@ TEST_QIANTANG_STRATEGY = [
     #$st_qiantang_f3_after_shakeout_mid100_1106,
     #st_qiantang_f3_after_shakeout_icdesign_1106,
 
-    #st_qiantang_f3_after_shakeout_mid100_1108,
-    st_qiantang_f3_after_shakeout_TW50_1106,
+    st_qiantang_f3_after_shakeout_mid100_1108,
+    #st_qiantang_f3_after_shakeout_TW50_1106,
     #st_qiantang_f3_after_shakeout_ICDesign_1109,
     st_qiantang_f3_after_shakeout_1102_1,
     st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
@@ -171,8 +171,8 @@ STOCK_MODE = "csv"
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
-STOCK_INPUT = "data/TW50.csv"
-#STOCK_INPUT = "data/MID100.csv"
+#STOCK_INPUT = "data/TW50.csv"
+STOCK_INPUT = "data/MID100.csv"
 #STOCK_INPUT = "data/ICDesignList.csv"
 
 
