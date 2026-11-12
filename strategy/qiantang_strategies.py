@@ -1418,6 +1418,23 @@ def st_qiantang_f3_after_shakeout_mid100_1108(
   - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
   ===========================================================================
   """
+
+  if market_info:
+      m_close = float(market_info["close"])
+      m_ema = float(market_info["EMA60"])
+      m_slope = float(market_info["EMA60_slope"])
+
+      if not check_market_trend(market_info, filter_key="EMA60"):          
+          if verbose:
+              print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。")
+            
+          return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+
+      print(f"{sys._getframe().f_code.co_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0)")
+  else:
+      print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+      return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+    
   profile = profile or {}
 
   # 1. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
@@ -1794,6 +1811,22 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
     - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
     ===========================================================================
     """
+    if market_info:
+        m_close = float(market_info["close"])
+        m_ema = float(market_info["EMA60"])
+        m_slope = float(market_info["EMA60_slope"])
+
+        if not check_market_trend(market_info, filter_key="EMA60"):          
+            if verbose:
+                print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。")
+            
+            return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+
+        print(f"{sys._getframe().f_code.co_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0)")
+    else:
+        print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+        return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+    
     profile = profile or {}
 
     # 1. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
@@ -2839,6 +2872,23 @@ def st_qiantang_f3_after_shakeout_1102_1(
   - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
   ===========================================================================
   """
+
+  if market_info:
+    m_close = float(market_info["close"])
+    m_ema = float(market_info["EMA60"])
+    m_slope = float(market_info["EMA60_slope"])
+
+    if not check_market_trend(market_info, filter_key="EMA60"):          
+        if verbose:
+            print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。")
+            
+        return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+
+    print(f"{sys._getframe().f_code.co_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0)")
+  else:
+    print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+  
   profile = profile or {}
 
   # 1. 歷史 K 線總筆數驗證 (直接存取索引，筆數不足即拋出 ValueError)
@@ -7235,9 +7285,26 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
   8. 🌟 【防線一：長線年線扣抵結構防線】年線扣抵位置 <= 25.0% (避開解套賣壓天花板)
   9. 🌟 【防線二：右側 Confirmation 升級】T+3 右側觀察期報酬率 >= -0.5% (主力實質鎖碼)
   """
+  if market_info:
+    m_close = float(market_info["close"])
+    m_ema = float(market_info["EMA60"])
+    m_slope = float(market_info["EMA60_slope"])
+
+    if not check_market_trend(market_info, filter_key="EMA60"):          
+        if verbose:
+            print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。")
+            
+        return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+
+    print(f"{sys._getframe().f_code.co_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0)")
+  else:
+    print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+    
   profile = profile or {}
 
   min_required_len = 240 + 5 + delay_days
+    
   if len(df_single) < min_required_len:
     T0 = df_single.iloc[-1]
     date_T0_str = str(T0["date"])
