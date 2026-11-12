@@ -1060,7 +1060,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     # -------------------------------------------------------------------------
     if str(row_t0['category']).strip() != 'ICDesign':
         if verbose:
-            print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非ICDesign ➔ 直接中斷策略。")
+            print(f"    {sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非ICDesign ➔ 直接中斷策略。")
         return False, {}
 
     # -------------------------------------------------------------------------
@@ -1842,6 +1842,9 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
     # 關卡 0：股票池專屬門檻檢查 (直接自 row_t0['category'] 原生欄位存取，不進行任何 fallback)
     # -------------------------------------------------------------------------
     if str(row_t0['category']).strip() != 'TW50':
+        if verbose:
+            print(f"    {sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非TW50 ➔ 直接中斷策略。")
+            
         return False, {}
 
     # -------------------------------------------------------------------------
@@ -2512,6 +2515,9 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
     cat_col = 'category' if 'category' in row_t0.index else '選股池分類'
     current_category = str(row_t0[cat_col]).strip()
     if current_category != 'MID100':
+        if verbose:
+            print(f"    {sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非MID100 ➔ 直接中斷策略。")
+            
         return False, {}
 
     # -------------------------------------------------------------------------
