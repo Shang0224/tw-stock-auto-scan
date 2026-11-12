@@ -235,7 +235,7 @@ def scan_qiantang_strategy_day(
       
     # 4. 查閱當日大盤環境數據
     m_info = market_dict.get(day_str, {}) if market_dict else {}
-
+    print(f"[{sid}] {stock_name} ({stock_cat}) 開始掃描" )
     try:
         # 執行當日單一股票掃描
         hits = scan_single_stock(
