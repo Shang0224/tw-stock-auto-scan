@@ -1033,12 +1033,12 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
                 m_close = float(market_info.get("close", 0))
                 m_ema = float(market_info.get("EMA60", 0))
                 m_slope = float(market_info.get("EMA60_slope", 0))
-                print(f"  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。")
+                print(f"  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。 from {sys._getframe().f_code.co_name}")
             return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
         else:
-            print("  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ")
+            print("  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0)  from {sys._getframe().f_code.co_name}")
     else:
-        print("  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+        print("  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。 from {sys._getframe().f_code.co_name}")
         return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
     
     profile = profile or {}
