@@ -1029,11 +1029,11 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     """
 
     if market_info:
-        if not check_market_trend(market_info, filter_key="EMA60"):
-            m_close = float(market_info["close"])
-            m_ema = float(market_info["EMA60"])
-            m_slope = float(market_info["EMA60_slope"])
-            
+        m_close = float(market_info["close"])
+        m_ema = float(market_info["EMA60"])
+        m_slope = float(market_info["EMA60_slope"])
+
+        if not check_market_trend(market_info, filter_key="EMA60"):          
             if verbose:
                 print(f"  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} <= EMA60 ${m_ema:.2f} 或斜率 {m_slope:.4f} <= 0) ➔ 直接中斷策略。 from {sys._getframe().f_code.co_name}")
             
