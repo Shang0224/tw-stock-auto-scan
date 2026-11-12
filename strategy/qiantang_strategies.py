@@ -1043,8 +1043,6 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     else:
         print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
         return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
-
-    print(f"  {sys._getframe().f_code.co_name} 繼續執行")
     
     profile = profile or {}
 
@@ -1062,7 +1060,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     # -------------------------------------------------------------------------
     if str(row_t0['category']).strip() != 'ICDesign':
         if verbose:
-            print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 為{row_t0['category']).strip()}股票, 非ICDesign ➔ 直接中斷策略。")
+            print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非ICDesign ➔ 直接中斷策略。")
         return False, {}
 
     # -------------------------------------------------------------------------
