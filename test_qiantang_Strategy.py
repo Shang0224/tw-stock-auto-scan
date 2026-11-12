@@ -207,7 +207,8 @@ def scan_qiantang_strategy_day(
     stocks_dict: dict[str, dict],
     strategies: list,
     profiles_map: dict = BUY_PARAM_PROFILES,
-    market_dict: dict = None,  # 🌟 新增：傳入大盤資料秒查字典
+    market_info: dict = None,  # 🌟傳入大盤指定日期的資料
+    #market_dict: dict = None,  # 🌟 新增：傳入大盤資料秒查字典
 ) -> list:
   """單日個股選股掃描核心，並於觸發時附加全方位技術面、大盤環境、前瞻與極值績效"""
   day_hits = []
@@ -234,8 +235,11 @@ def scan_qiantang_strategy_day(
     df_single["category"] = stock_cat  # 將股票池分類直接加入df_single
       
     # 4. 查閱當日大盤環境數據
-    m_info = market_dict.get(day_str, {}) if market_dict else {}
-    print(f"\n\n[{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+    #m_info = market_dict.get(day_str, {}) if market_dict else {}
+    if not market_info:
+        print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
+      
+    print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
     try:
         # 執行當日單一股票掃描
         hits = scan_single_stock(
@@ -675,7 +679,7 @@ def run_qiantang_strategy_range_scan(
         stocks_dict=stock_records,
         strategies=strategies,
         profiles_map=BUY_PARAM_PROFILES,
-        market_dict=market_dict,
+        market_info=market_info,
     )
 
     if day_hits:
