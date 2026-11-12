@@ -605,7 +605,7 @@ def run_qiantang_strategy_range_scan(
 
     market_info = market_dict.get(day_str)
     if not market_info:
-       print(f"  [✕] 🛑 {day_str} 日, 無大盤風控資料 ➔ 直接中斷當日掃描！")
+       print(f"[✕] 🛑 {day_str} 日, 無大盤風控資料 ➔ 直接中斷當日掃描！form run_qiantang_strategy_range_scan")
        current_day += timedelta(days=1)
        continue
 
@@ -614,11 +614,12 @@ def run_qiantang_strategy_range_scan(
     # =================================================================
     if trading_days_set:
       if day_str not in trading_days_set:
-        print(f"  [✕] 🛑 {day_str} 日, 非交易日 ➔ 直接中斷當日掃描！")
+        print(f"[✕] 🛑 {day_str} 日, 非交易日 ➔ 直接中斷當日掃描！form run_qiantang_strategy_range_scan")
         current_day += timedelta(days=1)
         continue
     else:
       if current_day.weekday() >= 5:
+        print(f"[✕] 🛑 {day_str} 日為週六、日 ➔ 直接中斷當日掃描！form run_qiantang_strategy_range_scan")
         current_day += timedelta(days=1)
         continue
    
