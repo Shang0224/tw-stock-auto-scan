@@ -620,11 +620,11 @@ def run_qiantang_strategy_range_scan(
 
     market_info = market_dict.get(day_str)
     if not market_info:
-       print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 {day_str} 日, 無大盤風控資料 ➔ 直接中斷當日掃描！form run_qiantang_strategy_range_scan")
+       print(f"{sys._getframe().f_code.co_name}  [✕] 🛑 {day_str} 日, 無大盤風控資料 ➔ 直接中斷當日掃描！")
        current_day += timedelta(days=1)
        continue
 
-    print(f"{sys._getframe().f_code.co_name}  [✓] 🛡️ {day_str} 日, 有大盤風控資料 ➔ 執行掃描！form run_qiantang_strategy_range_scan")
+    print(f"\n\n{sys._getframe().f_code.co_name}  [✓] 🛡️ {day_str} 日, 有大盤風控資料 ➔ 執行掃描！")
     
     """
     if USE_MARKET_FILTER:
