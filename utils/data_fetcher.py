@@ -60,7 +60,7 @@ def fetch_and_process_market_data(
   df["taiex_change_pct"] = df["close"].pct_change() * 100.0
 
   # (3) 大盤月線 (MA20) 乖離率 (%)
-  df["taiex_ma20_bias_pct"] = ((df["close"] - df["MA20"]) / df["MA20"]) * 100.0
+  df["taiex_ma20_bias_pct"] = ((df["taiex_close"] - df["taiex_MA20"]) / df["taiex_MA20"]) * 100.0
   print(f"df['taiex_ma20_bias_pct']={df['taiex_ma20_bias_pct'].iloc[0]}, df['close']={df['close'].iloc[0]}, df['MA20']={df['MA20'].iloc[0]}, ")
     
   # (3) 大盤季線 (MA60 & EMA60) 乖離率 (%)
