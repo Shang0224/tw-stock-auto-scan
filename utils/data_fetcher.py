@@ -35,26 +35,26 @@ def fetch_and_process_market_data(
   df = df.sort_values("date").reset_index(drop=True)
 
   # 確保數值型別正確
-  df["close"] = df["close"].astype(float)
+  df["taiex_close"] = df["close"].astype(float)
 
   # =========================================================================
   # 1. 原始計算：多週期大盤趨勢 EMA 均線 (20, 60, 120, 240 日)
   # =========================================================================
-  df["EMA20"] = df["close"].ewm(span=20, adjust=False).mean()
-  df["EMA60"] = df["close"].ewm(span=60, adjust=False).mean()
-  df["EMA120"] = df["close"].ewm(span=120, adjust=False).mean()
-  df["EMA240"] = df["close"].ewm(span=240, adjust=False).mean()
+  df["taiex_EMA20"] = df["close"].ewm(span=20, adjust=False).mean()
+  df["taiex_EMA60"] = df["close"].ewm(span=60, adjust=False).mean()
+  df["taiex_EMA120"] = df["close"].ewm(span=120, adjust=False).mean()
+  df["taiex_EMA240"] = df["close"].ewm(span=240, adjust=False).mean()
 
-  df["EMA60_slope"] = df["EMA60"].diff(5)
+  df["taiex_EMA60_slope"] = df["taiex_EMA60"].diff(5)
 
   # =========================================================================
   # 🌟 2. 長線回測新增大盤指標 (全數附加於原始 EMA 計算後方)
   # =========================================================================
   # (1) 簡單移動平均線 (SMA: MA20, MA60, MA120, MA240)
-  df["MA20"] = df["close"].rolling(window=20, min_periods=1).mean()
-  df["MA60"] = df["close"].rolling(window=60, min_periods=1).mean()
-  df["MA120"] = df["close"].rolling(window=120, min_periods=1).mean()
-  df["MA240"] = df["close"].rolling(window=240, min_periods=1).mean()
+  df["taiex_MA20"] = df["taiex_close"].rolling(window=20, min_periods=1).mean()
+  df["taiex_MA60"] = df["taiex_close"].rolling(window=60, min_periods=1).mean()
+  df["taiex_MA120"] = df["taiex_close"].rolling(window=120, min_periods=1).mean()
+  df["taiex_MA240"] = df["taiex_close"].rolling(window=240, min_periods=1).mean()
 
   # (2) 大盤當日漲跌幅 (%)
   df["taiex_change_pct"] = df["close"].pct_change() * 100.0
@@ -64,16 +64,16 @@ def fetch_and_process_market_data(
   print(f"df['taiex_ma20_bias_pct']={df['taiex_ma20_bias_pct'].iloc[0]}, df['close']={df['close'].iloc[0]}, df['MA20']={df['MA20'].iloc[0]}, ")
     
   # (3) 大盤季線 (MA60 & EMA60) 乖離率 (%)
-  df["taiex_ma60_bias_pct"] = ((df["close"] - df["MA60"]) / df["MA60"]) * 100.0
+  df["taiex_ma60_bias_pct"] = ((df["taiex_close"] - df["taiex_MA60"]) / df["taiex_MA60"]) * 100.0
   df["taiex_ema60_bias_pct"] = (
-      (df["close"] - df["EMA60"]) / df["EMA60"]
+      (df["taiex_close"] - df["taiex_EMA60"]) / df["taiex_EMA60"]
   ) * 100.0
 
   # (3) 大盤年線 (MA240) 乖離率 (%)
-  df["taiex_ma240_bias_pct"] = ((df["close"] - df["MA240"]) / df["MA240"]) * 100.0
+  df["taiex_ma240_bias_pct"] = ((df["taiex_close"] - df["taiex_MA240"]) / df["taiex_MA240"]) * 100.0
 
   # (3) 大盤季線（MA60）與年線 (MA240) 乖離率 (%)
-  df["taiex_ma60_ma240_bias_pct"] = ((df["MA60"] - df["MA240"]) / df["MA240"]) * 100.0
+  df["taiex_ma60_ma240_bias_pct"] = ((df["taiex_MA60"] - df["taiex_MA240"]) / df["taiex_MA240"]) * 100.0
   return df
 
 
