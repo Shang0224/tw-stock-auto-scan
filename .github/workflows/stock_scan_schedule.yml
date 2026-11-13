@@ -1,0 +1,96 @@
+#stock_scan_schedule.yml
+name: 00掃描台灣50與中型100
+
+on:
+  schedule:
+    # 分 時 日 月 週 (UTC 時間 10:00 = 台北時間 18:00)
+    - cron: '30 10 * * 1-5'
+  workflow_dispatch: # 允許手動測試
+
+jobs:
+  daily-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 顯式要求寫入權限
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
+
+      # 🟢 步驟 1：連線診斷步驟
+      - name: Diagnostic Tailscale Connection
+        run: |
+          tailscale status
+          echo "正在 Ping NAS 診斷連線..."
+          ping -c 3 ${{ secrets.NAS_VPN_IP }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pandas requests
+
+      # 🟢 步驟 2：執行策略掃描腳本
+      - name: Run Analysis Script
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          LINE_ACCESS_TOKEN: ${{ vars.LINE_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ vars.LINE_USER_ID }}
+          STOCK_FILES: ${{ vars.STOCK_FILES }}
+          STOCK_FILES_TEST: ${{ vars.STOCK_FILES_TEST }}
+          FINMIND_ACCESS_TOKEN: ${{ vars.FINMIND_ACCESS_TOKEN }}
+          SENDER_EMAIL: ${{ vars.SENDER_EMAIL }}
+          RECIPIENT_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
+          EMAIL_APP_PASSWORD: ${{ vars.EMAIL_APP_PASSWORD }}
+          NAS_PASSWORD: ${{ secrets.NAS_PASSWORD }}
+          NAS_SFTP_PATH: '${{ secrets.NAS_SFTP_PATH }}'
+          NAS_SFTP_PORT: ${{ secrets.NAS_SFTP_PORT }}
+          NAS_VPN_IP: ${{ secrets.NAS_VPN_IP }}
+          NAS_ACCOUNT: ${{ secrets.NAS_ACCOUNT }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_scan.py..."
+            python test_scan.py
+          else
+            echo "📅 [正式環境] 偵測到時間排程觸發，正在執行 stock_scanner.py..."
+            python stock_scanner.py
+          fi
+
+      # 🟢 步驟 3：成功時 Commit 並推回 GitHub
+      - name: Commit and Push results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "Daily 240MA scan results update" || echo "No changes to commit"
+          git pull --rebase origin main
+          git push
+
+      # 🔴 步驟 5：當前面任一步驟失敗時，寄出 Email 警報
+      - name: Send Email alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.SENDER_EMAIL }}
+          password: ${{ vars.EMAIL_APP_PASSWORD }}
+          subject: ⚠️ [GitHub Actions 警報] 00掃描工作流執行失敗通知
+          to: ${{ vars.RECIPIENT_EMAIL }}
+          from: GitHub Actions Alert
+          body: |
+            您好，
+
+            您的 GitHub Actions 工作流「00掃描台灣50與中型100」在執行時發生錯誤！
+            可能是 Tailscale VPN 連線失敗或 NAS SFTP 傳輸中斷。
+
+            請前往 GitHub Repository 的 Actions 頁面查看具體失敗步驟與 Log。
