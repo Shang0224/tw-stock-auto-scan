@@ -5,19 +5,60 @@ import pandas as pd
 import numpy as np
 from strategy.config import BUY_PARAM_PROFILES
 from scipy.stats import linregress
+from utils.data_fetcher import FINMIND_COLUMN_MAPPER, MARKET_COLUMN_MAPPER
 
+# preprocess 技術指標與型態對照
 TECHNICAL_INDICATOR_MAPPER = {
-  "easy_line": "輕鬆線價格",
-  "easy_line_bias": "輕鬆線乖離率(%)",
-  "easy_line_slope": "輕鬆線OLS斜率",
-  "MA60": "MA60季線",
-  "ma60_bias": "季線乖離率(%)", 
-  "ma240_bias": "年線乖離率(%)",
-  "dist_to_52w_high_pct": "距52週高點(%)", 
-  "base_consolidation_days": "打底沉澱天數"
+    # 輕鬆線動能
+    "easy_line": "輕鬆線價格",
+    "easy_line_bias": "輕鬆線乖離率(%)",
+    "easy_line_slope": "輕鬆線OLS斜率",
+    
+    # 季線與年線位階
+    "MA60": "MA60季線",
+    "ma60_bias": "季線乖離率(%)",
+    "ma60_deduct_bias": "季線扣抵位置(%)",
+    "ma60_slope": "MA60斜率",
+    "MA240": "MA240年線",
+    "ma240_bias": "年線乖離率(%)",
+    "ma240_deduct_bias": "年線扣抵位置(%)",
+    "ma240_slope": "MA240斜率",
+    
+    # 均線多頭與糾結
+    "is_bull_alignment": "均線多頭排列",
+    "ma_tangle_ratio": "均線糾結度(%)",
+    
+    # K線型態與特徵
+    "body_ratio": "實體K棒比例(%)",
+    "upper_shadow_ratio": "上影線比例(%)",
+    "is_red_k": "是否紅K",
+    "dist_to_52w_high_pct": "距52週高點(%)",
+    "base_consolidation_days": "打底沉澱天數",
+    "shares_per_trans": "單筆均張(SPT)",
+    "osc": "MACD柱狀體",
+    "macd_osc": "MACD柱狀體",
+    
+    # 前 5 日與前 20 日均量及斜率
+    "vol_ma5_prior": "前5日均量(張)",
+    "vol_ma5": "前5日均量(張)",
+    "vol_ma20_prior": "前20日均量(張)",
+    "vol_ma20": "前20日均量(張)",
+    "vol_ma5_slope_prior_pct": "前5日均量斜率(%/日)",
+    "vol_ma20_slope_prior_pct": "前20日均量斜率(%/日)",
+    "vol_ma5_slope_prior_lots": "前5日均量斜率(張/日)",
+    "vol_ma20_slope_prior_lots": "前20日均量斜率(張/日)",
+    
+    # 策略運算中繼標籤
+    "strategy_name": "策略函數名稱",
+    "delay_days": "右側觀察天數",
 }
 
-TOTAL_COLUMN_MAPPER = {**FINMIND_COLUMN_MAPPER, **MARKET_COLUMN_MAPPER, **TECHNICAL_INDICATOR_MAPPER}
+# 🌟 全域 Master 總對照表
+TOTAL_COLUMN_MAPPER = {
+    **FINMIND_COLUMN_MAPPER,
+    **MARKET_COLUMN_MAPPER,
+    **TECHNICAL_INDICATOR_MAPPER,
+}
 
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
