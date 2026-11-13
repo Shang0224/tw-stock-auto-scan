@@ -6,6 +6,19 @@ import numpy as np
 from strategy.config import BUY_PARAM_PROFILES
 from scipy.stats import linregress
 
+TECHNICAL_INDICATOR_MAPPER = {
+  "easy_line": "輕鬆線價格",
+  "easy_line_bias": "輕鬆線乖離率(%)",
+  "easy_line_slope": "輕鬆線OLS斜率",
+  "MA60": "MA60季線",
+  "ma60_bias": "季線乖離率(%)", 
+  "ma240_bias": "年線乖離率(%)",
+  "dist_to_52w_high_pct": "距52週高點(%)", 
+  "base_consolidation_days": "打底沉澱天數"
+}
+
+TOTAL_COLUMN_MAPPER = {**FINMIND_COLUMN_MAPPER, **MARKET_COLUMN_MAPPER, **TECHNICAL_INDICATOR_MAPPER}
+
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   """內部輔助函式：針對 FinMind 格式計算技術指標（正宗錢塘潮輕鬆線）、20日均量與成交金額"""
