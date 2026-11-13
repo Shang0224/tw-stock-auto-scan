@@ -87,16 +87,16 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
 
   # 🌟 包含原始 EMA 欄位，並擴充 SMA MA、當日漲跌幅與季線乖離率
   target_cols = [
-      "close",
-      "EMA20",
-      "EMA60",
-      "EMA60_slope",  # 🌟 加上這行
-      "EMA120",
-      "EMA240",
-      "MA20",
-      "MA60",
-      "MA120",
-      "MA240",
+      "taiex_close",
+      "taiex_EMA20",
+      "taiex_EMA60",
+      "taiex_EMA60_slope",  # 🌟 加上這行
+      "taiex_EMA120",
+      "taiex_EMA240",
+      "taiex_MA20",
+      "taiex_MA60",
+      "taiex_MA120",
+      "taiex_MA240",
       "taiex_change_pct",
       "taiex_ma20_bias_pct",
       "taiex_ma60_bias_pct",
