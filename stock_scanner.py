@@ -51,7 +51,7 @@ def yfinance_scan_ma240():
 
     # 1. 呼叫函數，傳入模式與數據
     stock_records = parse_and_validate_stocks(
-        stock_source="csv", 
+        stock_mode="csv", 
         stock_data=stock_data
     )
     
