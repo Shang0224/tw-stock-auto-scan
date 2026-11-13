@@ -11,6 +11,27 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import numpy as np
 
+FINMIND_COLUMN_MAPPER = {
+    "stock_id": "股票代號",
+    "date": "日期",
+    "close": "今日收盤",
+    "volume_lots": "今日成交量(張)",
+    "amount_100m": "成交金額(億元)",
+    "Foreign_Investor": "外資買超(張)",
+    "Investment_Trust": "投信買超(張)",
+    "Dealer_self": "自營商買超(張)",
+    "major_net": "主力買超(張)"
+}
+
+MARKET_COLUMN_MAPPER = {
+    "taiex_close": "大盤收盤價",
+    "taiex_change_pct": "大盤當日漲跌幅(%)",
+    "taiex_ma20_bias_pct": "大盤月線乖離率(%)",
+    "taiex_ma60_bias_pct": "大盤季線乖離率(%)",
+    "taiex_ma240_bias_pct": "大盤年線乖離率(%)",
+    "taiex_ema60_slope": "大盤EMA60斜率"
+}
+
 def fetch_and_process_market_data(
     api_client, start_date: str, end_date: str, stock_id: str = "TAIEX"
 ) -> pd.DataFrame:
