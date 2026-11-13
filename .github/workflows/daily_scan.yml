@@ -20,9 +20,9 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_VPN_AUTHKEY }}
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.12' # 建議升級至 3.10、3.11 或 3.12（避免使用已 EOL 的 3.9）
 
       - name: Install dependencies
         run: |
