@@ -265,8 +265,8 @@ def scan_qiantang_strategy_day(
 
       # 4. 查閱當日大盤環境數據
       #m_info = market_dict.get(day_str, {}) if market_dict else {}
-      m_close = float(market_info.get("close"))
-      m_ma60 = float(market_info.get("MA60"))
+      m_close = float(market_info.get("taiex_close"))
+      m_ma60 = float(market_info.get("taiex_MA60"))
 
       # 5. 計算第二類：前瞻天數報酬 (T+3, T+5, T+10, T+20, T+60, T+120, T+240)
       fwd_perf = calculate_forward_horizon_returns(
