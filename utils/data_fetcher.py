@@ -40,10 +40,10 @@ def fetch_and_process_market_data(
   # =========================================================================
   # 1. 原始計算：多週期大盤趨勢 EMA 均線 (20, 60, 120, 240 日)
   # =========================================================================
-  df["taiex_EMA20"] = df["close"].ewm(span=20, adjust=False).mean()
-  df["taiex_EMA60"] = df["close"].ewm(span=60, adjust=False).mean()
-  df["taiex_EMA120"] = df["close"].ewm(span=120, adjust=False).mean()
-  df["taiex_EMA240"] = df["close"].ewm(span=240, adjust=False).mean()
+  df["taiex_EMA20"] = df["taiex_close"].ewm(span=20, adjust=False).mean()
+  df["taiex_EMA60"] = df["taiex_close"].ewm(span=60, adjust=False).mean()
+  df["taiex_EMA120"] = df["taiex_close"].ewm(span=120, adjust=False).mean()
+  df["taiex_EMA240"] = df["taiex_close"].ewm(span=240, adjust=False).mean()
 
   df["taiex_EMA60_slope"] = df["taiex_EMA60"].diff(5)
 
@@ -57,11 +57,11 @@ def fetch_and_process_market_data(
   df["taiex_MA240"] = df["taiex_close"].rolling(window=240, min_periods=1).mean()
 
   # (2) 大盤當日漲跌幅 (%)
-  df["taiex_change_pct"] = df["close"].pct_change() * 100.0
+  df["taiex_change_pct"] = df["taiex_close"].pct_change() * 100.0
 
   # (3) 大盤月線 (MA20) 乖離率 (%)
   df["taiex_ma20_bias_pct"] = ((df["taiex_close"] - df["taiex_MA20"]) / df["taiex_MA20"]) * 100.0
-  print(f"df['taiex_ma20_bias_pct']={df['taiex_ma20_bias_pct'].iloc[0]}, df['close']={df['close'].iloc[0]}, df['MA20']={df['MA20'].iloc[0]}, ")
+  print(f"df['taiex_ma20_bias_pct']={df['taiex_ma20_bias_pct'].iloc[0]}, df['taiex_close']={df['taiex_close'].iloc[0]}, df['taiex_MA20']={df['taiex_MA20'].iloc[0]}, ")
     
   # (3) 大盤季線 (MA60 & EMA60) 乖離率 (%)
   df["taiex_ma60_bias_pct"] = ((df["taiex_close"] - df["taiex_MA60"]) / df["taiex_MA60"]) * 100.0
