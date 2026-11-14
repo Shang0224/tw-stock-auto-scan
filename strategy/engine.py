@@ -373,7 +373,6 @@ def preprocess_all_technical_indicators(global_df: pd.DataFrame) -> pd.DataFrame
 
 def scan_single_stock(
     df_single: pd.DataFrame,
-    category: str,
     func_list: list,
     param_profiles: dict = BUY_PARAM_PROFILES,
     market_info: dict = None
@@ -385,6 +384,18 @@ def scan_single_stock(
     if len(df_single) < 5:
         return []
 
+    latest_row = df_single.iloc[-1]
+    stock_id = str(latest_row.get("stock_id"))
+
+    # 🌟 直接從 Dataframe 拿 category，不必由外圍傳入
+    category = str(latest_row.get("category", "MID100")).strip()
+
+    if category not in param_profiles:
+        raise ValueError(f"❌ [設定檔錯誤] 類別 '{category}' 未定義於 PARAM_PROFILES 中！")
+
+    profile = param_profiles[category].copy()
+
+    """
     stock_id = str(df_single.iloc[-1].get("stock_id"))
   
     category = str(category).strip()
@@ -396,7 +407,8 @@ def scan_single_stock(
 
     profile = param_profiles[category].copy()
     profile['category'] = category
-
+    """
+    
     hits = []
     for run_func in func_list:
         try:
