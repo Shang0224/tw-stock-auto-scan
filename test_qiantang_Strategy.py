@@ -714,7 +714,7 @@ def run_qiantang_strategy_range_scan(
   # 🌟 核心修改：針對「各個別策略」獨立執行波段去重與標記
   for strat_name, data_list in results_by_strat.items():
       if data_list:
-          print(f"🔄 正在對個別策略 [{formula_name}] 進行波段 First Trigger 去重與標記...")
+          print(f"🔄 正在對個別策略 [{strat_name}] 進行波段 First Trigger 去重與標記...")
           results_by_strat[strat_name] = calculate_wave_dedup_info(data_list)
 
   """
@@ -843,38 +843,39 @@ def run_qiantang_strategy_range_scan(
     print(f"📊 綜合儀表板 CSV 檔已成功匯出至：【{csv_file_path}】")
 
     # 3. 將各策略獨立輸出為專屬 CSV 檔
+    """
     for strat in strategies:
       func_name = strat.__name__
-      data_list = results_by_formula.get(func_name, [])
+      data_list = results_by_strat.get(func_name, [])
       sheet_df = pd.DataFrame(data_list)
 
       if sheet_df.empty:
         sheet_df = pd.DataFrame()
-      """
+      
       else:
         sheet_df = sheet_df.drop(
             columns=["strategy_name"], errors="ignore"
           )
       """
-
-      strat_csv_name = (
+    for strat_name, data_list in results_by_strat.items():
+      if data_list:
+        sheet_df = pd.DataFrame(data_list)
+        sheet_df = sheet_df.drop(columns=["strategy_name"], errors="ignore")
+          
+        strat_csv_name = (
           f"{func_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
-      )
-      strat_csv_path = os.path.join(output_dir, strat_csv_name)
-      sheet_df.to_csv(strat_csv_path, index=False, encoding="utf-8-sig")
+        )
+        strat_csv_path = os.path.join(output_dir, strat_csv_name)
+        sheet_df.to_csv(strat_csv_path, index=False, encoding="utf-8-sig")
 
-      with open(strat_csv_path, "r", encoding="utf-8-sig") as f:
-        strat_orig_content = f.read()
+        with open(strat_csv_path, "r", encoding="utf-8-sig") as f:
+          strat_orig_content = f.read()
 
-      with open(strat_csv_path, "w", encoding="utf-8-sig") as f:
-        f.write(f"策略公式: ,{func_name}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
-        f.write(strat_orig_content)
+        with open(strat_csv_path, "w", encoding="utf-8-sig") as f:
+          f.write(f"策略公式: ,{func_name}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
+          f.write(strat_orig_content)
 
-      print(
-          f"📁 單獨策略 CSV 檔 [{func_name}]"
-          f" 已成功匯出至：【{strat_csv_path}】"
-      )
-
+        print(f"📁 單獨策略 CSV 檔 [{func_name}] 已成功匯出至：【{strat_csv_path}】")
   else:
     print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
 
@@ -906,11 +907,8 @@ def run_qiantang_strategy_range_scan(
         except Exception as e:
           print(f"⚠ 綜合儀表板 CSV NAS 備份失敗: {e}")
 
-      for strat in strategies:
-        func_name = strat.__name__
-        strat_csv_name = (
-            f"{func_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
-        )
+      for strat_name in results_by_strat.keys():
+        strat_csv_name = (f"{strat_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv")
         strat_csv_path = os.path.join(output_dir, strat_csv_name)
 
         if os.path.exists(strat_csv_path):
