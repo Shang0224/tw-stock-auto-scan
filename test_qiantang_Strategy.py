@@ -245,7 +245,6 @@ def scan_qiantang_strategy_day(
         # 執行當日單一股票掃描
         hits = scan_single_stock(
             df_single=df_single,
-            category=stock_cat,
             func_list=strategies,
             param_profiles=profiles_map,
             market_info=market_info,
