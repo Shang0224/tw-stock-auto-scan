@@ -431,6 +431,14 @@ def scan_single_stock(
         except Exception as strat_err:
             # 🌟 內層防線：策略層級隔離機制
             print(f"⚠️ [策略獨立跳過] 股票: {stock_id} | 策略: {run_func.__name__} 執行異常: {strat_err}")
+              
+            # 🌟 1. 印出完整 Traceback
+            traceback.print_exc()
+
+            # 🌟 2. 強制 Flushing！確保訊息在進程結束前完全刷到控制台
+            sys.stdout.flush()
+            sys.stderr.flush()
+            print("❌" * 35 + "\n")
             continue
   
     return hits
