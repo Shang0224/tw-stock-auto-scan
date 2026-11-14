@@ -1301,8 +1301,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     # 8. 回傳策略資訊
     info = (
         {
-            '選股公式': 'st_qiantang_f3_after_shakeout_ICDesign_1109',
-            'strategy_name': 'st_qiantang_f3_after_shakeout_ICDesign_1109',
+            '選股公式': func_name ,
             '股票代號': stock_id_str,
             '訊號日期': date_t0_str,
             '觸發價格': close_t0,
@@ -1719,8 +1718,7 @@ def st_qiantang_f3_after_shakeout_mid100_1108(
   # -------------------------------------------------------------------------
   info = (
       {
-          '選股公式': 'st_qiantang_f3_after_shakeout_mid100_1108',
-          'strategy_name': 'st_qiantang_f3_after_shakeout_mid100_1108',
+          '選股公式': func_name ,
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '觸發價格': close_t0,
@@ -2085,8 +2083,7 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
     # 8. 回傳策略資訊
     info = (
         {
-            '選股公式': 'st_qiantang_f3_after_shakeout_TW50_1106',
-            'strategy_name': 'st_qiantang_f3_after_shakeout_TW50_1106',
+            '選股公式': func_name ,
             '股票代號': stock_id_str,
             '訊號日期': date_t0_str,
             '觸發價格': close_t0,
@@ -3214,8 +3211,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
   info = (
       {
-          '選股公式': 'st_qiantang_f3_after_shakeout_1102_1',
-          'strategy_name': 'st_qiantang_f3_after_shakeout_1102_1',
+          '選股公式': func_name ,
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '觸發價格': close_t0,
@@ -6639,7 +6635,7 @@ def st_qiantang_f3_after_shakeout_20261023(
 
   info = (
       {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261023_fusion",
+          "選股公式": func_name ,
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
@@ -7564,7 +7560,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
 
   info = (
       {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261001_1_1_5",
+          "選股公式": func_name ,
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
