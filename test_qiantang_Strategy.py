@@ -774,6 +774,7 @@ def run_qiantang_strategy_range_scan(
                 safe_sheet_name = str(strat_name)[-31:]
                 
                 sheet_df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+                
       """
       dashboard_df.to_excel(
           writer, sheet_name="🎯 區間綜合強勢股儀表板", index=False
@@ -794,7 +795,7 @@ def run_qiantang_strategy_range_scan(
             data_list[0].get("選股公式", func_name) if data_list else func_name
         )
         sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
-    """
+        """
 
     print(
         "\n🎉 區間掃描完成！包含績效分析之終極選股 Excel 報告已成功匯出至：【"
