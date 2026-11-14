@@ -11,37 +11,53 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import numpy as np
 
-# 基礎價量與籌碼/信用交易全對照
+# 基礎價量、籌碼與信用交易全欄位對照
 FINMIND_COLUMN_MAPPER = {
-    # 基礎價量
+    # 基礎個股資訊與價量
     "stock_id": "股票代號",
     "date": "日期",
+    "name": "名稱",
     "open": "開盤價",
     "max": "最高價",
     "min": "最低價",
     "close": "今日收盤",
     "Trading_Volume": "成交股數",
     "Trading_money": "成交金額",
+    "Trading_turnover": "週轉率(%)",
     "category": "選股池分類",
     "volume_lots": "今日成交量(張)",
     "amount_100m": "成交金額(億元)",
     
-    # 當日籌碼買超 (已換算張數)
+    # 三大法人當日與別名
     "Foreign_Investor": "外資買超(張)",
+    "foreign_net": "外資買超(張)",
     "Investment_Trust": "投信買超(張)",
+    "trust_net": "投信買超(張)",
     "Dealer_self": "自營商買超(張)",
+    "dealer_self": "自營商買超(張)",
+    "Foreign_Dealer_Self": "外資自營商買超(張)",
+    "Dealer_Hedging": "自營商避險買超(張)",
+    "dealer_hedging": "自營商避險買超(張)",
     "major_net": "主力買超(張)",
     
     # 籌碼近 5 日累計
     "foreign_5d_shares_sum": "外資近5日累計(張)",
     "trust_5d_shares_sum": "投信近5日累計(張)",
     "major_5d_shares_sum": "主力近5日累計(張)",
+    "foreign_5d": "外資近5日累計(張)",
+    "trust_5d": "投信近5日累計(張)",
+    "main_5d": "主力近5日累計(張)",
     
     # 融資融券與信用交易
     "MarginPurchaseTodayBalance": "融資餘額(張)",
+    "margin_balance": "融資餘額(張)",
     "margin_diff_shares": "融資當日增減(張)",
+    "margin_diff": "融資當日增減(張)",
     "ShortSaleTodayBalance": "融券餘額(張)",
+    "short_balance": "融券餘額(張)",
     "short_diff_shares": "融券當日增減(張)",
+    "short_diff": "融券當日增減(張)",
+    "broker_diff": "分點買賣家數差",
 }
 
 # 統一大盤風控對照 (全數以 taiex_ 為前綴)
@@ -50,9 +66,19 @@ MARKET_COLUMN_MAPPER = {
     "taiex_change_pct": "大盤當日漲跌幅(%)",
     "taiex_ma20_bias_pct": "大盤月線乖離率(%)",
     "taiex_ma60_bias_pct": "大盤季線乖離率(%)",
+    "taiex_ema60_bias_pct": "大盤EMA60乖離率(%)",
     "taiex_ma240_bias_pct": "大盤年線乖離率(%)",
     "taiex_ma60_ma240_bias_pct": "大盤季線與年線乖離率(%)",
-    "taiex_ema60_slope": "大盤EMA60斜率",
+    "taiex_EMA60_slope": "大盤EMA60斜率",
+    "taiex_MA20": "大盤MA20月線",
+    "taiex_MA60": "大盤MA60季線",
+    "taiex_MA120": "大盤MA120半年線",
+    "taiex_MA240": "大盤MA240年線",
+    "taiex_EMA20": "大盤EMA20",
+    "taiex_EMA60": "大盤EMA60",
+    "taiex_EMA120": "大盤EMA120",
+    "taiex_EMA240": "大盤EMA240",
+    "taiex_status": "大盤位階標記",
 }
 
 def fetch_and_process_market_data(
