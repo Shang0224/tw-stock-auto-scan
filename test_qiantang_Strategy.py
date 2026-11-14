@@ -702,8 +702,8 @@ def run_qiantang_strategy_range_scan(
         if s_name in results_by_formula:
           results_by_formula[s_name].append(record)
         """
-
-      current_day += timedelta(days=1)
+     
+    current_day += timedelta(days=1)
 
   # =====================================================================
   # 6. 彙整數據與產出報表 (全動態繼承所有分析欄位)
