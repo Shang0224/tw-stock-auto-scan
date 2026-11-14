@@ -596,7 +596,7 @@ def run_qiantang_strategy_range_scan(
   # 5. 逐日推進監控掃描迴圈
   #results_by_formula = {strat.__name__: [] for strat in strategies}
 
-  results_by_formula = {}
+  results_by_strat = {}
   
   all_hits_list = []
   current_day = start_date
