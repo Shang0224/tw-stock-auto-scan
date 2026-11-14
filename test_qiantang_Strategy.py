@@ -121,14 +121,14 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout_icdesign_1106,
 
     #st_qiantang_f3_after_shakeout_mid100_1108,
-    #st_qiantang_f3_after_shakeout_TW50_1106,
-    st_qiantang_f3_after_shakeout_ICDesign_1109,
-    #st_qiantang_f3_after_shakeout_1102_1,
-    #st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
+    st_qiantang_f3_after_shakeout_TW50_1106,
+    #st_qiantang_f3_after_shakeout_ICDesign_1109,
+    st_qiantang_f3_after_shakeout_1102_1,
+    st_qiantang_f3_after_shakeout_20261001_1_1_5,  #重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
     
     st_qiantang_f3_after_shakeout_20261023, #20261020_1（強勢高位+T+3） 與 1_1_5（黃金雙防線版） 融合版
-    #st_qiantang_f3_after_shakeout_1029_1_1, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
-    #st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
+    st_qiantang_f3_after_shakeout_1029_1_1, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
+    st_qiantang_f3_after_shakeout_1102, #1029、1030、1101、1102系列最佳版本, 回測資料20261101_1857
 
     
     #st_qiantang_f3_after_shakeout_20261001_1,
@@ -171,9 +171,9 @@ STOCK_MODE = "csv"
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
-#STOCK_INPUT = "data/TW50.csv"
+STOCK_INPUT = "data/TW50.csv"
 #STOCK_INPUT = "data/MID100.csv"
-STOCK_INPUT = "data/ICDesignList.csv"
+#STOCK_INPUT = "data/ICDesignList.csv"
 
 
 #STOCK_MODE = 'noncsv' 
