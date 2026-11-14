@@ -3582,8 +3582,6 @@ def st_qiantang_f3_after_shakeout_1102(
   # -----------------------------------------------------------------
   info = (
       {
-          '選股公式': 'st_qiantang_f3_after_shakeout_1102',
-          'strategy_name': 'st_qiantang_f3_after_shakeout_1102',
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '觸發價格': close_t0,
