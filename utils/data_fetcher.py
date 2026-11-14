@@ -8,27 +8,26 @@ import numpy as np
 from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
-import pandas as pd
-import numpy as np
-
-# 基礎價量、籌碼與信用交易全欄位對照
+# ==============================================================================
+# 【類別 A1】：個股當日基礎價量、籌碼買超與信用交易
+# ==============================================================================
 FINMIND_COLUMN_MAPPER = {
     # 基礎個股資訊與價量
-    "stock_id": "股票代號",
     "date": "日期",
+    "stock_id": "股票代號",
     "name": "名稱",
+    "category": "選股池分類",
     "open": "開盤價",
     "max": "最高價",
     "min": "最低價",
     "close": "今日收盤",
+    "volume_lots": "今日成交量(張)",
+    "amount_100m": "成交金額(億元)",
     "Trading_Volume": "成交股數",
     "Trading_money": "成交金額",
     "Trading_turnover": "週轉率(%)",
-    "category": "選股池分類",
-    "volume_lots": "今日成交量(張)",
-    "amount_100m": "成交金額(億元)",
     
-    # 三大法人當日與別名
+    # 當日籌碼買超 (三大法人與主力)
     "Foreign_Investor": "外資買超(張)",
     "foreign_net": "外資買超(張)",
     "Investment_Trust": "投信買超(張)",
@@ -48,7 +47,7 @@ FINMIND_COLUMN_MAPPER = {
     "trust_5d": "投信近5日累計(張)",
     "main_5d": "主力近5日累計(張)",
     
-    # 融資融券與信用交易
+    # 融資融券與信用交易/分點
     "MarginPurchaseTodayBalance": "融資餘額(張)",
     "margin_balance": "融資餘額(張)",
     "margin_diff_shares": "融資當日增減(張)",
@@ -60,14 +59,18 @@ FINMIND_COLUMN_MAPPER = {
     "broker_diff": "分點買賣家數差",
 }
 
-# 統一大盤風控對照 (全數以 taiex_ 為前綴)
+# ==============================================================================
+# 【類別 A2】：當日大盤風控與位階環境特徵 (統一以 taiex_ 為前綴)
+# ==============================================================================
 MARKET_COLUMN_MAPPER = {
     "taiex_close": "大盤收盤價",
     "taiex_change_pct": "大盤當日漲跌幅(%)",
     "taiex_ma20_bias_pct": "大盤月線乖離率(%)",
     "taiex_ma60_bias_pct": "大盤季線乖離率(%)",
+    "market_ma60_bias": "大盤季線乖離率(%)",
     "taiex_ema60_bias_pct": "大盤EMA60乖離率(%)",
     "taiex_ma240_bias_pct": "大盤年線乖離率(%)",
+    "market_ma240_bias": "大盤年線乖離率(%)",
     "taiex_ma60_ma240_bias_pct": "大盤季線與年線乖離率(%)",
     "taiex_EMA60_slope": "大盤EMA60斜率",
     "taiex_MA20": "大盤MA20月線",
@@ -79,6 +82,7 @@ MARKET_COLUMN_MAPPER = {
     "taiex_EMA120": "大盤EMA120",
     "taiex_EMA240": "大盤EMA240",
     "taiex_status": "大盤位階標記",
+    "market_status": "大盤位階",
 }
 
 def fetch_and_process_market_data(
