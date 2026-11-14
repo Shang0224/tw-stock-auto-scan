@@ -1809,12 +1809,13 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
     - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
     ===========================================================================
     """
+    func_name = sys._getframe().f_code.co_name
+    
     if market_info:
       m_close = float(market_info["taiex_close"])
       m_ema = float(market_info["taiex_EMA60"])
       m_slope = float(market_info["taiex_EMA60_slope"])
 
-      func_name = sys._getframe().f_code.co_name
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
         if verbose:
           print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
@@ -2876,13 +2877,13 @@ def st_qiantang_f3_after_shakeout_1102_1(
   - Console Log 除錯訊息 100% 採用『🔔/✓/✕/🎯』經典卡牌輸出格式。
   ===========================================================================
   """
+  func_name = sys._getframe().f_code.co_name
 
   if market_info:
     m_close = float(market_info["taiex_close"])
     m_ema = float(market_info["taiex_EMA60"])
     m_slope = float(market_info["taiex_EMA60_slope"])
 
-    func_name = sys._getframe().f_code.co_name
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
       if verbose:
         print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
@@ -6373,13 +6374,13 @@ def st_qiantang_f3_after_shakeout_20261023(
   10. 🌟 融入 1_1_5【大盤年線風控】：大盤年線乖離率 <= 12.0% (防範大盤過熱崩跌風險)
   11. 🌟 右側 Confirmation 觀察期：觸發後第 3 日 (T+3) 報酬率 >= -2.0% (主力實質鎖碼)
   """
+  func_name = sys._getframe().f_code.co_name
 
   if market_info:
     m_close = float(market_info["taiex_close"])
     m_ema = float(market_info["taiex_EMA60"])
     m_slope = float(market_info["taiex_EMA60_slope"])
 
-    func_name = sys._getframe().f_code.co_name
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
         if verbose:
             print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
@@ -7308,12 +7309,14 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
   8. 🌟 【防線一：長線年線扣抵結構防線】年線扣抵位置 <= 25.0% (避開解套賣壓天花板)
   9. 🌟 【防線二：右側 Confirmation 升級】T+3 右側觀察期報酬率 >= -0.5% (主力實質鎖碼)
   """
+
+  func_name = sys._getframe().f_code.co_name
+    
   if market_info:
     m_close = float(market_info["taiex_close"])
     m_ema = float(market_info["taiex_EMA60"])
     m_slope = float(market_info["taiex_EMA60_slope"])
 
-    func_name = sys._getframe().f_code.co_name
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
         if verbose:
             print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
