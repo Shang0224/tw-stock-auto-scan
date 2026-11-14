@@ -794,7 +794,7 @@ def run_qiantang_strategy_range_scan(
             data_list[0].get("選股公式", func_name) if data_list else func_name
         )
         sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
-        """
+    """
 
     print(
         "\n🎉 區間掃描完成！包含績效分析之終極選股 Excel 報告已成功匯出至：【"
