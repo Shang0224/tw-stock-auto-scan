@@ -875,7 +875,7 @@ def run_qiantang_strategy_range_scan(
           f.write(f"策略公式: ,{strat_name}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
           f.write(strat_orig_content)
 
-        print(f"📁 單獨策略 CSV 檔 [{func_name}] 已成功匯出至：【{strat_csv_path}】")
+        print(f"📁 單獨策略 CSV 檔 [{strat_name}] 已成功匯出至：【{strat_csv_path}】")
   else:
     print("ℹ [提示] EXPORT_CSV 為 False，已略過 CSV 檔的本地產出。")
 
@@ -918,11 +918,11 @@ def run_qiantang_strategy_range_scan(
           try:
             archive_and_cleanup(strat_csv_path, remote_strat_csv_path)
             print(
-                f"📦 單獨策略 CSV [{func_name}]"
+                f"📦 單獨策略 CSV [{strat_name}]"
                 f" 已成功備份至 NAS：{remote_strat_csv_path}"
             )
           except Exception as e:
-            print(f"⚠ 單獨策略 CSV [{func_name}] NAS 備份失敗: {e}")
+            print(f"⚠ 單獨策略 CSV [{strat_name}] NAS 備份失敗: {e}")
 
   # ==============================================================================
   # SECTION 7. 自動繪製股票波段 K 線走勢圖 (Wave Charts Generation)
