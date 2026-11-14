@@ -400,8 +400,7 @@ def scan_qiantang_strategy_day(
 
       """
       for hit in hits:
-        strat_func_name = hit.get("strategy_name", "")
-        formula_label = hit.get("選股公式", strat_func_name)
+        strat_func_name = hit.get("選股公式")
 
         # -----------------------------------------------------------------
         # 📌 步驟 1：建立前半段基礎欄位（到「操作建議」為止）
@@ -413,8 +412,7 @@ def scan_qiantang_strategy_day(
             "選股池分類": stock_cat,
             "今日收盤": close_price,
             "今日成交量(張)": vol_lots,
-            "選股公式": formula_label,
-            "strategy_name": strat_func_name,   
+            "選股公式": strat_func_name,
             "操作建議": hit.get("操作建議", hit.get("detail", "")),
         }
 
