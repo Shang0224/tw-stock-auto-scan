@@ -1035,8 +1035,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
         m_slope = float(market_info["taiex_EMA60_slope"])
 
         if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-            if verbose:
-                print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+            print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
             return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
         print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
@@ -1817,9 +1816,7 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
       m_slope = float(market_info["taiex_EMA60_slope"])
 
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-            
+        print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
         return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
       print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
@@ -2514,9 +2511,7 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
     cat_col = 'category' if 'category' in row_t0.index else '選股池分類'
     current_category = str(row_t0[cat_col]).strip()
     if current_category != 'MID100':
-        if verbose:
-            print(f"    {sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非MID100 ➔ 直接中斷策略。")
-            
+        print(f"    {sys._getframe().f_code.co_name}  [✕] 🛑 為{(row_t0['category']).strip()}股票, 非MID100 ➔ 直接中斷策略。")
         return False, {}
 
     # -------------------------------------------------------------------------
@@ -2885,9 +2880,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
     m_slope = float(market_info["taiex_EMA60_slope"])
 
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-            
+      print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
       return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
     print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
@@ -3313,8 +3306,7 @@ def st_qiantang_f3_after_shakeout_1102(
       m_slope = float(market_info["taiex_EMA60_slope"])
 
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-          if verbose:
-              print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
           return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
       print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
@@ -4225,8 +4217,7 @@ def st_qiantang_f3_after_shakeout_1029_1_1_1(
       m_slope = float(market_info["taiex_EMA60_slope"])
 
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-          if verbose:
-              print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
           return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
       print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
@@ -6417,9 +6408,7 @@ def st_qiantang_f3_after_shakeout_20261023(
     m_slope = float(market_info["taiex_EMA60_slope"])
 
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-        if verbose:
-            print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-            
+        print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
         return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
     print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
@@ -7353,9 +7342,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
     m_slope = float(market_info["taiex_EMA60_slope"])
 
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-        if verbose:
-            print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-            
+        print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
         return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
 
     print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
