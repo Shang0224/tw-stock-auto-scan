@@ -9,80 +9,103 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta, timezone
 
 # ==============================================================================
-# 【類別 A1】：個股當日基礎價量、籌碼買超與信用交易
+# 📌 錢塘潮選股系統 - 指標規格註冊表 (Indicator Spec Registry)
 # ==============================================================================
-FINMIND_COLUMN_MAPPER = {
-    # 基礎個股資訊與價量
-    "date": "日期",
-    "stock_id": "股票代號",
-    "name": "名稱",
-    "category": "選股池分類",
-    "open": "開盤價",
-    "max": "最高價",
-    "min": "最低價",
-    "close": "今日收盤",
-    "volume_lots": "今日成交量(張)",
-    "amount_100m": "成交金額(億元)",
-    "Trading_Volume": "成交股數",
-    "Trading_money": "成交金額",
-    "Trading_turnover": "週轉率(%)",
+# 設計說明：
+# 1. 字典 Key：資料庫/預處理產出的英文原名 (如 'close', 'taiex_EMA60_slope')
+# 2. 字典 Value：二元組 Tuple (中文欄位名稱, 小數位數精度)
+#    - 精度為 None : 原樣輸出 (適用於日期、股票代號、名稱、分類標籤)
+#    - 精度為 0    : 格式化為整數 int (適用於成交張數、張數增減、打底天數)
+#    - 精度為 2    : 浮點數保留 2 位小數 (適用於價格、金額、乖離率、百分比)
+#    - 精度為 4    : 浮點數保留 4 位小數 (適用於 OLS 斜率、均線斜率)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 【類別 A1】：個股當日基礎價量、三大法人買超與信用交易規格註冊表
+# ------------------------------------------------------------------------------
+FINMIND_SPECS = {
+    # --- 1. 個股基礎資訊與當日價量 (保留 2 位小數 / 張數為整數) ---
+    "date": ("日期", None),                # 交易日期 (YYYY-MM-DD)
+    "stock_id": ("股票代號", None),        # 股票代號 (如 '2330')
+    "name": ("名稱", None),                # 股票名稱 (如 '台積電')
+    "category": ("選股池分類", None),      # 股票池分類 (如 'TW50', 'ICDesign')
+    "open": ("開盤價", 2),
+    "max": ("最高價", 2),
+    "min": ("最低價", 2),
+    "close": ("今日收盤", 2),
+    "spread": ("漲跌價差", 2),
+    "change_pct": ("當日漲跌幅(%)", 2),
+    "volume_lots": ("今日成交量(張)", 0),  # 成交量 (已換算為張數)
+    "amount_100m": ("成交金額(億元)", 2),  # 當日成交金額 (億元)
+    #"Trading_Volume": ("成交股數", 0),
+    #"Trading_money": ("成交金額", 0),
+    "Trading_turnover": ("週轉率(%)", 2),
     
-    # 當日籌碼買超 (三大法人與主力)
-    "Foreign_Investor": "外資買超(張)",
-    "foreign_net": "外資買超(張)",
-    "Investment_Trust": "投信買超(張)",
-    "trust_net": "投信買超(張)",
-    "Dealer_self": "自營商買超(張)",
-    "dealer_self": "自營商買超(張)",
-    "Foreign_Dealer_Self": "外資自營商買超(張)",
-    "Dealer_Hedging": "自營商避險買超(張)",
-    "dealer_hedging": "自營商避險買超(張)",
-    "major_net": "主力買超(張)",
+    # --- 2. 當日籌碼買超 (三大法人與主力，單位：張) ---
+    "Foreign_Investor": ("外資買超(張)", 0),
+    "foreign_net": ("外資買超(張)", 0),   # 簡稱同義 Key
+    "Investment_Trust": ("投信買超(張)", 0),
+    "trust_net": ("投信買超(張)", 0),     # 簡稱同義 Key
+    "Dealer_self": ("自營商買超(張)", 0),
+    "dealer_self": ("自營商買超(張)", 0),  # 簡稱同義 Key
+    "Foreign_Dealer_Self": ("外資自營商買超(張)", 0),
+    "Dealer_Hedging": ("自營商避險買超(張)", 0),
+    "dealer_hedging": ("自營商避險買超(張)", 0),
+    "major_net": ("主力買超(張)", 0),     # 主力券商買超張數
     
-    # 籌碼近 5 日累計
-    "foreign_5d_shares_sum": "外資近5日累計(張)",
-    "trust_5d_shares_sum": "投信近5日累計(張)",
-    "major_5d_shares_sum": "主力近5日累計(張)",
-    "foreign_5d": "外資近5日累計(張)",
-    "trust_5d": "投信近5日累計(張)",
-    "main_5d": "主力近5日累計(張)",
+    # --- 3. 籌碼近 5 日累計買超 (單位：張) ---
+    "foreign_5d_shares_sum": ("外資近5日累計(張)", 0),
+    "trust_5d_shares_sum": ("投信近5日累計(張)", 0),
+    "major_5d_shares_sum": ("主力近5日累計(張)", 0),
+    "foreign_5d": ("外資近5日累計(張)", 0),  # 別名相容
+    "trust_5d": ("投信近5日累計(張)", 0),    # 別名相容
+    "main_5d": ("主力近5日累計(張)", 0),     # 別名相容
     
-    # 融資融券與信用交易/分點
-    "MarginPurchaseTodayBalance": "融資餘額(張)",
-    "margin_balance": "融資餘額(張)",
-    "margin_diff_shares": "融資當日增減(張)",
-    "margin_diff": "融資當日增減(張)",
-    "ShortSaleTodayBalance": "融券餘額(張)",
-    "short_balance": "融券餘額(張)",
-    "short_diff_shares": "融券當日增減(張)",
-    "short_diff": "融券當日增減(張)",
-    "broker_diff": "分點買賣家數差",
+    # --- 4. 融資融券與信用交易/分點籌碼 ---
+    "MarginPurchaseTodayBalance": ("融資餘額(張)", 0),
+    "margin_balance": ("融資餘額(張)", 0),
+    "margin_diff_shares": ("融資當日增減(張)", 0),
+    "margin_diff": ("融資當日增減(張)", 0),
+    "ShortSaleTodayBalance": ("融券餘額(張)", 0),
+    "short_balance": ("融券餘額(張)", 0),
+    "short_diff_shares": ("融券當日增減(張)", 0),
+    "short_diff": ("融券當日增減(張)", 0),
+    "broker_diff": ("分點買賣家數差", 0), # 買賣分點家數差 (正值代表籌碼集中)
 }
 
-# ==============================================================================
-# 【類別 A2】：當日大盤風控與位階環境特徵 (統一以 taiex_ 為前綴)
-# ==============================================================================
-MARKET_COLUMN_MAPPER = {
-    "taiex_close": "大盤收盤價",
-    "taiex_change_pct": "大盤當日漲跌幅(%)",
-    "taiex_ma20_bias_pct": "大盤月線乖離率(%)",
-    "taiex_ma60_bias_pct": "大盤季線乖離率(%)",
-    "market_ma60_bias": "大盤季線乖離率(%)",
-    "taiex_ema60_bias_pct": "大盤EMA60乖離率(%)",
-    "taiex_ma240_bias_pct": "大盤年線乖離率(%)",
-    "market_ma240_bias": "大盤年線乖離率(%)",
-    "taiex_ma60_ma240_bias_pct": "大盤季線與年線乖離率(%)",
-    "taiex_EMA60_slope": "大盤EMA60斜率",
-    "taiex_MA20": "大盤MA20月線",
-    "taiex_MA60": "大盤MA60季線",
-    "taiex_MA120": "大盤MA120半年線",
-    "taiex_MA240": "大盤MA240年線",
-    "taiex_EMA20": "大盤EMA20",
-    "taiex_EMA60": "大盤EMA60",
-    "taiex_EMA120": "大盤EMA120",
-    "taiex_EMA240": "大盤EMA240",
-    "taiex_status": "大盤位階標記",
-    "market_status": "大盤位階",
+# ------------------------------------------------------------------------------
+# 【類別 A2】：大盤風控與環境位階規格註冊表 (統一以 taiex_ 為 Key 前綴)
+# ------------------------------------------------------------------------------
+MARKET_SPECS = {
+    # --- 大盤當日指數與漲跌幅 ---
+    "taiex_close": ("大盤收盤價", 2),
+    "taiex_change_pct": ("大盤當日漲跌幅(%)", 2),
+    
+    # --- 大盤各均線乖離率 ---
+    "taiex_ma20_bias_pct": ("大盤月線乖離率(%)", 2),
+    "taiex_ma60_bias_pct": ("大盤季線乖離率(%)", 2),
+    "market_ma60_bias": ("大盤季線乖離率(%)", 2),     # 簡稱相容
+    "taiex_ema60_bias_pct": ("大盤EMA60乖離率(%)", 2),
+    "taiex_ma240_bias_pct": ("大盤年線乖離率(%)", 2),
+    "market_ma240_bias": ("大盤年線乖離率(%)", 2),    # 簡稱相容
+    "taiex_ma60_ma240_bias_pct": ("大盤季線與年線乖離率(%)", 2),
+    
+    # --- 🌟 最高層級大盤風控開關：EMA60 季線斜率 (保留 4 位小數) ---
+    "taiex_EMA60_slope": ("大盤EMA60斜率", 4),
+    
+    # --- 大盤 MA 與 EMA 均線指數 ---
+    "taiex_MA20": ("大盤MA20月線", 2),
+    "taiex_MA60": ("大盤MA60季線", 2),
+    "taiex_MA120": ("大盤MA120半年線", 2),
+    "taiex_MA240": ("大盤MA240年線", 2),
+    "taiex_EMA20": ("大盤EMA20", 2),
+    "taiex_EMA60": ("大盤EMA60", 2),
+    "taiex_EMA120": ("大盤EMA120", 2),
+    "taiex_EMA240": ("大盤EMA240", 2),
+    
+    # --- 大盤位階狀態標記 ---
+    "taiex_status": ("大盤位階標記", None),   # 如 '大盤>MA60'
+    "market_status": ("大盤位階", None),      # 簡稱相容
 }
 
 def fetch_and_process_market_data(
