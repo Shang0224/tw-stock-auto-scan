@@ -689,7 +689,7 @@ def run_qiantang_strategy_range_scan(
       )
       for record in day_hits:
         all_hits_list.append(record)
-        s_name = record["strategy_name"]
+        s_name = record["選股公式"]
         if s_name in results_by_formula:
           results_by_formula[s_name].append(record)
 
@@ -756,10 +756,12 @@ def run_qiantang_strategy_range_scan(
         sheet_df = pd.DataFrame(data_list)
         if sheet_df.empty:
           sheet_df = pd.DataFrame()
+        """
         else:
           sheet_df = sheet_df.drop(
               columns=["strategy_name"], errors="ignore"
           )
+        """
 
         sheet_label = (
             data_list[0].get("選股公式", func_name) if data_list else func_name
@@ -793,11 +795,6 @@ def run_qiantang_strategy_range_scan(
     
   if EXPORT_CSV:
     # 1. 建立輸出資料夾
-    #sub_folder_name = (
-    #    f"qiantang_test_report/{start_date_str}_to_{end_date_str}_{current_time_str}"
-    #)
-    #output_dir = os.path.abspath(os.path.join("data", sub_folder_name))
-    #os.makedirs(output_dir, exist_ok=True)
 
     # 2. 輸出綜合儀表板 CSV 檔
     csv_file_name = (
@@ -824,10 +821,12 @@ def run_qiantang_strategy_range_scan(
 
       if sheet_df.empty:
         sheet_df = pd.DataFrame()
+      """
       else:
         sheet_df = sheet_df.drop(
             columns=["strategy_name"], errors="ignore"
           )
+      """
 
       strat_csv_name = (
           f"{func_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
