@@ -594,7 +594,10 @@ def run_qiantang_strategy_range_scan(
   print("✅ 大盤均線字典與交易日曆準備完畢！\n")
 
   # 5. 逐日推進監控掃描迴圈
-  results_by_formula = {strat.__name__: [] for strat in strategies}
+  #results_by_formula = {strat.__name__: [] for strat in strategies}
+
+  results_by_formula = {}
+  
   all_hits_list = []
   current_day = start_date
 
@@ -686,11 +689,21 @@ def run_qiantang_strategy_range_scan(
       )
       for record in day_hits:
         all_hits_list.append(record)
+
+        # 🌟 2. 動態建 Key 寫入 results_by_strat
+        s_name = record["選股公式"]
+        if s_name not in results_by_strat:
+            results_by_strat[s_name] = []
+            
+        results_by_strat[s_name].append(record)
+          
+        """
         s_name = record["選股公式"]
         if s_name in results_by_formula:
           results_by_formula[s_name].append(record)
+        """
 
-    current_day += timedelta(days=1)
+      current_day += timedelta(days=1)
 
   # =====================================================================
   # 6. 彙整數據與產出報表 (全動態繼承所有分析欄位)
@@ -699,17 +712,21 @@ def run_qiantang_strategy_range_scan(
   current_time_str = tw_time.strftime("%Y%m%d_%H%M")
 
   # 🌟 核心修改：針對「各個別策略」獨立執行波段去重與標記
+  for strat_name, data_list in results_by_strat.items():
+      if data_list:
+          print(f"🔄 正在對個別策略 [{formula_name}] 進行波段 First Trigger 去重與標記...")
+          results_by_strat[strat_name] = calculate_wave_dedup_info(data_list)
+
+  """
   for strat in strategies:
       func_name = strat.__name__
       if func_name in results_by_formula and results_by_formula[func_name]:
           print(f"🔄 正在對個別策略 [{func_name}] 進行波段 First Trigger 去重與標記...")
           # 傳入該策略獨立的選股串列，產出專屬的波段群組編號與首發標籤
           results_by_formula[func_name] = calculate_wave_dedup_info(results_by_formula[func_name])
-
+  """
     
-  file_name = (
-      f"錢塘潮選股歷史報告_含績效分析_{start_date_str}_to_{end_date_str}_{current_time_str}.xlsx"
-  )
+  file_name = f"錢塘潮選股歷史報告_含績效分析_{start_date_str}_to_{end_date_str}_{current_time_str}.xlsx"
   file_path = os.path.abspath(file_name)
 
   # 🌟 全動態多策略去重與合併：完整保留 hit_record 裡所有的 30+ 個特徵欄位
@@ -743,6 +760,21 @@ def run_qiantang_strategy_range_scan(
   # 條件式輸出 Excel 報表
   if EXPORT_EXCEL:
     with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+        # Sheet 1: 綜合強勢股儀表板
+        if all_hits_list:
+            # 進行 Dashboard 彙整...
+            dashboard_df.to_excel(writer, sheet_name="🎯 綜合強勢股儀表板", index=False)
+
+        # Sheet 2~N: 個別策略詳細結果 (依 results_by_strat 動態開頁)
+        for strat_name, data_list in results_by_strat.items():
+            if data_list:
+                sheet_df = pd.DataFrame(data_list)
+                
+                # 🌟 3. 取後 31 個字元切片，防止工作表名稱過長報錯
+                safe_sheet_name = str(strat_name)[-31:]
+                
+                sheet_df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+      """
       dashboard_df.to_excel(
           writer, sheet_name="🎯 區間綜合強勢股儀表板", index=False
       )
@@ -753,17 +785,16 @@ def run_qiantang_strategy_range_scan(
         sheet_df = pd.DataFrame(data_list)
         if sheet_df.empty:
           sheet_df = pd.DataFrame()
-        """
         else:
           sheet_df = sheet_df.drop(
               columns=["strategy_name"], errors="ignore"
           )
-        """
-
+        
         sheet_label = (
             data_list[0].get("選股公式", func_name) if data_list else func_name
         )
         sheet_df.to_excel(writer, sheet_name=sheet_label, index=False)
+        """
 
     print(
         "\n🎉 區間掃描完成！包含績效分析之終極選股 Excel 報告已成功匯出至：【"
