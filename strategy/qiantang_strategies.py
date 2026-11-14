@@ -1328,7 +1328,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
 def st_qiantang_f3_after_shakeout_mid100_1108(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,  # Tbase+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.02,  # Tbase+3 右側確認最低允許報酬率 (-2.0%，回歸 1102 經典標準)
     min_dist_52w_high: float = -15.0,  # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -1744,7 +1744,7 @@ def st_qiantang_f3_after_shakeout_mid100_1108(
 def st_qiantang_f3_after_shakeout_TW50_1106(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                  # Tbase+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.01,         # 🌟 右側確認最低報酬 (-1.0%，完美保留 2603 長榮 +1881% 飆股特徵)
     min_dist_52w_high: float = -15.0,     # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -2109,7 +2109,7 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
 def st_qiantang_f3_after_shakeout_icdesign_1106(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                  # Tbase+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.005,        # Tbase+3 右側確認最低允許報酬率 (-0.5%，1_1_5 門檻)
     min_dist_52w_high: float = -15.0,     # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -2463,7 +2463,7 @@ def st_qiantang_f3_after_shakeout_icdesign_1106(
 def st_qiantang_f3_after_shakeout_mid100_1106(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                  # Tbase+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = 0.0,           # Tbase+3 右側確認最低允許報酬率 (0.0%，專用版硬鎖碼)
     min_dist_52w_high: float = -15.0,     # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -3858,7 +3858,7 @@ def st_qiantang_f3_after_shakeout_1101(
 def st_qiantang_f3_after_shakeout_1029_1_2(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                    # T+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.02,           # T+3 右側確認最低允許報酬率 (-2.0%)
     min_dist_52w_high: float = -15.0,       # 第一軌：強勢高位門檻 (>= -15.0%)
@@ -5925,7 +5925,7 @@ def st_qiantang_f3_after_shakeout_20261030(
 def st_qiantang_f3_after_shakeout_20261029_1(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,                 # T+3 右側觀察天數 (預設 3 天)
     threshold_pct: float = -0.02,        # T+3 右側觀察期門檻 (報酬率 >= -2.0%)
     min_dist_52w_high: float = -15.0,    # 雙軌分流門檻 (距 52 週高點 >= -15.0% 為第一軌)
