@@ -3237,7 +3237,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
 def st_qiantang_f3_after_shakeout_1102(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = True,
+    verbose: bool = DEBUG_VERBOSE,
     delay_days: int = 3,  # T+3 右側觀察期天數 (預設 3 天)
     threshold_pct: float = -0.02,  # T+3 右側確認最低允許報酬率 (-2.0%)
     min_dist_52w_high: float = -15.0,  # 第一軌：強勢高位門檻 (>= -15.0%)
