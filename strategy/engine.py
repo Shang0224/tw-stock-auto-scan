@@ -7,16 +7,15 @@ from strategy.config import BUY_PARAM_PROFILES
 from scipy.stats import linregress
 from utils.data_fetcher import FINMIND_COLUMN_MAPPER, MARKET_COLUMN_MAPPER
 
+# 【類別 B】：僅收錄預處理產出的英文技術指標 Key
 TECHNICAL_INDICATOR_MAPPER = {
-    # 輕鬆線動能與別名
+    # 輕鬆線、均線與扣抵位階
     "easy_line": "輕鬆線價格",
     "easy_buy": "輕鬆買進快線",
     "easy_line_bias": "輕鬆線乖離率(%)",
     "easy_bias": "輕鬆線乖離率(%)",
     "easy_line_slope": "輕鬆線OLS斜率",
     "easy_ols_slope": "輕鬆線OLS斜率",
-    
-    # 個股 MA / EMA 均線
     "MA5": "MA5日線",
     "MA10": "MA10日線",
     "MA20": "MA20月線",
@@ -29,8 +28,6 @@ TECHNICAL_INDICATOR_MAPPER = {
     "EMA60": "EMA60",
     "EMA120": "EMA120",
     "EMA240": "EMA240",
-    
-    # 季線與年線位階與扣抵
     "ma60_bias": "季線乖離率(%)",
     "ma60_deduct_bias": "季線扣抵位置(%)",
     "ma60_slope": "MA60斜率",
@@ -38,12 +35,10 @@ TECHNICAL_INDICATOR_MAPPER = {
     "ma240_bias_pct": "年線乖離率(%)",
     "ma240_deduct_bias": "年線扣抵位置(%)",
     "ma240_slope": "MA240斜率",
-    
-    # 均線多頭與糾結
     "is_bull_alignment": "均線多頭排列",
     "ma_tangle_ratio": "均線糾結度(%)",
     
-    # K線型態、KD 與 MACD
+    # K 線型態、均量斜率、KD & MACD 動能
     "body_ratio": "實體K棒比例(%)",
     "body_ratio_pct": "實體K棒比例(%)",
     "upper_shadow_ratio": "上影線比例(%)",
@@ -56,17 +51,7 @@ TECHNICAL_INDICATOR_MAPPER = {
     "osc": "MACD柱狀體",
     "macd_osc": "MACD柱狀體",
     "OSC": "MACD柱狀體",
-    
-    # 52 週位階與沉澱天數
-    "dist_to_52w_high_pct": "距52週高點(%)",
-    "dist_52w_high_val": "距52週高點(%)",
-    "dist_to_52w_high": "距52週高點(%)",
-    "high_52w": "52週最高價",
-    "low_52w": "52週最低價",
-    "base_consolidation_days": "打底沉澱天數",
     "shares_per_trans": "單筆均張(SPT)",
-    
-    # 前 5 日與前 20 日均量及斜率
     "vol_ma5_prior": "前5日均量(張)",
     "vol_ma5": "前5日均量(張)",
     "vol_ma20_prior": "前20日均量(張)",
@@ -75,16 +60,19 @@ TECHNICAL_INDICATOR_MAPPER = {
     "vol_ma20_slope_prior_pct": "前20日均量斜率(%/日)",
     "vol_ma5_slope_prior_lots": "前5日均量斜率(張/日)",
     "vol_ma20_slope_prior_lots": "前20日均量斜率(張/日)",
-    "vol_ma5_slope_prior": "前5日均量原始斜率",
-    "vol_ma20_slope_prior": "前20日均量原始斜率",
     
-    # 策略運算中繼標籤與舊相容 Key
+    # 52 週位階與打底天數
+    "dist_to_52w_high_pct": "距52週高點(%)",
+    "dist_52w_high_val": "距52週高點(%)",
+    "dist_52w_high": "距52週高點(%)",
+    "high_52w": "52週最高價",
+    "low_52w": "52週最低價",
+    "base_consolidation_days": "打底沉澱天數",
+    "base_days": "打底天數",
     "strategy_name": "策略函數名稱",
     "delay_days": "右側觀察天數",
-    "Category_Tag": "走勢類別標籤",
 }
 
-# 🌟 全域 Master 總對照表
 TOTAL_COLUMN_MAPPER = {
     **FINMIND_COLUMN_MAPPER,
     **MARKET_COLUMN_MAPPER,
