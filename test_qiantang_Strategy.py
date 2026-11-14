@@ -159,7 +159,7 @@ MARKET_FILTER_KEY = "EMA60"     # 大盤門檻指標 (預設季線 EMA60)
 GENERATE_WAVE_CHARTS = False  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 # 🌟 檔案輸出控制開關
-EXPORT_EXCEL = False            # 是否輸出與上傳 Excel 報告
+EXPORT_EXCEL = True            # 是否輸出與上傳 Excel 報告
 EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 
 # 模式 A：CSV 檔案載入模式
