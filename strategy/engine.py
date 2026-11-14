@@ -411,8 +411,10 @@ def scan_single_stock(
 
             if is_hit:
                 res_info = info if isinstance(info, dict) else {"detail": str(info)}
-                res_info["strategy_name"] = run_func.__name__
-                res_info["category"] = category
+                res_info["選股公式""] = run_func.__name__
+                
+                #res_info["category"] = category
+                
                 hits.append(res_info)
         except Exception as strat_err:
             # 🌟 內層防線：策略層級隔離機制
