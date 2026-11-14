@@ -5,78 +5,125 @@ import pandas as pd
 import numpy as np
 from strategy.config import BUY_PARAM_PROFILES
 from scipy.stats import linregress
-from utils.data_fetcher import FINMIND_COLUMN_MAPPER, MARKET_COLUMN_MAPPER
 
-# 【類別 B】：僅收錄預處理產出的英文技術指標 Key
-TECHNICAL_INDICATOR_MAPPER = {
-    # 輕鬆線、均線與扣抵位階
-    "easy_line": "輕鬆線價格",
-    "easy_buy": "輕鬆買進快線",
-    "easy_line_bias": "輕鬆線乖離率(%)",
-    "easy_bias": "輕鬆線乖離率(%)",
-    "easy_line_slope": "輕鬆線OLS斜率",
-    "easy_ols_slope": "輕鬆線OLS斜率",
-    "MA5": "MA5日線",
-    "MA10": "MA10日線",
-    "MA20": "MA20月線",
-    "MA60": "MA60季線",
-    "MA120": "MA120半年線",
-    "MA240": "MA240年線",
-    "EMA5": "EMA5",
-    "EMA10": "EMA10",
-    "EMA20": "EMA20",
-    "EMA60": "EMA60",
-    "EMA120": "EMA120",
-    "EMA240": "EMA240",
-    "ma60_bias": "季線乖離率(%)",
-    "ma60_deduct_bias": "季線扣抵位置(%)",
-    "ma60_slope": "MA60斜率",
-    "ma240_bias": "年線乖離率(%)",
-    "ma240_bias_pct": "年線乖離率(%)",
-    "ma240_deduct_bias": "年線扣抵位置(%)",
-    "ma240_slope": "MA240斜率",
-    "is_bull_alignment": "均線多頭排列",
-    "ma_tangle_ratio": "均線糾結度(%)",
+# 1. 自 data_fetcher 匯入 A1 (個股價量籌碼) 與 A2 (大盤風控) 的規格註冊表
+from utils.data_fetcher import FINMIND_SPECS, MARKET_SPECS
+
+# ==============================================================================
+# 📌 錢塘潮選股系統 - 萬能指標規格與自動轉譯引擎 (Indicator Spec Registry Engine)
+# ==============================================================================
+# 運作原理說明：
+# 1. 字典二元組 Tuple 格式：(中文欄位名稱, 小數點精確度)
+#    - None : 原樣輸出 (適用於日期、股票代號、名稱、選股池分類標籤)
+#    - 0    : 格式化為整數 int (適用於成交張數、張數增減、打底天數)
+#    - 2    : 浮點數保留 2 位小數 (適用於價格、金額、乖離率、百分比)
+#    - 4    : 浮點數保留 4 位小數 (適用於 OLS 斜率、均線斜率)
+#
+# 2. 自動放行與轉譯機制：
+#    - 英文 Key ➔ 自動對照 TOTAL_SPECS 進行「提取 ➔ 轉型格式化 ➔ 翻譯成中文標頭」。
+#    - 中文 Key ➔ 策略回傳原生的中文說明 (如 "選股公式"、"操作建議")，自動原樣寫入。
+#
+# 3. 模組分工說明：
+#    - FINMIND_SPECS (A1) & MARKET_SPECS (A2) 來自 utils/data_fetcher.py
+#    - TECHNICAL_SPECS (B) 於本檔 (strategy/engine.py) 定義
+#    - TOTAL_SPECS 融合前述三者，為全系統單點維護的 Master 總對照表
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 【類別 B】：預處理技術指標、Tbase 起漲特徵與 K 線型態規格註冊表
+# ------------------------------------------------------------------------------
+TECHNICAL_SPECS = {
+    # --- B1. Tbase 發動日定位與觀察期特徵 ---
+    "tbase_date": ("Tbase發動日期", None),   # 訊號起漲觸發日
+    "t0_date": ("Tbase發動日期", None),      # 別名相容
+    "tbase_close": ("Tbase收盤價", 2),       # 起漲日收盤價
+    "t0_close": ("Tbase收盤價", 2),          # 別名相容
+    "tbase_volume_lots": ("Tbase成交量(張)", 0),
+    "t0_vol_lots": ("Tbase成交量(張)", 0),
+    "delay_days": ("右側觀察天數", 0),       # Tbase 觀察延遲天數
+    "is_resonance": ("量價共振標記", None),   # 量價共振 Bool
+    "vol_price_resonance": ("量價共振標記", None),
     
-    # K 線型態、均量斜率、KD & MACD 動能
-    "body_ratio": "實體K棒比例(%)",
-    "body_ratio_pct": "實體K棒比例(%)",
-    "upper_shadow_ratio": "上影線比例(%)",
-    "upper_shadow_pct": "上影線比例(%)",
-    "is_red_k": "是否紅K",
-    "K": "K值",
-    "D": "D值",
-    "dif": "MACD快線(DIF)",
-    "dem": "MACD慢線(DEM)",
-    "osc": "MACD柱狀體",
-    "macd_osc": "MACD柱狀體",
-    "OSC": "MACD柱狀體",
-    "shares_per_trans": "單筆均張(SPT)",
-    "vol_ma5_prior": "前5日均量(張)",
-    "vol_ma5": "前5日均量(張)",
-    "vol_ma20_prior": "前20日均量(張)",
-    "vol_ma20": "前20日均量(張)",
-    "vol_ma5_slope_prior_pct": "前5日均量斜率(%/日)",
-    "vol_ma20_slope_prior_pct": "前20日均量斜率(%/日)",
-    "vol_ma5_slope_prior_lots": "前5日均量斜率(張/日)",
-    "vol_ma20_slope_prior_lots": "前20日均量斜率(張/日)",
+    # --- B2. 輕鬆線、均線與扣抵位階 (價格/乖離率保留2位，斜率保留4位) ---
+    "easy_line": ("輕鬆線價格", 2),
+    "easy_buy": ("輕鬆買進快線", 2),
+    "easy_sell": ("輕鬆賣出慢線", 2),
+    "easy_line_bias": ("輕鬆線乖離率(%)", 2),
+    "easy_bias": ("輕鬆線乖離率(%)", 2),     # 別名相容
+    "easy_line_slope": ("輕鬆線OLS斜率", 4), # OLS 迴歸斜率 (4位精度)
+    "easy_ols_slope": ("輕鬆線OLS斜率", 4),  # 別名相容
+    "MA5": ("MA5日線", 2),
+    "MA10": ("MA10日線", 2),
+    "MA20": ("MA20月線", 2),
+    "MA60": ("MA60季線", 2),
+    "MA120": ("MA120半年線", 2),
+    "MA240": ("MA240年線", 2),
+    "EMA5": ("EMA5", 2),
+    "EMA10": ("EMA10", 2),
+    "EMA20": ("EMA20", 2),
+    "EMA60": ("EMA60", 2),
+    "EMA120": ("EMA120", 2),
+    "EMA240": ("EMA240", 2),
+    "ma60_bias": ("季線乖離率(%)", 2),
+    "ma60_deduct_bias": ("季線扣抵位置(%)", 2),
+    "ma60_slope": ("MA60斜率", 4),
+    "ma240_bias": ("年線乖離率(%)", 2),
+    "ma240_bias_pct": ("年線乖離率(%)", 2),
+    "ma240_deduct_bias": ("年線扣抵位置(%)", 2),
+    "ma240_slope": ("MA240斜率", 4),
+    "is_bull_alignment": ("均線多頭排列", None),
+    "ma_tangle_ratio": ("均線糾結度(%)", 2),
     
-    # 52 週位階與打底天數
-    "dist_to_52w_high_pct": "距52週高點(%)",
-    "dist_52w_high_val": "距52週高點(%)",
-    "dist_52w_high": "距52週高點(%)",
-    "high_52w": "52週最高價",
-    "low_52w": "52週最低價",
-    "base_consolidation_days": "打底沉澱天數",
-    "base_days": "打底天數",
-    "strategy_name": "策略函數名稱",
-    "delay_days": "右側觀察天數",
+    # --- B3. K 線型態、均量斜率、KD & MACD 動能 ---
+    "body_ratio": ("實體K棒比例(%)", 2),
+    "body_ratio_pct": ("實體K棒比例(%)", 2),
+    "upper_shadow_ratio": ("上影線比例(%)", 2),
+    "upper_shadow_pct": ("上影線比例(%)", 2),
+    "is_red_k": ("是否紅K", None),
+    "K": ("K值", 2),
+    "D": ("D值", 2),
+    "dif": ("MACD快線(DIF)", 2),
+    "dem": ("MACD慢線(DEM)", 2),
+    "osc": ("MACD柱狀體", 2),
+    "macd_osc": ("MACD柱狀體", 2),
+    "OSC": ("MACD柱狀體", 2),
+    "shares_per_trans": ("單筆均張(SPT)", 2), # 大戶籌碼指標
+    "vol_ma5_prior": ("前5日均量(張)", 0),
+    "vol_ma5": ("前5日均量(張)", 0),
+    "vol_ma20_prior": ("前20日均量(張)", 0),
+    "vol_ma20": ("前20日均量(張)", 0),
+    "vol_ma5_slope_prior_pct": ("前5日均量斜率(%/日)", 2),
+    "vol_ma20_slope_prior_pct": ("前5日均量斜率(%/日)", 2),
+    "vol_ma5_slope_prior_lots": ("前5日均量斜率(張/日)", 0),
+    "vol_ma20_slope_prior_lots": ("前20日均量斜率(張/日)", 0),
+    
+    # --- B4. 52 週位階、打底天數與策略發動標籤 ---
+    "dist_to_52w_high_pct": ("距52週高點(%)", 2),
+    "dist_52w_high_val": ("距52週高點(%)", 2),
+    "dist_52w_high": ("距52週高點(%)", 2),
+    "high_52w": ("52週最高價", 2),
+    "low_52w": ("52週最低價", 2),
+    "base_consolidation_days": ("打底沉澱天數", 0),
+    "base_days": ("打底天數", 0),
+    "is_ols_exempt": ("飆股豁免啟動", None),
+    "ols_exempt_flag": ("飆股豁免啟動", None),
+    "vol_surge_ratio": ("量能爆發倍數", 2),
+    "vol_ratio": ("量能爆發倍數", 2),
+    "trigger_mode": ("觸發模式", None),
+    "mode": ("觸發模式", None),
+    "turnover": ("成交金額(億元)", 2),
+    "turnover_amount_100m": ("成交金額(億元)", 2),
+    "daily_amount_100m": ("成交金額(億元)", 2),
 }
 
-TOTAL_COLUMN_MAPPER = {
-    **FINMIND_COLUMN_MAPPER,
-    **MARKET_COLUMN_MAPPER,
-    **TECHNICAL_INDICATOR_MAPPER,
+# ==============================================================================
+# 🌟 全域 Master 總規格對照表 (融合 A1 個股 + A2 大盤 + B 技術面)
+# 說明：後續選股引擎將直接使用 TOTAL_SPECS 進行自動欄位提煉與中文化轉譯。
+# ==============================================================================
+TOTAL_SPECS = {
+    **FINMIND_SPECS,
+    **MARKET_SPECS,
+    **TECHNICAL_SPECS,
 }
 
 def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
