@@ -774,8 +774,8 @@ def run_qiantang_strategy_range_scan(
                 safe_sheet_name = str(strat_name)[-31:]
                 
                 sheet_df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
-                
-      """
+
+        """
       dashboard_df.to_excel(
           writer, sheet_name="🎯 區間綜合強勢股儀表板", index=False
       )
