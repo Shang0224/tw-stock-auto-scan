@@ -863,7 +863,7 @@ def run_qiantang_strategy_range_scan(
         sheet_df = sheet_df.drop(columns=["strategy_name"], errors="ignore")
           
         strat_csv_name = (
-          f"{func_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
+          f"{strat_name}_{start_date_str}_to_{end_date_str}_{current_time_str}.csv"
         )
         strat_csv_path = os.path.join(output_dir, strat_csv_name)
         sheet_df.to_csv(strat_csv_path, index=False, encoding="utf-8-sig")
@@ -872,7 +872,7 @@ def run_qiantang_strategy_range_scan(
           strat_orig_content = f.read()
 
         with open(strat_csv_path, "w", encoding="utf-8-sig") as f:
-          f.write(f"策略公式: ,{func_name}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
+          f.write(f"策略公式: ,{strat_name}, Stock Data:,{stock_data}, 大盤濾網: {USE_MARKET_FILTER}\n")
           f.write(strat_orig_content)
 
         print(f"📁 單獨策略 CSV 檔 [{func_name}] 已成功匯出至：【{strat_csv_path}】")
