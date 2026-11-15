@@ -259,10 +259,7 @@ def scan_qiantang_strategy_day(
         # 攔截該檔股票當天發生的任何例外    
         print(f'⚠️ [股票掃描跳過] 股票代號: {stock_id} | 日期: {day_str} | 錯誤: {e}')
         continue
-
-
-
-      
+     
     if hits:
       # 取得觸發當日 (Day T) 的預處理資料列
       latest_row = df_single.iloc[-1]
@@ -285,8 +282,8 @@ def scan_qiantang_strategy_day(
           # =================================================================
           # 📌 1. 基本資訊：實盤建倉買進日 (Day 0) 基礎標籤
           # =================================================================
-          strat_func_name = hit.get("strategy_name", hit.get("選股公式", ""))
-          formula_label = hit.get("選股公式", strat_func_name if strat_func_name else "未知策略")
+          strat_func_name = hit.get("strategy_name", hit.get("選股策略", ""))
+          formula_label = hit.get("選股策略", strat_func_name if strat_func_name else "未知策略")
         
           try:
             delay_days_val = int(hit.get("delay_days", 0))
@@ -321,7 +318,7 @@ def scan_qiantang_strategy_day(
           #  hit_record["右側觀察天數"] = delay_days_val
           
           for key, value in hit.items():
-            if key in ["strategy_name", "選股公式"]:
+            if key in ["strategy_name", "選股策略"]:
                 continue  # 忽略已顯式處理或廢棄的欄位                
             if key not in hit_record:
                 hit_record[key] = value
@@ -349,12 +346,7 @@ def scan_qiantang_strategy_day(
           # 🧬 4. Tbase 發動日技術與籌碼基因特徵 (含新股 N/A 防護)
           # =================================================================
           vol_t0_lots = int(round(float(row_t0.get("Trading_Volume", 0)) / 1000.0))
-          hit_record.update({
-            # 發動日基礎
-            "Tbase發動日期": str(row_t0.get("date", day_str)),
-            "Tbase收盤價": round(float(row_t0.get("close", close_price)), 2),
-            "Tbase成交量(張)": vol_t0_lots,
-            
+          hit_record.update({        
             # K線型態與特徵
             "實體K棒比例(%)": round(float(row_t0.get("body_ratio", 0)), 2),
             "上影線比例(%)": round(float(row_t0.get("upper_shadow_ratio", 0)), 2),
@@ -737,7 +729,7 @@ def run_qiantang_strategy_range_scan(
         results_by_strat[s_name].append(record)
           
         """
-        s_name = record["選股公式"]
+        s_name = record["選股策略"]
         if s_name in results_by_formula:
           results_by_formula[s_name].append(record)
         """
@@ -774,10 +766,10 @@ def run_qiantang_strategy_range_scan(
     key = (hit["日期"], hit["股票代號"])
     if key not in dashboard_dict:
       item = hit.copy()
-      item["符合公式清單"] = [hit["選股公式"]]
+      item["符合公式清單"] = [hit["選股策略"]]
       dashboard_dict[key] = item
     else:
-      dashboard_dict[key]["符合公式清單"].append(hit["選股公式"])
+      dashboard_dict[key]["符合公式清單"].append(hit["選股策略"])
 
   dashboard_rows = []
   for item in dashboard_dict.values():
@@ -785,7 +777,7 @@ def run_qiantang_strategy_range_scan(
     row_data = item.copy()
     row_data["符合公式總數"] = len(formulas)
     row_data["符合公式明細"] = "、".join(formulas)
-    row_data.pop("選股公式", None)  # 移除單一公式欄位，改用明細欄位代替
+    row_data.pop("選股策略", None)  # 移除單一公式欄位，改用明細欄位代替
     dashboard_rows.append(row_data)
 
   dashboard_df = (
