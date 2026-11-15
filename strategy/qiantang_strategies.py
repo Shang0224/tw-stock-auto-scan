@@ -438,6 +438,7 @@ def st_qiantang_f2_volume_breakout(
 
     return is_hit, {
         "mode": mode_name,
+        "delay_days": pos_idx,
         "turnover": turnover,
         "change_pct": change_pct,
         "vol": v0,
@@ -493,6 +494,7 @@ def st_qiantang_f2_volume_breakout(
 
       return True, {
           "選股公式": "F2_出量上輕 (T-1強勢攻擊)",
+          "delay_days": info_t1["delay_days"],
           "操作建議": (
               f"昨日突破 ({info_t1['mode']})，今日展現 Level 2 強勢跳空"
               f" (+{gap_pct:.1f}%) 並收紅 K，主力買盤強烈，攻勢延續。"
@@ -567,6 +569,7 @@ def st_qiantang_f2_volume_breakout(
 
       return True, {
           "選股公式": "F2_出量上輕 (T-2洗盤確認)",
+          "delay_days": info_t2["delay_days"],
           "操作建議": (
               f"前日突破 ({info_t2['mode']})，買盤純度達"
               f" {body_ratio_2*100:.0f}%，經過兩日沉澱洗盤守住成本線，今日轉強紅"
