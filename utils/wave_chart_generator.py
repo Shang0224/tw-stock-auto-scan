@@ -3,12 +3,24 @@ import os
 import re
 import shutil
 from datetime import datetime
-import matplotlib
+import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+# 1. 依作業系統設定支援中文的字型優先順序
+plt.rcParams['font.sans-serif'] = [
+    'Microsoft JhengHei',   # Windows 微軟正黑體
+    'Noto Sans CJK TC',     # Linux / Docker 思源黑體
+    'WenQuanYi Micro Hei',  # Linux 文泉驛微米黑
+    'PingFang TC',          # macOS 蘋果蘋方字型
+    'Arial Unicode MS'
+]
+
+# 2. 解決負號 '-' 顯示為方塊亂碼的問題
+plt.rcParams['axes.unicode_minus'] = False
 
 
 def parse_perf_field(val):
