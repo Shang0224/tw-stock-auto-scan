@@ -151,7 +151,7 @@ TEST_QIANTANG_STRATEGY = [
 ]
 
 CHOSEN_SOURCE = "fm"
-TEST_START_DATE = "2025-01-01"  # 測試起始日期 (YYYY-MM-DD)
+TEST_START_DATE = "2015-01-01"  # 測試起始日期 (YYYY-MM-DD)
 TEST_END_DATE = "2025-09-30"    # 測試結束日期 (YYYY-MM-DD) 2025/9/30
 DAYS_BEFORE = 400               # 歷史技術指標計算緩衝天數, 配合某些策略要T+N日, 故從365天向前增加至400
 
@@ -162,7 +162,7 @@ MARKET_FILTER_KEY = "EMA60"     # 大盤門檻指標 (預設季線 EMA60)
 # ==============================================================================
 # 🎛 走勢圖繪製控制開關
 # ==============================================================================
-GENERATE_WAVE_CHARTS = True  # 選股完成後是否自動繪製波段 K 線走勢圖
+GENERATE_WAVE_CHARTS = False  # 選股完成後是否自動繪製波段 K 線走勢圖
 
 # 🌟 檔案輸出控制開關
 EXPORT_EXCEL = True            # 是否輸出與上傳 Excel 報告
