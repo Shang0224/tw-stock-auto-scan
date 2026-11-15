@@ -1165,12 +1165,31 @@ SOP v2.0》
     advice_str = '雙策略均未觸發訊號。'
 
   # 4. 輸出資訊字典
+  # -------------------------------------------------------------------------
+  # 4. 回傳策略資訊字典 (改寫為呼叫 make_info 標準規範函式)
+  # -------------------------------------------------------------------------
+  info = (
+      make_info(
+          strategy_name=func_name,
+          position=suggested_position,
+          stop_loss=stop_loss_str,
+          win_rate=win_rate_str,
+          drawdown=drawdown_str,
+          advice=advice_str,
+          doc_ref="洗盤後MID100策略統計資料20261108_2237.pdf",
+          # 🌟 特有自訂欄位透過 **extra_fields 動態合流
+          訊號評等=tier_label,
+      )
+      if is_hit
+      else {}
+  )
+
+    return is_hit, info
+    
+  """
   info = (
       {
           '選股策略': func_name,
-          '股票代號': stock_id_str,
-          '訊號日期': date_t0_str,
-          '當日收盤價': f'{close_t0:.2f}元',
           '訊號評等': tier_label,
           '建議部位': suggested_position,
           '停損價格': stop_loss_str,
@@ -1182,6 +1201,8 @@ SOP v2.0》
       if is_hit
       else {}
   )
+  """
+ 
 
   return is_hit, info
 
