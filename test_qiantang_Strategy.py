@@ -794,9 +794,16 @@ def run_qiantang_strategy_range_scan(
   if EXPORT_EXCEL:
     with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
         # Sheet 1: 綜合強勢股儀表板
-        if all_hits_list:
-            # 進行 Dashboard 彙整...
-            dashboard_df.to_excel(writer, sheet_name="🎯 綜合強勢股儀表板", index=False)
+
+        # 🌟 防呆檢查：若區間內無任何策略觸發，安全結束
+        if not all_hits_list:
+            print("ℹ️ [提示] 該天期區間內無任何策略觸發符合條件之個股，安全結束報表匯出與後續作業。")
+            return
+        
+        # 直接進行 Dashboard 彙整與 Excel 匯出
+        print(f"📊 開始彙整策略觸發結果，共 {len(all_hits_list)} 筆觸發紀錄...")
+        
+        dashboard_df.to_excel(writer, sheet_name="🎯 綜合強勢股儀表板", index=False)
 
         # Sheet 2~N: 個別策略詳細結果 (依 results_by_strat 動態開頁)
         for strat_name, data_list in results_by_strat.items():
