@@ -302,6 +302,7 @@ def scan_qiantang_strategy_day(
             "今日收盤": close_price,      # 實際買進成本價
             "今日成交量(張)": vol_lots,
             "成交金額(億元)": amount_100m,
+            "選股公式": hit.get("選股公式", "未知策略"),  # 🌟 顯式寫入，防止 KeyError
           }
 
           # =================================================================
@@ -314,6 +315,8 @@ def scan_qiantang_strategy_day(
           #  hit_record["右側觀察天數"] = delay_days_val
           
           for key, value in hit.items():
+            if key in ["strategy_name", "選股公式"]:
+                continue  # 忽略已顯式處理或廢棄的欄位                
             if key not in hit_record:
                 hit_record[key] = value
 
