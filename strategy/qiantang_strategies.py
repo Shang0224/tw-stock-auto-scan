@@ -8,6 +8,36 @@ import numpy as np
 import sys
 from strategy.config import DEBUG_VERBOSE, BUY_PARAM_PROFILES
 
+def make_info(
+    strategy_name: str,
+    position: str = "N/A",
+    stop_loss: str = "N/A",
+    win_rate: str = "N/A",
+    drawdown: str = "N/A",
+    advice: str = "N/A",
+    doc_ref: str = "N/A",
+    **extra_fields
+) -> dict:
+    """
+    錢塘潮選股策略標準回傳 info 工廠函式
+    7 大標準欄位預設值統一為 'N/A'，並支援 **extra_fields 動態擴充策略特有欄位。
+    """
+    info = {
+        "選股策略": strategy_name,
+        "建議部位": position,
+        "停損價格": str(stop_loss),
+        "最佳績效": str(win_rate),
+        "最大回檔": str(drawdown),
+        "操作建議": advice,
+        "策略文件": doc_ref,
+    }
+
+    # 自動合流該策略額外傳入的特有欄位 (例如：'訊號評等', '所屬軌道' 等)
+    if extra_fields:
+        info.update(extra_fields)
+
+    return info
+
 def check_market_trend(market_info: dict, filter_key: str = "taiex_EMA60") -> bool:
     """
     【大盤趨勢純邏輯檢查】
