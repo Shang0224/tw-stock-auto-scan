@@ -4,6 +4,8 @@ import re
 import shutil
 from datetime import datetime
 import matplotlib
+matplotlib.use('Agg')  # 🌟 必須在 import pyplot 之前執行
+
 import matplotlib.dates as mdates
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
@@ -86,7 +88,7 @@ def group_signals_into_waves(stock_df):
 
 def plot_single_wave_chart(wave_info, kline_df, save_path):
     """繪製單一波段 K 線圖，智慧避避高低點、持倉極值與觸發點標籤重疊。"""
-    matplotlib.use('Agg')
+    #matplotlib.use('Agg')
     
     """
     plt.rcParams['font.sans-serif'] = [
@@ -393,7 +395,7 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
     plt.tight_layout()
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close()
+    plt.close(fig)
     return True
 
 
