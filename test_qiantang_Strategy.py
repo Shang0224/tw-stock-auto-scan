@@ -308,7 +308,7 @@ def scan_qiantang_strategy_day(
             "今日收盤": close_price,      # 實際買進成本價
             "今日成交量(張)": vol_lots,
             "成交金額(億元)": amount_100m,
-            "選股公式": hit.get("選股公式", "未知策略"),  # 🌟 顯式寫入，防止 KeyError
+            "選股策略": hit.get("選股策略", "未知策略"),  # 🌟 顯式寫入，防止 KeyError
           }
 
           # =================================================================
@@ -730,7 +730,7 @@ def run_qiantang_strategy_range_scan(
         all_hits_list.append(record)
 
         # 🌟 2. 動態建 Key 寫入 results_by_strat
-        s_name = record["選股公式"]
+        s_name = record["選股策略"]
         if s_name not in results_by_strat:
             results_by_strat[s_name] = []
             
