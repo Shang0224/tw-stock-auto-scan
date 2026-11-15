@@ -1055,8 +1055,9 @@ SOP v2.0》
   profile = profile or {}
 
   # 1. 歷史 K 線筆數驗證
-  if len(df_single) < 60 or len(df_single) <= delay_days:
-    return False, {}
+  min_required_len = 60 + delay_days
+  if len(df_single) < min_required_len:
+      return False, {}  # 安全返回 False，不拋出例外崩潰
 
   t0_pos = -(1 + delay_days)
   row_t0 = df_single.iloc[t0_pos]
