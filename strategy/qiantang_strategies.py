@@ -956,6 +956,207 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
+
+def st_qiantang_f3_mid100_resonance_2237(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 3,
+    market_info: dict = None,
+) -> tuple[bool, dict]:
+
+"""=============================================================================
+
+【策略名稱】：st_qiantang_f3_mid100_resonance_2237 (中型100
+雙策略共振實戰總控模組)
+【規範依據】：《2237 版中型100 雙策略搭配量化分析報告》與《策略程式開發規範
+SOP v2.0》
+=============================================================================
+
+一、 策略設計邏輯與架構：
+    1.
+    本模組為實戰下單總控層，同時呼叫『1102_1 (動態量價共振版)』與『mid100_1108
+    (純第一軌專用版)』。
+    2.
+    依據兩策略於發動日 (T0)
+    之觸發狀態與價格位階，將訊號精準劃分為三大實戰階層：
+       - S 級 (第一軌雙重共振)：1102_1 第一軌 (距52W高點 >= -15%) 與 mid100_1108
+       同日同時觸發。
+       - A 級 (高位常態部隊)：僅 mid100_1108 觸發 (1102_1
+       因單筆均張或均量比過嚴未觸發)。
+       - D 級 (高危風控攔截)：僅 1102_1 觸發 (含發動當天主力暴倒貨 5
+       檔與第二軌低位崩跌地雷 4 檔)。
+
+二、 各階層回測數據與風控規範 (2015-2025 10.75年實體回測依據)：
+    -------------------------------------------------------------------------
+    【S 級：🔥 雙策略同日共振】
+    - 數據表現：勝率 73.7% (Cat1+2) | Cat1飆股率 52.6% | Cat3陷阱率僅 10.5%
+    - 獲利極值：1Y MFE 均值 +124.0% (最大值 +780.1% / 最小值 +2.1%)
+    - 風控極值：1Y MAE 均值 -6.7% (最差 -17.6%) | 一年最深 -31.8% | 創高前平均回測僅
+    -2.97% (起漲幾乎不甩轎)
+    - 風控機制：停損比例 -8.0% (停損價格 = 收盤價 * 0.92) | 建議部位 15%~20%
+    (重倉)
+    - 停利機制：持倉浮盈達 +30% 時，啟動自高點拉回 -10% 之移動停利
+    (Trailing Stop)
+
+    -------------------------------------------------------------------------
+    【A 級：⭐️ 高位常態部隊】
+    - 數據表現：勝率 63.0% (Cat1+2) | Cat1飆股率 30.7% | Cat3陷阱率 17.2%
+    - 獲利極值：1Y MFE 均值 +50.9% (最大值 +780.1% / 最小值 -0.2%)
+    - 風控極值：1Y MAE 均值 -7.5% (最差 -21.4%) | 一年最深 -37.3%
+    - 風控機制：停損比例 -10.0% (停損價格 = 收盤價 * 0.90) | 建議部位 8%~10%
+    (標準倉)
+    - 停利機制：持倉達月波段 (T+20) 且浮盈 > +15% 時，停損點上移至成本價保本
+
+    -------------------------------------------------------------------------
+    【D 級：🛑 高危風控攔截/禁買】
+    - 數據表現：勝率僅 22.2% | Cat3陷阱率高達 55.6% 💥 (地雷過半)
+    - 獲利極值：1Y MFE 均值 +18.1% (最大值 +107.2% / 最小值 +0.1%)
+    - 風控極值：1Y MAE 均值 -13.4% (最差 -19.7%) | 一年最深 -38.7%
+    - 風控機制：系統判定為無效高危訊號，自動攔截不進場 (is_hit = False) |
+    建議部位 0%
+
+三、 停損價格計算公式：
+    - S 級停損價 ＝ round(當日收盤價 * (1.0 - 0.08), 2)
+    - A 級停損價 ＝ round(當日收盤價 * (1.0 - 0.10), 2)
+=============================================================================
+"""
+  func_name = sys._getframe().f_code.co_name
+  profile = profile or {}
+
+  # 1. 歷史 K 線筆數驗證
+  if len(df_single) < 60 or len(df_single) <= delay_days:
+    return False, {}
+
+  t0_pos = -(1 + delay_days)
+  row_t0 = df_single.iloc[t0_pos]
+  row_today = df_single.iloc[-1]
+
+  # 確定欄位直接索引存取 (缺失直接拋出 KeyError)
+  stock_id_str = str(row_t0['stock_id'])
+  date_t0_str = str(row_t0['date'])
+  date_confirm_str = str(row_today['date'])
+  close_t0 = float(row_t0['close'])
+  vol_t0 = float(row_t0['Trading_Volume'])
+  dist_52w_high_val = float(row_t0['dist_to_52w_high_pct'])
+  amount_100m = float(vol_t0 * close_t0 / 100_000_000.0)
+
+  # 2. 獨立呼叫雙子策略進行訊號掃描
+  hit_1102_1, info_1102_1 = st_qiantang_f3_after_shakeout_1102_1(
+      df_single=df_single,
+      profile=profile,
+      verbose=False,
+      delay_days=delay_days,
+      market_info=market_info,
+  )
+  hit_1108, info_1108 = st_qiantang_f3_after_shakeout_mid100_1108(
+      df_single=df_single,
+      profile=profile,
+      verbose=False,
+      delay_days=delay_days,
+      market_info=market_info,
+  )
+
+  is_1102_1_track1 = hit_1102_1 and (dist_52w_high_val >= -15.0)
+
+  # 3. 判斷分級、計算停損價格與設定 MFE (極值與最小值) 績效字串
+  if is_1102_1_track1 and hit_1108:
+    # 🔥 S 級：停損比例 -8.0%
+    stop_loss_ratio = 0.08
+    stop_loss_price = round(close_t0 * (1.0 - stop_loss_ratio), 2)
+
+    is_hit = True
+    tier_label = '🔥 S級 (第一軌雙重共振)'
+    suggested_position = '15% ～ 20% (重倉)'
+    stop_loss_str = f'{stop_loss_price:.2f} 元 (-8.0% 精準停損)'
+    win_rate_str = (
+        '勝率 73.7% (Cat1+2) | Cat1飆股率 52.6% | 預期 MFE均值 +124.0% (最大'
+        ' +780.1% / 最小 +2.1%)'
+    )
+    drawdown_str = (
+        'Cat3陷阱率 10.5% | 1Y MAE均值 -6.7% (最差 -17.6%) | 一年最深 -31.8%'
+    )
+    advice_str = (
+        '觸發 1102_1 第一軌與 mid100_1108 同日雙重共振！2015-2025'
+        ' 回測創高前平均回測僅 -2.97%，起漲幾乎不甩轎，建議重倉配置'
+        ' (15%~20%)。掛緊'
+        f' {stop_loss_price:.2f}元 (-8.0%) 精準停損；浮盈達 +30% 啟動拉回 -10%'
+        ' 移動停利鎖定利潤。'
+    )
+
+  elif hit_1108 and (not is_1102_1_track1):
+    # ⭐️ A 級：停損比例 -10.0%
+    stop_loss_ratio = 0.10
+    stop_loss_price = round(close_t0 * (1.0 - stop_loss_ratio), 2)
+
+    is_hit = True
+    tier_label = '⭐️ A級 (高位常態部隊)'
+    suggested_position = '8% ～ 10% (標準倉)'
+    stop_loss_str = f'{stop_loss_price:.2f} 元 (-10.0% 硬停損)'
+    win_rate_str = (
+        '勝率 63.0% (Cat1+2) | Cat1飆股率 30.7% | 預期 MFE均值 +50.9% (最大'
+        ' +780.1% / 最小 -0.2%)'
+    )
+    drawdown_str = (
+        'Cat3陷阱率 17.2% | 1Y MAE均值 -7.5% (最差 -21.4%) | 一年最深 -37.3%'
+    )
+    advice_str = (
+        '僅 mid100_1108 通過，屬高位常態配置部隊 (年均提供 17.4'
+        ' 檔充沛容量)。建議標準倉位配置 (8%~10%)。嚴格執行'
+        f' {stop_loss_price:.2f}元 (-10.0%) 硬停損紀律；持倉 T+20 浮盈 > +15%'
+        ' 時停損點上移至成本價保本。'
+    )
+
+  elif hit_1102_1 and (not hit_1108):
+    # 🛑 D 級：系統自動攔截
+    is_hit = False
+    tier_label = '🛑 D級 (高危風控攔截/禁買)'
+    suggested_position = '0% (嚴格禁買)'
+    stop_loss_str = '不適用 (系統攔截不進場)'
+    win_rate_str = (
+        '勝率 22.2% (Cat1+2) | Cat1飆股率 11.1% | 預期 MFE均值 +18.1% (最大'
+        ' +107.2% / 最小 +0.1%)'
+    )
+    drawdown_str = (
+        'Cat3陷阱率 55.6% 💥 | 1Y MAE均值 -13.4% (最差 -19.7%) | 一年最深'
+        ' -38.7%'
+    )
+    advice_str = (
+        '僅 1102_1 通過，系統判定為無效高危訊號，Cat3陷阱率高達 55.6%，系統自動攔截不進場！'
+    )
+
+  else:
+    is_hit = False
+    tier_label = '未通過'
+    suggested_position = '0%'
+    stop_loss_str = 'N/A'
+    win_rate_str = 'N/A'
+    drawdown_str = 'N/A'
+    advice_str = '雙策略均未觸發訊號。'
+
+  # 4. 輸出資訊字典
+  info = (
+      {
+          '選股公式': func_name,
+          '股票代號': stock_id_str,
+          '訊號日期': date_t0_str,
+          '當日收盤價': f'{close_t0:.2f}元',
+          '訊號評等': tier_label,
+          '建議部位': suggested_position,
+          '停損價格': stop_loss_str,
+          '最佳績效': win_rate_str,
+          '最大回檔': drawdown_str,
+          '操作建議': advice_str,
+      }
+      if is_hit
+      else {}
+  )
+
+  return is_hit, info
+
+
+
+
 def st_qiantang_f3_after_shakeout_ICDesign_1109(
     df_single: pd.DataFrame,
     profile: dict = None,
