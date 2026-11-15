@@ -1184,8 +1184,6 @@ SOP v2.0》
       else {}
   )
 
-    return is_hit, info
-    
   """
   info = (
       {
