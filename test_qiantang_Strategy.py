@@ -24,6 +24,9 @@ from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth,      # 筆張現形
     st_qiantang_f2_volume_breakout, # 出量上輕
     st_qiantang_f3_after_shakeout,  # 洗盤後
+
+    st_qiantang_f3_mid100_resonance_2237, #MID100專用策略
+
     st_qiantang_f3_after_shakeout_20261001,
     st_qiantang_f3_after_shakeout_20261001_1,
     st_qiantang_f3_after_shakeout_20261001_1_1,
