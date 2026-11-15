@@ -33,11 +33,23 @@ def calculate_wave_dedup_info(hits_list: list[dict], max_gap_days: int = 90) -> 
         return hits_list
 
     df = pd.DataFrame(hits_list)
+
+    # 🛑 1. 強制檢查依賴欄位：若未經過 extreme_perf 處理，直接終止並明確提示
+    required_cols = ['1Y內最高績效', '1Y內最低績效']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    
+    if missing_cols:
+        raise ValueError(
+            f"\n[資料流水線錯誤] 執行波段去重 (calculate_wave_dedup_info) 失敗！\n"
+            f"原因：傳入的資料缺少欄位 {missing_cols}。\n"
+            f"解決方式：請務必先呼叫 calculate_one_year_extremes寫入前瞻極值資訊後，再進行波段去重。"
+        )
+    
     df['dt_temp'] = pd.to_datetime(df['日期'])
 
     # 🌟 直接存取系統固定的極值欄位，免去任何 if ... in df.columns 判斷
-    df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date_from_perf_str)
-    df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date_from_perf_str)
+    #df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date_from_perf_str)
+    #df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date_from_perf_str)
 
     # 依 [股票代號, 觸發日期] 遞增排序
     df = df.sort_values(by=['股票代號', 'dt_temp']).reset_index(drop=True)
