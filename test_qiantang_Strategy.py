@@ -254,6 +254,9 @@ def scan_qiantang_strategy_day(
         print(f'⚠️ [股票掃描跳過] 股票代號: {stock_id} | 日期: {day_str} | 錯誤: {e}')
         continue
 
+
+
+      
     if hits:
       # 取得觸發當日 (Day T) 的預處理資料列
       latest_row = df_single.iloc[-1]
@@ -274,108 +277,122 @@ def scan_qiantang_strategy_day(
 
       for hit in hits:
           # =================================================================
-          # 📌 第一部分：買進日資訊 (Entry Date — 實盤下單 Day 0)
+          # 📌 1. 基本資訊：實盤建倉買進日 (Day 0) 基礎標籤
           # =================================================================
+          strat_func_name = hit.get("strategy_name", hit.get("選股公式", ""))
+          formula_label = hit.get("選股公式", strat_func_name if strat_func_name else "未知策略")
+        
+          try:
+            delay_days_val = int(hit.get("delay_days", 0))
+          except (ValueError, TypeError):
+            delay_days_val = 0
+
+          # 精準定位 Tbase 發動日相對資料列 (-1 - delay_days)
+          t0_pos = -(1 + delay_days_val)
+          if len(df_single) >= abs(t0_pos):
+            row_t0 = df_single.iloc[t0_pos]
+          else:
+            row_t0 = latest_row
+
           hit_record = {
-              "日期": day_str,  # 實盤建倉買進日 (Tbase + delay_days)
-              "股票代號": sid,
-              "名稱": stock_name,
-              "選股池分類": stock_cat,
-              "今日收盤": close_price,  # 實際買進成本價
-              "今日成交量(張)": vol_lots,
-              "成交金額(億元)": amount_100m,
-              #"選股公式": formula_label,
-              #"strategy_name": strat_func_name,
-              #"選股公式": strat_func_name,
-              #"操作建議": hit.get("操作建議", hit.get("detail", "")),
+            "日期": day_str,              # 實盤建倉買進日 (Confirmation Date)
+            "股票代號": sid,
+            "名稱": stock_name,
+            "選股池分類": stock_cat,
+            "今日收盤": close_price,      # 實際買進成本價
+            "今日成交量(張)": vol_lots,
+            "成交金額(億元)": amount_100m,
           }
 
-          # 遍歷 hit 字典中的每個鍵值對，若欄位尚未存在於 hit_record，則自動補充寫入
-          # 確保不論策略回傳「所屬軌道」、「飆股豁免啟動」、「跳空細節」等任何自訂 Key 都能 100% 完整產出至報表
+          # =================================================================
+          # 🌟 2. 策略動態回傳資料 (Strategy Hits) ➔ 【移至大盤資料之前】
+          # =================================================================
+          # 自動透傳策略內部的自訂診斷指標（如：'所屬軌道'、'Tbase+3觀察期報酬'、'飆股豁免啟動' 等）
+          # 既可保持 100% 欄位無損輸出，又不會覆蓋基本資訊
+
+          #if delay_days_val > 0: 
+          #  hit_record["右側觀察天數"] = delay_days_val
+          
           for key, value in hit.items():
-              if key not in hit_record:
-                  hit_record[key] = value
+            if key not in hit_record:
+                hit_record[key] = value
 
-          # 4. 查閱當日大盤環境數據
-          #m_info = market_dict.get(day_str, {}) if market_dict else {}
-          m_close = float(market_info.get("taiex_close"))
-          m_ma60 = float(market_info.get("taiex_MA60"))
+          # =================================================================
+          # 🛡️ 3. 大盤環境資訊 (Market Environment Info)
+          # =================================================================
+          if market_info and isinstance(market_info, dict):
+            m_close = float(market_info.get("taiex_close", 0))
+            m_ma60 = float(market_info.get("taiex_MA60", 0))
 
-          # 建倉日大盤環境
-          hit_record.update({              
-              "大盤位階": ("大盤>MA60" if m_close > m_ma60 else "大盤<=MA60"),
-              "大盤當日漲跌幅(%)": round(float(market_info.get("taiex_change_pct", 0)), 2),
-              
-              "大盤EMA60斜率(5日差值/OLS)": round(float(market_info.get("taiex_EMA60_slope", 0)), 4),
-              "大盤EMA60月乖離率(%)": round(float(market_info.get("taiex_ema60_bias_pct", 0)), 2),
+            hit_record.update({
+                "大盤收盤": m_close,
+                "大盤位階": ("大盤>MA60" if (m_close > 0 and m_ma60 > 0 and m_close > m_ma60) else "大盤<=MA60"),
+                "大盤當日漲跌幅(%)": round(float(market_info.get("taiex_change_pct", 0)), 2),
+                "大盤EMA60斜率(5日差值/OLS)": round(float(market_info.get("taiex_EMA60_slope", 0)), 4),
+                "大盤EMA60月乖離率(%)": round(float(market_info.get("taiex_ema60_bias_pct", 0)), 2),
+                "大盤月線乖離率(%)": round(float(market_info.get("taiex_ma20_bias_pct", 0)), 2),
+                "大盤季線乖離率(%)": round(float(market_info.get("taiex_ma60_bias_pct", 0)), 2),
+                "大盤年線乖離率(%)": round(float(market_info.get("taiex_ma240_bias_pct", 0)), 2),
+                "大盤季線與年線乖離率(%)": round(float(market_info.get("taiex_ma60_ma240_bias_pct", 0)), 2),
+            })
 
-              "大盤月線乖離率(%)": round(float(market_info.get("taiex_ma20_bias_pct", 0)), 2),
-              "大盤季線乖離率(%)": round(float(market_info.get("taiex_ma60_bias_pct", 0)), 2),
-              "大盤年線乖離率(%)": round(float(market_info.get("taiex_ma240_bias_pct", 0)), 2),
-              "大盤季線與年線乖離率(%)": round(float(market_info.get("taiex_ma60_ma240_bias_pct", 0)), 2),
-          })
-
-          delay_days_val = hit.get("delay_days", 0)  # 若無 delay_days 則預設為 0
-
-          # 依 delay_days 動能精準定位 Tbase 發動日相對資料列 (-1 - delay_days)
-          if len(df_single) >= (1 + delay_days_val):
-              t0_pos = -(1 + delay_days_val)
-              row_t0 = df_single.iloc[t0_pos]
-          else:
-              row_t0 = latest_row
-          
+          # =================================================================
+          # 🧬 4. Tbase 發動日技術與籌碼基因特徵 (含新股 N/A 防護)
+          # =================================================================
+          vol_t0_lots = int(round(float(row_t0.get("Trading_Volume", 0)) / 1000.0))
           hit_record.update({
-              # K線型態與特徵 (Tbase)
-              "實體K棒比例(%)": round(float(row_t0.get("body_ratio", 0)), 2),
-              "上影線比例(%)": round(float(row_t0.get("upper_shadow_ratio", 0)), 2),
-              "是否紅K": bool(row_t0.get("is_red_k", True)),
-              "距52週高點(%)": round(float(row_t0["dist_to_52w_high_pct"]), 2),
-              "打底沉澱天數": int(row_t0.get("base_consolidation_days", 0)),
-              
-              "單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
-              "前5日均量(張)": int(round(float(row_t0.get("vol_ma5_prior", row_t0.get("vol_ma5", 0))) / 1000.0)),
-              "前20日均量(張)": int(round(float(row_t0.get("vol_ma20_prior", row_t0.get("vol_ma20", 0))) / 1000.0)),
-              "前5日均量斜率(%/日)": round(float(row_t0.get("vol_ma5_slope_prior_pct", 0)), 2),
-              "前20日均量斜率(%/日)": round(float(row_t0.get("vol_ma20_slope_prior_pct", 0)), 2),
-              "前5日均量斜率(張/日)": round(float(row_t0.get("vol_ma5_slope_prior_lots", 0)), 1),
-              "前20日均量斜率(張/日)": round(float(row_t0.get("vol_ma20_slope_prior_lots", 0)), 1),
-              "量價共振標記": bool(hit.get("量價共振標記", False)),
-          
-              # 輕鬆線動能 (Tbase)
-              "輕鬆線價格": round(float(row_t0.get("easy_line", 0)), 2),
-              "輕鬆線乖離率(%)": round(float(row_t0.get("easy_line_bias", 0)), 2),
-              "輕鬆線OLS斜率": round(float(row_t0.get("easy_line_slope", 0)), 4),
-              
-              # 均線位階與扣抵 (Tbase)
-              "MA60季線": round(float(row_t0.get("MA60", 0)), 2),
-              "MA60斜率": round(float(row_t0.get("ma60_slope", 0)), 4),
-              "季線乖離率(%)": round(float(row_t0.get("ma60_bias", 0)), 2),
-              "季線扣抵位置(%)": round(float(row_t0.get("ma60_deduct_bias", 0)), 2),
-              
-              "MA240年線": round(float(row_t0["MA240"]), 2),
-              "MA240斜率": round(float(row_t0.get("ma240_slope", 0)), 4),
-              "年線乖離率(%)": round(float(row_t0["ma240_bias"]), 2),
-              "年線扣抵位置(%)": round(float(row_t0["ma240_deduct_bias"]), 2),
-
-              "均線多頭排列": bool(row_t0.get("is_bull_alignment")),
-              "均線糾結度(%)": round(float(row_t0["ma_tangle_ratio"]), 2),
+            # 發動日基礎
+            "Tbase發動日期": str(row_t0.get("date", day_str)),
+            "Tbase收盤價": round(float(row_t0.get("close", close_price)), 2),
+            "Tbase成交量(張)": vol_t0_lots,
             
-              # 籌碼特徵 (Tbase 發動日動態)
-              "外資買超(張)": safe_lots_from_shares(row_t0.get("Foreign_Investor")),
-              "投信買超(張)": safe_lots_from_shares(row_t0.get("Investment_Trust")),
-              "自營商買超(張)": safe_lots_from_shares(row_t0.get("Dealer_self")),
-              "主力買超(張)": safe_lots_from_shares(row_t0.get("major_net")),
-              "外資近5日累計(張)": safe_lots_from_shares(row_t0.get("foreign_5d_shares_sum")),
-              "投信近5日累計(張)": safe_lots_from_shares(row_t0.get("trust_5d_shares_sum")),
-              "主力近5日累計(張)": safe_lots_from_shares(row_t0.get("major_5d_shares_sum")),
-              "融資餘額(張)": safe_lots_from_lots(row_t0.get("MarginPurchaseTodayBalance")),
-              "融資當日增減(張)": safe_lots_from_lots(row_t0.get("margin_diff_shares")),
-              "融券餘額(張)": safe_lots_from_lots(row_t0.get("ShortSaleTodayBalance")),
-              "融券當日增減(張)": safe_lots_from_lots(row_t0.get("short_diff_shares")),
+            # K線型態與特徵
+            "實體K棒比例(%)": round(float(row_t0.get("body_ratio", 0)), 2),
+            "上影線比例(%)": round(float(row_t0.get("upper_shadow_ratio", 0)), 2),
+            "是否紅K": bool(row_t0.get("is_red_k", True)),
+            "距52週高點(%)": round(float(row_t0["dist_to_52w_high_pct"]), 2) if ("dist_to_52w_high_pct" in row_t0 and pd.notnull(row_t0["dist_to_52w_high_pct"])) else "N/A",
+            "打底沉澱天數": int(row_t0.get("base_consolidation_days", 0)),
+            
+            # 均量與動能
+            "單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
+            "前5日均量(張)": int(round(float(row_t0.get("vol_ma5_prior", row_t0.get("vol_ma5", 0))) / 1000.0)),
+            "前20日均量(張)": int(round(float(row_t0.get("vol_ma20_prior", row_t0.get("vol_ma20", 0))) / 1000.0)),
+            "前5日均量斜率(%/日)": round(float(row_t0.get("vol_ma5_slope_prior_pct", 0)), 2),
+            "前20日均量斜率(%/日)": round(float(row_t0.get("vol_ma20_slope_prior_pct", 0)), 2),
+            "前5日均量斜率(張/日)": round(float(row_t0.get("vol_ma5_slope_prior_lots", 0)), 1),
+            "前20日均量斜率(張/日)": round(float(row_t0.get("vol_ma20_slope_prior_lots", 0)), 1),
+        
+            # 輕鬆線與均線位階 (帶新股 N/A 安全護城河)
+            "輕鬆線價格": round(float(row_t0.get("easy_line", 0)), 2),
+            "輕鬆線乖離率(%)": round(float(row_t0.get("easy_line_bias", 0)), 2),
+            "輕鬆線OLS斜率": round(float(row_t0.get("easy_line_slope", 0)), 4),
+            "MA60季線": round(float(row_t0.get("MA60", 0)), 2),
+            "MA60斜率": round(float(row_t0.get("ma60_slope", 0)), 4),
+            "季線乖離率(%)": round(float(row_t0.get("ma60_bias", 0)), 2),
+            "季線扣抵位置(%)": round(float(row_t0.get("ma60_deduct_bias", 0)), 2),
+            "MA240年線": round(float(row_t0["MA240"]), 2) if ("MA240" in row_t0 and pd.notnull(row_t0["MA240"])) else "N/A",
+            "MA240斜率": round(float(row_t0.get("ma240_slope", 0)), 4),
+            "年線乖離率(%)": round(float(row_t0["ma240_bias"]), 2) if ("ma240_bias" in row_t0 and pd.notnull(row_t0["ma240_bias"])) else "N/A",
+            "年線扣抵位置(%)": round(float(row_t0["ma240_deduct_bias"]), 2) if ("ma240_deduct_bias" in row_t0 and pd.notnull(row_t0["ma240_deduct_bias"])) else "N/A",
+            "均線多頭排列": bool(row_t0.get("is_bull_alignment", False)),
+            "均線糾結度(%)": round(float(row_t0["ma_tangle_ratio"]), 2) if ("ma_tangle_ratio" in row_t0 and pd.notnull(row_t0["ma_tangle_ratio"])) else "N/A",
+          
+            # 籌碼特徵 (以 safe_lots 防護安全寫入)
+            "外資買超(張)": safe_lots_from_shares(row_t0.get("Foreign_Investor")),
+            "投信買超(張)": safe_lots_from_shares(row_t0.get("Investment_Trust")),
+            "自營商買超(張)": safe_lots_from_shares(row_t0.get("Dealer_self")),
+            "主力買超(張)": safe_lots_from_shares(row_t0.get("major_net")),
+            "外資近5日累計(張)": safe_lots_from_shares(row_t0.get("foreign_5d_shares_sum")),
+            "投信近5日累計(張)": safe_lots_from_shares(row_t0.get("trust_5d_shares_sum")),
+            "主力近5日累計(張)": safe_lots_from_shares(row_t0.get("major_5d_shares_sum")),
+            "融資餘額(張)": safe_lots_from_lots(row_t0.get("MarginPurchaseTodayBalance")),
+            "融資當日增減(張)": safe_lots_from_lots(row_t0.get("margin_diff_shares")),
+            "融券餘額(張)": safe_lots_from_lots(row_t0.get("ShortSaleTodayBalance")),
+            "融券當日增減(張)": safe_lots_from_lots(row_t0.get("short_diff_shares")),
           })
 
           # =================================================================
-          # ⏱️ 第三部分：績效統計 (Performance Metrics — 建倉後持續追蹤)
+          # ⏱️ 5. 前瞻與極值績效統計 (Performance Metrics)
           # =================================================================
           hit_record.update(fwd_perf)      # 寫入 T+1 ~ T+240 天期報酬率
           hit_record.update(extreme_perf)  # 寫入 MFE / MAE / 1Y極值與 Cat 走勢標籤
