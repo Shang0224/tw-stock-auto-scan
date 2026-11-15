@@ -1045,14 +1045,14 @@ SOP v2.0》
   hit_1102_1, info_1102_1 = st_qiantang_f3_after_shakeout_1102_1(
       df_single=df_single,
       profile=profile,
-      verbose=False,
+      verbose=verbose,
       delay_days=delay_days,
       market_info=market_info,
   )
   hit_1108, info_1108 = st_qiantang_f3_after_shakeout_mid100_1108(
       df_single=df_single,
       profile=profile,
-      verbose=False,
+      verbose=verbose,
       delay_days=delay_days,
       market_info=market_info,
   )
@@ -1147,6 +1147,7 @@ SOP v2.0》
           '最佳績效': win_rate_str,
           '最大回檔': drawdown_str,
           '操作建議': advice_str,
+          '策略文件': "洗盤後MID100策略統計資料20261108_2237.pdf"
       }
       if is_hit
       else {}
