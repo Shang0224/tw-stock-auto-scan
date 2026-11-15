@@ -21,6 +21,35 @@ jobs:
       #    sudo apt-get update
       #    sudo apt-get install -y fonts-wqy-zenhei fonts-noto-cjk
       # 步驟一：切換並檢出您的程式碼
+    
+      # =================================================================
+      # 📌 1. 啟用中文字型快取 (Cache Mechanism)
+      # =================================================================
+      - name: Cache CJK Fonts
+        id: cache-fonts
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/share/fonts   # 快取的目標路徑
+          key: cjk-fonts-v1           # 快取 Key 名稱
+
+      # =================================================================
+      # 📥 2. 僅在快取未命中 (Cache Miss) 時下載字型
+      # =================================================================
+      - name: Download & Install CJK Fonts
+        if: steps.cache-fonts.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/share/fonts
+          # 下載 Noto Sans CJK TC 字型檔至用戶字型目錄
+          wget -q [suspicious link removed] -O ~/.local/share/fonts/NotoSansCJKtc-Regular.otf
+          # 更新系統字型快取快照
+          fc-cache -fv
+
+      # =================================================================
+      # 🧹 3. 清理 Matplotlib 字型快取 (確保 Matplotlib 重新掃描新字型)
+      # =================================================================
+      - name: Clear Matplotlib Cache
+        run: |
+          rm -rf ~/.cache/matplotlib      
       - name: Checkout repository
         uses: actions/checkout@v4
 
