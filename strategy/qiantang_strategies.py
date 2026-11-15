@@ -493,7 +493,7 @@ def st_qiantang_f2_volume_breakout(
         print("=" * 55 + "\n")
 
       return True, {
-          "選股公式": "F2_出量上輕 (T-1強勢攻擊)",
+          "選股策略": "F2_出量上輕 (T-1強勢攻擊)",
           "delay_days": info_t1["delay_days"],
           "操作建議": (
               f"昨日突破 ({info_t1['mode']})，今日展現 Level 2 強勢跳空"
@@ -568,7 +568,7 @@ def st_qiantang_f2_volume_breakout(
         print("=" * 55 + "\n")
 
       return True, {
-          "選股公式": "F2_出量上輕 (T-2洗盤確認)",
+          "選股策略": "F2_出量上輕 (T-2洗盤確認)",
           "delay_days": info_t2["delay_days"],
           "操作建議": (
               f"前日突破 ({info_t2['mode']})，買盤純度達"
@@ -793,7 +793,7 @@ def st_qiantang_f2_volume_breakout_20260930_2(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F2_出量上輕',
+        '選股策略': 'F2_出量上輕',
         '套用族群': profile.get('name', '預設族群'),
         '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
         '成交金額億': round(turnover_0, 2),
@@ -879,7 +879,7 @@ def st_qiantang_f2_volume_breakout_20260930_1(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F2_出量上輕',
+        '選股策略': 'F2_出量上輕',
         '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
         '成交金額億': round(turnover_0, 2),
         '觸發模式': '模式A(大中型)' if mode_a else ('模式B(中小型/IC設計)' if mode_b else '未觸發')
@@ -1137,7 +1137,7 @@ SOP v2.0》
   # 4. 輸出資訊字典
   info = (
       {
-          '選股公式': func_name,
+          '選股策略': func_name,
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '當日收盤價': f'{close_t0:.2f}元',
@@ -1505,7 +1505,7 @@ def st_qiantang_f3_after_shakeout_ICDesign_1109(
     # 8. 回傳策略資訊
     info = (
         {
-            '選股公式': func_name ,
+            '選股策略': func_name ,
             '股票代號': stock_id_str,
             '訊號日期': date_t0_str,
             '觸發價格': close_t0,
@@ -1921,7 +1921,7 @@ def st_qiantang_f3_after_shakeout_mid100_1108(
   # -------------------------------------------------------------------------
   info = (
       {
-          '選股公式': func_name ,
+          '選股策略': func_name ,
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '觸發價格': close_t0,
@@ -2285,7 +2285,7 @@ def st_qiantang_f3_after_shakeout_TW50_1106(
     # 8. 回傳策略資訊
     info = (
         {
-            '選股公式': func_name ,
+            '選股策略': func_name ,
             '股票代號': stock_id_str,
             '訊號日期': date_t0_str,
             '觸發價格': close_t0,
@@ -2638,7 +2638,7 @@ def st_qiantang_f3_after_shakeout_icdesign_1106(
     # 8. 回傳策略資訊
     info = (
         {
-            '選股公式': 'st_qiantang_f3_after_shakeout_icdesign_1106',
+            '選股策略': 'st_qiantang_f3_after_shakeout_icdesign_1106',
             'strategy_name': 'st_qiantang_f3_after_shakeout_icdesign_1106',
             '股票代號': stock_id_str,
             '訊號日期': date_t0_str,
@@ -2958,7 +2958,7 @@ def st_qiantang_f3_after_shakeout_mid100_1106(
     # 8. 回傳策略資訊
     info = (
         {
-            '選股公式': 'st_qiantang_f3_after_shakeout_mid100_1106',
+            '選股策略': 'st_qiantang_f3_after_shakeout_mid100_1106',
             'strategy_name': 'st_qiantang_f3_after_shakeout_mid100_1106',
             '股票代號': stock_id_str,
             '訊號日期': date_t0_str,
@@ -3409,7 +3409,7 @@ def st_qiantang_f3_after_shakeout_1102_1(
 
   info = (
       {
-          '選股公式': func_name ,
+          '選股策略': func_name ,
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '觸發價格': close_t0,
@@ -4031,7 +4031,7 @@ def st_qiantang_f3_after_shakeout_1101(
 
     # 🌟 8. 更新回傳 info 字典 (新增 delay_days 且更名為 Tbase+{delay_days}觀察期報酬)
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_1101',
+        '選股策略': 'st_qiantang_f3_after_shakeout_1101',
         '股票代號': stock_id_str,
         '訊號日期': date_t0_str,
         '觸發價格': close_t0,
@@ -4315,7 +4315,7 @@ def st_qiantang_f3_after_shakeout_1029_1_2(
 
     # 8. 回傳訊號與資訊 (🌟 已依指示增加 delay_days 與右側觀察期明確欄位)
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_1029_1_2',
+        '選股策略': 'st_qiantang_f3_after_shakeout_1029_1_2',
         '股票代號': stock_id_str,
         '訊號日期': date_t0_str,
         '觸發價格': close_t0,
@@ -4745,7 +4745,7 @@ def st_qiantang_f3_after_shakeout_1029_1_1_1(
   # 8. 回傳訊號與資訊
   info = (
       {
-          '選股公式': 'st_qiantang_f3_after_shakeout_1029_1_1_1',
+          '選股策略': 'st_qiantang_f3_after_shakeout_1029_1_1_1',
           '股票代號': stock_id_str,
           '訊號日期': date_t0_str,
           '觸發價格': close_t0,
@@ -5013,7 +5013,7 @@ def st_qiantang_f3_after_shakeout_1029_1_1(
 
     # 8. 回傳訊號與資訊
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_1029_1_1',
+        '選股策略': 'st_qiantang_f3_after_shakeout_1029_1_1',
         '股票代號': stock_id_str,
         '訊號日期': date_t0_str,
         '觸發價格': close_t0,
@@ -5251,7 +5251,7 @@ def st_qiantang_f3_after_shakeout_1029_1_old(
             )
 
         info = {
-            "選股公式": "st_qiantang_f3_after_shakeout_1029_1",
+            "選股策略": "st_qiantang_f3_after_shakeout_1029_1",
             "股票代號": stock_id,
             "訊號日期": date_t0_str,
             "觸發價格": close_t0,
@@ -5474,7 +5474,7 @@ def st_qiantang_f3_after_shakeout_20261030_1_new(
 
     # 8. 回傳訊號與資訊
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_20261030_1_黃金組合A版',
+        '選股策略': 'st_qiantang_f3_after_shakeout_20261030_1_黃金組合A版',
         '股票代號': stock_id_str,
         '訊號日期': date_str,
         '觸發價格': close_t0,
@@ -5672,7 +5672,7 @@ def st_qiantang_f3_after_shakeout_20261030_1(
         print(f"✅ [{stock_id_str} {date_str}] 成功觸發選股訊號！({track_tag})")
 
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_20261030_1_黃金組合A版',
+        '選股策略': 'st_qiantang_f3_after_shakeout_20261030_1_黃金組合A版',
         '股票代號': stock_id_str,
         '訊號日期': date_str,
         '觸發價格': close_t0,
@@ -5892,7 +5892,7 @@ def st_qiantang_f3_after_shakeout_20261030_new(
 
     # 8. 回傳資訊與質化建議
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_20261030_雙軌分流獨立優化旗艦版',
+        '選股策略': 'st_qiantang_f3_after_shakeout_20261030_雙軌分流獨立優化旗艦版',
         '股票代號': stock_id_str,
         '訊號日期': date_str,
         '觸發價格': close_t0,
@@ -6112,7 +6112,7 @@ def st_qiantang_f3_after_shakeout_20261030(
         print(f"✅ [{stock_id_str} {date_str}] 成功觸發選股訊號！({track_tag})")
 
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_20261030_雙軌分流獨立優化旗艦版',
+        '選股策略': 'st_qiantang_f3_after_shakeout_20261030_雙軌分流獨立優化旗艦版',
         '股票代號': stock_id_str,
         '訊號日期': date_str,
         '觸發價格': close_t0,
@@ -6306,7 +6306,7 @@ def st_qiantang_f3_after_shakeout_20261029_1(
 
     # 7. 回傳訊號與資訊
     info = {
-        '選股公式': 'st_qiantang_f3_after_shakeout_20261029_1_重構規範版',
+        '選股策略': 'st_qiantang_f3_after_shakeout_20261029_1_重構規範版',
         '股票代號': stock_id_str,
         '訊號日期': date_str,
         '觸發價格': close_t0,
@@ -6572,7 +6572,7 @@ def st_qiantang_f3_after_shakeout_20261029(
             )
 
         info = {
-            "選股公式": "st_qiantang_f3_after_shakeout_20261029",
+            "選股策略": "st_qiantang_f3_after_shakeout_20261029",
             "股票代號": stock_id,
             "訊號日期": date_t0_str,
             "觸發價格": close_t0,
@@ -6880,7 +6880,7 @@ def st_qiantang_f3_after_shakeout_20261023(
 
   info = (
       {
-          "選股公式": func_name ,
+          "選股策略": func_name ,
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
@@ -7198,7 +7198,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_3(
 
   info = (
       {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261001_1_1_3",
+          "選股策略": "st_qiantang_f3_after_shakeout_20261001_1_1_3",
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
@@ -7504,7 +7504,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_4(
 
   info = (
       {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261001_1_1_4",
+          "選股策略": "st_qiantang_f3_after_shakeout_20261001_1_1_4",
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
@@ -7805,7 +7805,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_5(
 
   info = (
       {
-          "選股公式": func_name ,
+          "選股策略": func_name ,
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
@@ -8121,7 +8121,7 @@ def st_qiantang_f3_after_shakeout_20261022_1_1_6(
 
   info = (
       {
-          "選股公式": "st_qiantang_f3_after_shakeout_20261022_1_1_6",
+          "選股策略": "st_qiantang_f3_after_shakeout_20261022_1_1_6",
           "股票代號": details["stock_id"],
           "訊號日期": details["date_t0_str"],
           "觸發價格": close_t0,
@@ -8417,7 +8417,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_2(
 
   info = (
       {
-          "選股公式": (
+          "選股策略": (
               "st_qiantang_f3_after_shakeout_20261001_1_1_2_大盤年線風控與OLS強勢斜率豁免版"
           ),
           "股票代號": details["stock_id"],
@@ -8685,7 +8685,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1_1(
 
   info = (
       {
-          "選股公式": (
+          "選股策略": (
               f"F3_洗盤後_20261001_1_1_1_MACD綠翻紅與年線乖離雙控 (T+{delay_days})"
           ),
           "股票代號": details["stock_id"],
@@ -8947,7 +8947,7 @@ def st_qiantang_f3_after_shakeout_20261017_1(
 
   info = (
       {
-          "選股公式": (
+          "選股策略": (
               f"F3_洗盤後_優化版_量能1.2倍與輕鬆線動能 (T+{delay_days}右側確認)"
           ),
           "操作建議": (
@@ -9197,7 +9197,7 @@ def st_qiantang_f3_after_shakeout_20261020_3(
     print('=' * 60 + '\n')
 
   info = {
-      '選股公式': 'F3_洗盤後_20261020_3_ABC終極組合版',
+      '選股策略': 'F3_洗盤後_20261020_3_ABC終極組合版',
       '股票代號': details['stock_id'],
       '訊號日期': details['date_t0_str'],
       '觸發價格': close_t0,
@@ -9468,7 +9468,7 @@ def st_qiantang_f3_after_shakeout_20261020_2(
     print('=' * 60 + '\n')
 
   info = {
-      '選股公式': f'F3_洗盤後_1020_2防線四籌碼共振與上影線過濾 (T+{delay_days})',
+      '選股策略': f'F3_洗盤後_1020_2防線四籌碼共振與上影線過濾 (T+{delay_days})',
       '股票代號': details['stock_id'],
       '訊號日期': details['date_t0_str'],
       '觸發價格': close_t0,
@@ -9656,7 +9656,7 @@ def st_qiantang_f3_after_shakeout_20261020_1(
     print('=' * 60 + '\n')
 
   info = {
-      '選股公式': 'F3_洗盤後_20261020_1_強勢高位與右側 confirmation 旗艦融合版',
+      '選股策略': 'F3_洗盤後_20261020_1_強勢高位與右側 confirmation 旗艦融合版',
       '股票代號': str(row_t0.get('stock_id', '')),
       '訊號日期': str(row_t0.get('date', '')),
       '觸發價格': close_t0,
@@ -9821,7 +9821,7 @@ def st_qiantang_f3_after_shakeout_20261018_1(
 
     # 回傳結果字典
     info = {
-        '選股公式': 'F3_洗盤後_旗艦雙線斜率共振版',
+        '選股策略': 'F3_洗盤後_旗艦雙線斜率共振版',
         '操作建議': (
             f'雙線斜率共振向上 (季線斜率:{ma60_slope:.3f}, 輕鬆線斜率:{ols_slope:.3f})，'
             f'股價位居 52 週高點強勢區 ({dist_52w_high:.1f}%) 且洗盤沉澱完成，具備強烈主升段飆股特徵。'
@@ -9946,7 +9946,7 @@ def st_qiantang_f3_after_shakeout(
     print('=' * 55 + '\n')
 
   info = {
-      '選股公式': 'F3_洗盤後_優化版_量能1.2倍與輕鬆線動能',
+      '選股策略': 'F3_洗盤後_優化版_量能1.2倍與輕鬆線動能',
       '操作建議': (
           '結合均線多頭、1.2倍爆發量、連續站穩輕鬆線，並透過 OLS '
           '斜率與 5 日漲幅確保輕鬆線確實向上發散，過濾橫盤雜訊。'
@@ -10061,7 +10061,7 @@ def st_qiantang_f3_after_shakeout20261001_1_2(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F3_洗盤後_優化版',
+        '選股策略': 'F3_洗盤後_優化版',
         '操作建議': '結合均線多頭、1.2倍放量、扎實紅K表態與連續兩天站穩輕鬆線，精準過濾假突破。'
     } if is_hit else {}
 
@@ -10181,7 +10181,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_1(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F3_洗盤後_優化版_MACD動能確認',
+        '選股策略': 'F3_洗盤後_優化版_MACD動能確認',
         '操作建議': '結合均線多頭、帶量、連續兩天站穩輕鬆線，並透過 MACD 柱狀體由綠翻紅確認多頭動能啟動，過濾假突破。'
     } if is_hit else {}
 
@@ -10287,7 +10287,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_1(
     )
 
     info = {
-        '選股公式': 'F3_洗盤後_實體紅K與上影線精準版',
+        '選股策略': 'F3_洗盤後_實體紅K與上影線精準版',
         '操作建議': f'強勢實體紅K站穩輕鬆線 (乖離: {easy_bias*100:.1f}%, 量能: {vol_ratio:.1f}倍, 上影線: {upper_shadow_ratio*100:.1f}%)'
     } if is_hit else {}
 
@@ -10481,7 +10481,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3_2(
         print('-' * 60)
 
     info = {
-        '選股公式': f'F3_洗盤後_乖離與量能雙控版 右側二次確認 (T+{delay_days})',
+        '選股策略': f'F3_洗盤後_乖離與量能雙控版 右側二次確認 (T+{delay_days})',
         '操作建議': f'洗盤結束且緊貼輕鬆線 (乖離: {details["easy_bias_t0"]*100:.1f}%, 量能: {details["vol_ratio_t0"]:.1f}倍)。右側確認通過: T+{delay_days} 報酬 {confirm_return*100:.1f}% (>= {threshold_pct*100:.1f}%)'
     } if is_hit else {}
 
@@ -10563,7 +10563,7 @@ def st_qiantang_f3_after_shakeout_20261001_1_3(
     )
 
     info = {
-        '選股公式': 'F3_洗盤後_乖離與量能雙控版',
+        '選股策略': 'F3_洗盤後_乖離與量能雙控版',
         '操作建議': f'洗盤結束且緊貼輕鬆線 (乖離: {easy_bias*100:.1f}%, 量能: {vol_ratio:.1f}倍)'
     } if is_hit else {}
 
@@ -10654,7 +10654,7 @@ def st_qiantang_f3_after_shakeout_20261001_1(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F3_洗盤後_優化版',
+        '選股策略': 'F3_洗盤後_優化版',
         '操作建議': '結合均線多頭、帶量與連續兩天站穩輕鬆線，過濾假突破雜訊後確認洗盤完成。'
     } if is_hit else {}
 
@@ -10717,7 +10717,7 @@ def st_qiantang_f3_after_shakeout_20261001(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F3_洗盤後',
+        '選股策略': 'F3_洗盤後',
         '操作建議': '短線跌破輕鬆線甩離浮動籌碼後，今日強勢重新站回輕鬆線，洗盤完成轉強。'
     } if is_hit else {}
 
@@ -10787,7 +10787,7 @@ def st_qiantang_f4_strong_rise(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F4_強力上',
+        '選股策略': 'F4_強力上',
         '操作建議': '昨日平穩沉澱、今日發動攻態拉出長紅，價格具強烈突破攻擊特徵。'
     } if is_hit else {}
 
@@ -10897,7 +10897,7 @@ def st_qiantang_f5_major_buy_easy(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F5_主外上輕',
+        '選股策略': 'F5_主外上輕',
         '操作建議': '主力與外資法人多頭籌碼集結，搭配技術指標金叉或單筆大單，多方動能明確。'
     } if is_hit else {}
 
@@ -11026,7 +11026,7 @@ def st_qiantang_f6_flower(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F6_一朵花',
+        '選股策略': 'F6_一朵花',
         '操作建議': '法人集中度高且大單急敲，呈現強烈籌碼與量能錦上添花之起漲型態。'
     } if is_hit else {}
 
@@ -11146,7 +11146,7 @@ def st_qiantang_f7_super_stock(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F7_飆股',
+        '選股策略': 'F7_飆股',
         '操作建議': '籌碼極度高度集中，內外資法人大舉連買卡位，具備強烈黑馬飆股特徵。'
     } if is_hit else {}
 
