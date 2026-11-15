@@ -48,8 +48,8 @@ def calculate_wave_dedup_info(hits_list: list[dict], max_gap_days: int = 90) -> 
     df['dt_temp'] = pd.to_datetime(df['日期'])
 
     # 🌟 直接存取系統固定的極值欄位，免去任何 if ... in df.columns 判斷
-    #df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date_from_perf_str)
-    #df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date_from_perf_str)
+    df['Date_MFE'] = df['1Y內最高績效'].apply(_extract_date_from_perf_str)
+    df['Date_MAE'] = df['1Y內最低績效'].apply(_extract_date_from_perf_str)
 
     # 依 [股票代號, 觸發日期] 遞增排序
     df = df.sort_values(by=['股票代號', 'dt_temp']).reset_index(drop=True)
