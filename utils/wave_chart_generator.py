@@ -10,6 +10,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+# 1. 依作業系統設定支援中文的字型優先順序
+plt.rcParams['font.sans-serif'] = [
+    'Microsoft JhengHei',   # Windows 微軟正黑體
+    'Noto Sans CJK TC',     # Linux / Docker 思源黑體
+    'WenQuanYi Micro Hei',  # Linux 文泉驛微米黑
+    'PingFang TC',          # macOS 蘋果蘋方字型
+    'Arial Unicode MS'
+]
+
+plt.rcParams['axes.unicode_minus'] = False
 
 def parse_perf_field(val):
     """解析 1Y內最高績效 / 持倉最高績效 / 1Y內最低績效 / 持倉實際最低績效 欄位字串。"""
@@ -77,15 +87,7 @@ def group_signals_into_waves(stock_df):
 def plot_single_wave_chart(wave_info, kline_df, save_path):
     """繪製單一波段 K 線圖，智慧避避高低點、持倉極值與觸發點標籤重疊。"""
     matplotlib.use('Agg')
-
-    # 1. 依作業系統設定支援中文的字型優先順序
-    plt.rcParams['font.sans-serif'] = [
-        'Microsoft JhengHei',   # Windows 微軟正黑體
-        'Noto Sans CJK TC',     # Linux / Docker 思源黑體
-        'WenQuanYi Micro Hei',  # Linux 文泉驛微米黑
-        'PingFang TC',          # macOS 蘋果蘋方字型
-        'Arial Unicode MS'
-    ]
+    
     """
     plt.rcParams['font.sans-serif'] = [
         'Noto Sans TC',
@@ -93,9 +95,10 @@ def plot_single_wave_chart(wave_info, kline_df, save_path):
         'Microsoft JhengHei',
         'DejaVu Sans',
     ]
-    """
-    plt.rcParams['axes.unicode_minus'] = False
 
+    plt.rcParams['axes.unicode_minus'] = False
+    """
+    
     stock_id = wave_info['stock_id']
     stock_name = wave_info['stock_name']
     signals = wave_info['signals']
