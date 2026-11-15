@@ -160,24 +160,34 @@ def build_market_dict(df_market_processed: pd.DataFrame) -> dict:
 
   # 🌟 包含原始 EMA 欄位，並擴充 SMA MA、當日漲跌幅與季線乖離率
   target_cols = [
-      "taiex_close",
-      "taiex_change_pct",
-      "taiex_EMA60_slope",  # 🌟 加上這行
-      "taiex_ema60_bias_pct",
-      "taiex_EMA20",
-      "taiex_EMA60",
-      "taiex_EMA120",
-      "taiex_EMA240",
-      "taiex_MA20",
-      "taiex_MA60",
-      "taiex_MA120",
-      "taiex_MA240",
       "taiex_ma20_bias_pct",
       "taiex_ma60_bias_pct",
       "taiex_ma240_bias_pct",
       "taiex_ma60_ma240_bias_pct"
   ]
 
+
+  target_cols = [
+    "taiex_close",                # 大盤收盤價
+    "taiex_change_pct",           # 大盤當日漲跌幅 (%)
+    "taiex_EMA60_slope",          # 大盤 EMA60 季線斜率 (5日差值/OLS)
+    "taiex_ema60_bias_pct",       # 大盤 EMA60 季線乖離率 (%)
+      
+    "taiex_EMA20",                # 大盤 EMA20 指數平滑均線
+    "taiex_EMA60",                # 大盤 EMA60 指數平滑季線
+    "taiex_EMA120",               # 大盤 EMA120 指數平滑半年線
+    "taiex_EMA240",               # 大盤 EMA240 指數平滑年線
+    "taiex_MA20",                 # 大盤 MA20 算術平均月線
+    "taiex_MA60",                 # 大盤 MA60 算術平均季線
+    "taiex_MA120",                # 大盤 MA120 算術平均半年線
+    "taiex_MA240",                # 大盤 MA240 算術平均年線
+
+    "taiex_ma20_bias_pct",        # 大盤月線 (20日) 乖離率 (%)
+    "taiex_ma60_bias_pct",        # 大盤季線 (60日) 乖離率 (%)
+    "taiex_ma240_bias_pct",       # 大盤年線 (240日) 乖離率 (%)
+    "taiex_ma60_ma240_bias_pct",  # 大盤季線與年線乖離率 (%)
+]
+    
   # 轉為字典結構以利 O(1) 複雜度查詢
   return df.set_index("date_str")[target_cols].to_dict(orient="index")
 
