@@ -956,8 +956,7 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
-
-def st_qiantang_f3_mid100_resonance_2237(
+def st_qiantang_f3_after_shakeout_mid100(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
@@ -965,7 +964,8 @@ def st_qiantang_f3_mid100_resonance_2237(
     market_info: dict = None,
 ) -> tuple[bool, dict]:
 
-"""=============================================================================
+  """
+  =============================================================================
 
 【策略名稱】：st_qiantang_f3_mid100_resonance_2237 (中型100
 雙策略共振實戰總控模組)
@@ -1020,7 +1020,7 @@ SOP v2.0》
     - S 級停損價 ＝ round(當日收盤價 * (1.0 - 0.08), 2)
     - A 級停損價 ＝ round(當日收盤價 * (1.0 - 0.10), 2)
 =============================================================================
-"""
+  """
   func_name = sys._getframe().f_code.co_name
   profile = profile or {}
 
