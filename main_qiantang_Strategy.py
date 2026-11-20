@@ -336,6 +336,7 @@ def run_qiantang_strategy_excel_scan(
     print(f"  ► 傳入之 create_day (target_date) : 【{passed_in_create_day if passed_in_create_day else '未指定 (None)'}】")
     print(f"  ► 最終定案之掃描交易日 (scan_date) : 【{scan_date_str}】")
     print(f"  ► 日期校正狀態說明                 : {calib_status}")
+    print(f"  ► 模式/檔案                 : {stock_mode}/{stock_data}")
     print("=" * 75 + "\n")
 
     # 5. 批量抓取個股日 K 線與籌碼資料 (抓取至 scan_date_str)
