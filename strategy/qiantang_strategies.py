@@ -36,6 +36,10 @@ def make_info(
     if extra_fields:
         info.update(extra_fields)
 
+    # 🌟 自動剔除值為 "N/A"、"" 或 None 的欄位，保持輸出極致乾淨
+    if drop_na:
+        return {k: v for k, v in raw_info.items() if v not in ("N/A", "", None)}
+
     return info
 
 def check_market_trend(market_info: dict, filter_key: str = "taiex_EMA60") -> bool:
