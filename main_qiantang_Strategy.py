@@ -312,7 +312,7 @@ def run_qiantang_strategy_excel_scan(
     else:
         # 📅 【情境 B：排程模式 或 未指定日期 (Schedule 或 target_date=None)】
         # 邏輯：由排程觸發或未傳入日期時，擷取近 150 天大盤資料，並進行大盤最新收盤日歸位校正。
-        start_str = (tw_time.date() - timedelta(days=150)).strftime("%Y-%m-%d")
+        start_str = (tw_time.date() - timedelta(days=400)).strftime("%Y-%m-%d")
 
         print("📡 正在擷取大盤 (TAIEX) 均線與風控數據以進行日期校正...")
         market_dict = fetch_market_ema_dict(dl, start_str, today_str)
