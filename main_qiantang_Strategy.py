@@ -5,7 +5,7 @@
 ===============================================================================
 
 【核心設計說明與參數機制】：
-1. 傳入參數 (Passed Arguments) vs. 預設參數 (Default Parameters)：
+1. 傳入參數 (Passed Arguments) vs. 預設參數 (Default Parameters)：https://github.com/Shang0224/tw-stock-auto-scan/blob/main/main_qiantang_Strategy.py
    - CLI 命令行傳入 (-d, -s, -m) 具備最高優先權。
    - 若未傳入參數，系統自動備退採用控制面板預設值 (STOCK_MODE, STOCK_INPUT, GLOBAL_TEST_DATE)。
 
@@ -86,7 +86,7 @@ TEST_QIANTANG_STRATEGY = [
 
 STOCK_MODE = "csv"                          # 預設股票池讀取模式 ('csv' 或 'noncsv')
 STOCK_INPUT = "data/MID100.csv"             # 預設股票池輸入檔案路徑
-GLOBAL_TEST_DATE = None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
+GLOBAL_TEST_DATE = "2025/7/7" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
 
 
 # =============================================================================
