@@ -136,7 +136,8 @@ def scan_qiantang_strategy_day(
             continue
 
         meta = stocks_dict[sid]
-        stock_name = meta.get("name", stock_name_dict.get(sid, sid))
+        #stock_name = meta.get("name", stock_name_dict.get(sid, sid))
+        stock_name = meta.get("name")
         stock_cat = meta.get("category", "MID100")
 
         sorted_df = group_df.sort_values("date").copy()
