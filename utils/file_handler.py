@@ -88,8 +88,8 @@ def parse_stock_dict(files_env: str) -> dict[str, dict]:
 
     print(f"📊 [parse_stock_dict] 解析完成，共計 {len(stock_dict)} 檔不重複股票：")
     
-    for sid, info in stock_dict.items():
-        print(f"  • 代號: {sid:<5} | 名稱: {info.get('name', 'N/A'):<8} | 分類: {info.get('category')}")
+    #for sid, info in stock_dict.items():
+    #    print(f"  • 代號: {sid:<5} | 名稱: {info.get('name', 'N/A'):<8} | 分類: {info.get('category')}")
         
     return stock_dict
 
