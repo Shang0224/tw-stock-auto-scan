@@ -1,6 +1,7 @@
 #strategy/engine.py
 #回測策略引擎
 import traceback  # 🌟 補上這個匯入，防止崩潰
+import sys
 import inspect
 import pandas as pd
 import numpy as np
