@@ -86,7 +86,7 @@ TEST_QIANTANG_STRATEGY = [
 
 STOCK_MODE = "csv"                          # 預設股票池讀取模式 ('csv' 或 'noncsv')
 STOCK_INPUT = "data/MID100.csv"             # 預設股票池輸入檔案路徑
-GLOBAL_TEST_DATE = "2025/7/7" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
+GLOBAL_TEST_DATE = "2025-07-07" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
 
 
 # =============================================================================
