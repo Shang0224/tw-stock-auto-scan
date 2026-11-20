@@ -44,10 +44,52 @@ def parse_and_validate_stocks(stock_mode: str, stock_data) -> dict[str, dict]:
     return stock_dict
 
 
-import pandas as pd
-
-
 def parse_stock_dict(files_env: str) -> dict[str, dict]:
+    """
+    解析 CSV 檔案，回傳以 stock_id 為 Key 的字典。
+    採用純字串分類 (category)，不保留任何多餘的集合欄位。
+    """
+    files = [f.strip() for f in files_env.split(",") if f.strip()]
+    stock_dict = {}
+    stock_cats_map = {}  # 僅在解析過程暫存不重複分類，不寫入最終字典
+
+    for file in files:
+        try:
+            df = pd.read_csv(file, encoding="utf-8-sig", dtype={"stock_id": str})
+            df["stock_id"] = df["stock_id"].str.strip()
+            df = df.fillna("")
+
+            for record in df.to_dict(orient="records"):
+                sid = record["stock_id"]
+                if not sid or sid.lower() in ("nan", "none", "nat"):
+                    continue
+
+                current_cat = str(record["category"]).strip()
+
+                if sid not in stock_dict:
+                    # 1. 新個股：記錄至暫存 set，並寫入原始 record
+                    stock_cats_map[sid] = {current_cat}
+                    record["category"] = current_cat
+                    stock_dict[sid] = record
+                else:
+                    # 2. 重複個股：更新暫存 set，並直接重新組合 category 字串
+                    stock_cats_map[sid].add(current_cat)
+                    stock_dict[sid]["category"] = "、".join(sorted(stock_cats_map[sid]))
+
+                    # 補齊其他空欄位
+                    for k, v in record.items():
+                        if v and not stock_dict[sid].get(k):
+                            stock_dict[sid][k] = v
+
+            print(f"✅ 讀取成功: {file} (目前累積 {len(stock_dict)} 檔不重複股票)")
+
+        except Exception as e:
+            print(f"❌ 讀取 {file} 失敗: {e}")
+
+    return stock_dict
+
+
+def parse_stock_dict_old(files_env: str) -> dict[str, dict]:
   """解析 CSV 檔案字串，回傳以 stock_id 為 Key 的去重字典"""
   files = [f.strip() for f in files_env.split(",") if f.strip()]
   stock_dict = {}
