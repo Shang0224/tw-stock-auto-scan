@@ -143,6 +143,14 @@ def scan_qiantang_strategy_day(
         if sorted_df.empty or len(sorted_df) < 60:
             continue
 
+        # 🌟 核心修正：將選股池分類寫入 Dataframe，供 MID100 / TW50 / ICDesign 策略模組讀取
+        sorted_df["category"] = stock_cat
+       
+        if not market_info:
+            print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
+      
+        print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+       
         # 呼叫核心策略檢測引擎
         hits = scan_single_stock(
             df_single=sorted_df,
