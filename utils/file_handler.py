@@ -86,6 +86,7 @@ def parse_stock_dict(files_env: str) -> dict[str, dict]:
         except Exception as e:
             print(f"❌ 讀取 {file} 失敗: {e}")
 
+    print(f"parse_stock_dict stock_dict : {stock_dict}")
     return stock_dict
 
 
