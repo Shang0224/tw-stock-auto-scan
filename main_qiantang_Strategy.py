@@ -300,10 +300,10 @@ def run_qiantang_strategy_excel_scan(
     if not is_schedule and passed_in_create_day:
         # 🧪 【情境 A：測試模式且明確傳入指定日期 (Non-Schedule + target_date)】
         # 邏輯：使用者手動或測試時指定特定日期 (如 '2024-05-20')，100% 採用該日期進行歷史回測，
-        #       資料擷取區間自動設為 [指定日期 - 150天 ~ 指定日期]，不強制歸位至最新交易日。
+        #       資料擷取區間自動設為 [指定日期 - 400天 ~ 指定日期]，不強制歸位至最新交易日。
         scan_date_str = passed_in_create_day
         target_dt = datetime.strptime(scan_date_str, "%Y-%m-%d").date()
-        start_str = (target_dt - timedelta(days=150)).strftime("%Y-%m-%d")
+        start_str = (target_dt - timedelta(days=400)).strftime("%Y-%m-%d")
 
         print("📡 正在擷取指定測試日期之大盤 (TAIEX) 均線與風控數據...")
         market_dict = fetch_market_ema_dict(dl, start_str, scan_date_str)
