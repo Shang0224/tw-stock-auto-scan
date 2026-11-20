@@ -389,6 +389,23 @@ def scan_single_stock(
     latest_row = df_single.iloc[-1]
     stock_id = str(latest_row.get("stock_id"))
 
+    # 1. 取得股票分類字串
+    category = str(latest_row.get("category", "")).strip()
+
+    # 2. 檢查 PARAM_PROFILES 的 Key 是否包含在 category 字串中
+    matched_key = next((k for k in param_profiles if k in category), None)
+
+    # 3. 若完全沒有配對到任何已知分類，直接拋出例外中斷
+    if not matched_key:
+        raise ValueError(
+            f"❌ [設定檔錯誤] 股票分類 '{category}' 未包含任何定義於 PARAM_PROFILES 中的分類！"
+            f"(目前可用的分類: {list(param_profiles.keys())})"
+        )
+
+    profile = param_profiles[matched_key].copy()
+    profile["category"] = category
+    
+    """
     # 🌟 直接從 Dataframe 拿 category，不必由外圍傳入
     category = str(latest_row.get("category", "MID100")).strip()
 
@@ -397,18 +414,6 @@ def scan_single_stock(
 
     profile = param_profiles[category].copy()
 
-    """
-    stock_id = str(df_single.iloc[-1].get("stock_id"))
-  
-    category = str(category).strip()
-    if category not in param_profiles:
-        raise ValueError(
-            f"❌ [設定檔錯誤] 類別 '{category}' 未定義於 PARAM_PROFILES 中！\n"
-            f"可用的類別有：{list(param_profiles.keys())}"
-        )
-
-    profile = param_profiles[category].copy()
-    profile['category'] = category
     """
     
     hits = []
