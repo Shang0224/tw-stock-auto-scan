@@ -5,6 +5,7 @@
 """
 import pandas as pd
 import numpy as np
+import traceback
 import sys
 from strategy.config import DEBUG_VERBOSE, BUY_PARAM_PROFILES
 
