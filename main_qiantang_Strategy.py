@@ -94,7 +94,7 @@ STOCK_INPUT = "data/TestData/qiantang_ICDesign_test.csv,data/TestData/qiantang_m
 #STOCK_INPUT = "data/ICDesignList.csv,data/TW50.csv"
 GLOBAL_TEST_DATE = "2016-07-26" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
 
-ENABLE_LINE_NOTIFY = False #測試/手動執行時是否發送 LINE 通知 (True: 發送, False: 不發送)
+ENABLE_LINE_NOTIFY = True #測試/手動執行時是否發送 LINE 通知 (True: 發送, False: 不發送)
                            #💡 提示：若為定時排程執行 (GITHUB_EVENT_NAME == 'schedule')，系統將會無視此設定並【強制發送】
 
 
