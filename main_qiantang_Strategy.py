@@ -90,7 +90,7 @@ STOCK_MODE = "csv"                          # 預設股票池讀取模式 ('csv'
 STOCK_INPUT = "data/TestData/qiantang_ICDesign_test.csv,data/TestData/qiantang_mid100_test.csv,data/TestData/qiantang_tw50_test.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/TW50.csv"
-GLOBAL_TEST_DATE = "2025-07-07" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
+GLOBAL_TEST_DATE = "2016-07-26" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
 
 
 # =============================================================================
