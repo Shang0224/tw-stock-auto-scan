@@ -264,7 +264,8 @@ def scan_qiantang_strategy_day(
         )
     except Exception as e:
         # 攔截該檔股票當天發生的任何例外    
-        print(f'⚠️ [股票掃描跳過] 股票代號: {stock_id} | 日期: {day_str} | 錯誤: {e}')
+        print(f'⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤: {e}')
+        traceback.print_exc()    
         continue
      
     if hits:
@@ -1065,5 +1066,17 @@ def run_qiantang_strategy_range_scan(
     )
 
 if __name__ == "__main__":
-    print("test_qiantang_Strategy.py")
-    run_qiantang_strategy_range_scan()
+
+    try:
+        print("test_qiantang_Strategy.py 啟動掃描...")
+        run_qiantang_strategy_range_scan()
+    except Exception as e:
+        print(f"\n❌ [系統致命錯誤強制攔截]: {e}")
+        traceback.print_exc()
+        # 強制刷新輸出緩衝區，確保日誌不被吞掉
+        sys.stdout.flush()
+        sys.stderr.flush()
+        sys.exit(1)
+        
+    #print("test_qiantang_Strategy.py")
+    #run_qiantang_strategy_range_scan()
