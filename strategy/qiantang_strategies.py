@@ -990,6 +990,134 @@ def st_qiantang_f2_volume_breakout_20260930(
 # =====================================================================
 from scipy.stats import linregress  # 用於計算 OLS 斜率
 
+def st_qiantang_f3_after_shakeout_TW50(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 3,
+    market_info: dict = None,
+) -> tuple[bool, dict]:
+    """
+    【TW50 股票池雙軌組合策略 (1102_1 + TW50_1106)】
+    實戰下單總控層，內部分別呼叫『1102_1 (高位強攻版)』與『TW50_1106 (極致防守版)』子策略：
+    - 🔥 S級 (第一軌共振)：1102_1 第一軌 與 TW50_1106 第一軌 同日同時觸發 ➔ 重倉 (15%~20%)
+    - ⚡ A級 (高位強攻)：僅 1102_1 第一軌 觸發 ➔ 標準倉 (10%)
+    - 🛡️ A級 (低位打底/極致防守)：僅 TW50_1106 第二軌 觸發 ➔ 標準倉 (10%)
+    
+    【統一輸出規格】：透過 make_info 工廠函式統一輸出標準 7 大欄位與「訊號評等」特有欄位。
+    """
+    func_name = sys._getframe().f_code.co_name
+
+    # 1. 獨立呼叫雙子策略進行訊號掃描
+    hit_a, info_a = st_qiantang_f3_after_shakeout_1102_1(
+        df_single=df_single,
+        profile=profile,
+        verbose=verbose,
+        delay_days=delay_days,
+        market_info=market_info,
+    )
+
+    hit_b, info_b = st_qiantang_f3_after_shakeout_TW50_1106(
+        df_single=df_single,
+        profile=profile,
+        verbose=verbose,
+        delay_days=delay_days,
+        market_info=market_info,
+    )
+
+    # 兩者均未觸發，直接結束傳回 (False, {})
+    if not hit_a and not hit_b:
+        return False, {}
+
+    # 2. 取得當日觸發價格做為停損計算基準 (優先自子策略 info 提取，若無則自 df_single 提取)
+    close_t0 = 0.0
+    if info_a and '觸發價格' in info_a:
+        close_t0 = float(info_a['觸發價格'])
+    elif info_b and '觸發價格' in info_b:
+        close_t0 = float(info_b['觸發價格'])
+    elif len(df_single) > delay_days:
+        close_t0 = float(df_single.iloc[-(1 + delay_days)]['close'])
+    else:
+        close_t0 = float(df_single.iloc[-1]['close'])
+
+    # 3. 判斷分級、計算 -10% 硬停損價格與設定標準化績效/風控字串
+    if hit_a and hit_b:
+        # 🔥 S 級：第一軌同日共振 (雙策略同時發動)
+        stop_loss_ratio = 0.10
+        stop_loss_price = round(close_t0 * (1.0 - stop_loss_ratio), 2)
+        
+        is_hit = True
+        tier_label = "🔥 S級 (第一軌共振)"
+        suggested_position = "15% ～ 20% (重倉)"
+        stop_loss_str = f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)"
+        win_rate_str = (
+            "勝率 80.0% (Cat1+2) | Cat1飆股率 80.0% | 預期 MFE均值 +141.9% (最大 +381.3% / 最小 +1.9%)"
+        )
+        drawdown_str = (
+            "Cat3陷阱率 20.0% | 1Y MAE均值 -6.0% (最差 -16.0%) | 一年最深 -26.5%"
+        )
+        advice_str = (
+            f"【🔥 S級極致信心】建議重倉配置 (15%~20%)。觸發 1102_1 第一軌與 TW50_1106 第一軌同日共振！"
+            f"2043 回測飆股率達 80.0%，勝率高且拉回極淺，請掛緊 {stop_loss_price:.2f}元 (-10.0%) 硬停損單放手抱牢主升段。"
+        )
+    elif hit_a:
+        # ⚡ A 級：高位強攻 (僅 1102_1 觸發)
+        stop_loss_ratio = 0.10
+        stop_loss_price = round(close_t0 * (1.0 - stop_loss_ratio), 2)
+        
+        is_hit = True
+        tier_label = "⚡ A級 (高位強攻)"
+        suggested_position = "10% (標準倉位)"
+        stop_loss_str = f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)"
+        win_rate_str = (
+            "勝率 71.4% (Cat1+2) | Cat1飆股率 35.7% | 預期 MFE均值 +105.0% (最大 +561.9% / 最小 +1.9%)"
+        )
+        drawdown_str = (
+            "Cat3陷阱率 14.3% | 1Y MAE均值 -6.4% (最差 -16.1%) | 一年最深 -40.4%"
+        )
+        advice_str = (
+            f"【⚡ A級嚴格防守】建議標準倉位 (10%)。僅觸發 1102_1 第一軌高位強攻，高位突破講求動能，"
+            f"若拉回接近 {stop_loss_price:.2f}元 (-10.0%) 硬停損點即果斷離場。"
+        )
+    else:
+        # 🛡️ A 級：低位打底/極致防守 (僅 TW50_1106 觸發)
+        stop_loss_ratio = 0.10
+        stop_loss_price = round(close_t0 * (1.0 - stop_loss_ratio), 2)
+        
+        is_hit = True
+        tier_label = "🛡️ A級 (低位打底/極致防守)"
+        suggested_position = "10% (標準倉位)"
+        stop_loss_str = f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)"
+        win_rate_str = (
+            "勝率 83.3% (Cat1+2) | Cat1飆股率 50.0% | 預期 MFE均值 +300.3% (最大 +1881.9% / 最小 +0.6%)"
+        )
+        drawdown_str = (
+            "Cat3陷阱率 11.1% | 1Y MAE均值 -7.9% (最差 -20.5%) | 一年最深 -22.6%"
+        )
+        advice_str = (
+            f"【🛡️ A級給予容忍】建議標準倉位 (10%)。僅觸發 TW50_1106 第二軌低位轉折，勝率 83.3% 且獲利天花板高，"
+            f"盤中洗盤請給予換手空間，未跌破 {stop_loss_price:.2f}元 (-10.0%) 硬停損切勿驚慌。"
+        )
+
+    # 4. 回傳策略資訊字典 (完全對齊 mid100 模式，呼叫 make_info 工廠函式統一產出)
+    info = (
+        make_info(
+            strategy_name=func_name,
+            position=suggested_position,
+            stop_loss=stop_loss_str,
+            win_rate=win_rate_str,
+            drawdown=drawdown_str,
+            advice=advice_str,
+            doc_ref="洗盤後TW50策略統計資料20261108_2043.pdf",
+            訊號評等=tier_label,
+        )
+        if is_hit
+        else {}
+    )
+
+    return is_hit, info
+
+
 def st_qiantang_f3_after_shakeout_mid100(
     df_single: pd.DataFrame,
     profile: dict = None,
