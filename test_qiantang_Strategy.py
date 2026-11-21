@@ -103,6 +103,7 @@ TEST_QIANTANG_STRATEGY = [
     
     #st_qiantang_f3_after_shakeout_mid100, #MID100專用策略
     #st_qiantang_f3_after_shakeout_TW50, #TW50專用策略
+    #st_qiantang_f3_after_shakeout_ICDesign_1109, #ICDesign策略效果不佳, 暫停開發
     
     #st_qiantang_f3_after_shakeout_20261020_2,
     #st_qiantang_f3_after_shakeout_20261020_3,
@@ -130,7 +131,7 @@ TEST_QIANTANG_STRATEGY = [
 
     #$st_qiantang_f3_after_shakeout_mid100_1108,
     #$st_qiantang_f3_after_shakeout_TW50_1106,
-    #st_qiantang_f3_after_shakeout_ICDesign_1109,
+    
     #$st_qiantang_f3_after_shakeout_1102_1, # MID100 TW50共同策略
     #$st_qiantang_f3_after_shakeout_20261001_1_1_5,  ## TW50共同策略, 重新回到st_qiantang_f3_after_shakeout_20261001_1_1_2
     
