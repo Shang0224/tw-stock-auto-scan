@@ -354,7 +354,7 @@ def scan_qiantang_strategy_day(
           # 🧬 欄位 4: T0 / Tbase 發動日技術面與籌碼基因特徵 (根據 row_t0 提取)
           # -------------------------------------------------------------
           # 🌟 判斷是否有 delay_days 機制，動態為發動日特徵加上 "Tbase" 前綴
-          print(f"row_t0.get("Trading_Volume", 0) : {row_t0.get("Trading_Volume", 0)}, 日期: {day_str}, 股票代號 : {sid}")
+          print(f"row_t0.get('Trading_Volume', 0) : {row_t0.get('Trading_Volume', 0)}, 日期: {day_str}, 股票代號 : {sid}, t0_pos : {t0_pos}")
           
           vol_t0_lots = int(round(float(row_t0.get("Trading_Volume", 0)) / 1000.0))
           prefix = "Tbase" if delay_days_val > 0 else ""
