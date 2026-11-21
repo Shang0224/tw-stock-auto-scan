@@ -10,10 +10,30 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-import pandas as pd
+def send_line_message(message: str):
+    """透過 LINE Messaging API 發送 Push 訊息給指定 User"""
+    token = os.getenv("LINE_ACCESS_TOKEN")
+    user_id = os.getenv("LINE_USER_ID")
 
-import os
-import requests
+    if not token or not user_id:
+        print("⚠️ [LINE 提示] 缺少 LINE_ACCESS_TOKEN 或 LINE_USER_ID，跳過 LINE 發送。")
+        return
+
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+    payload = {"to": user_id, "messages": [{"type": "text", "text": message}]}
+
+    try:
+        res = requests.post(url, headers=headers, json=payload, timeout=10)
+        if res.status_code == 200:
+            print("✅ LINE 簡報訊息發送成功！")
+        else:
+            print(f"❌ LINE 發送失敗，狀態碼：{res.status_code}, 內容：{res.text}")
+    except Exception as e:
+        print(f"❌ LINE 發送發生預期外錯誤: {e}")
 
 def send_line_broadcast(message):
     """透過 LINE Messaging API 發送廣播訊息給所有加好友的用戶"""
@@ -106,7 +126,7 @@ def send_email_report(file_path):
 
 
 
-def send_line_message(message):
+def send_line_message_old(message):
     """透過 LINE Messaging API 發送訊息"""
     token = os.getenv("LINE_ACCESS_TOKEN")
     user_id = os.getenv("LINE_USER_ID")
