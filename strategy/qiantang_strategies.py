@@ -68,53 +68,45 @@ def st_qiantang_f1_spt_growth_20261121(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
-    market_info: dict = None     # 當日大盤秒查資料字典
+    market_info: dict = None,  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
-  """【F1_筆張現形 - 20261121 極速降噪卡位版 (預處理指標直取+make_info版)】
+  """【F1_筆張現形 - 20261121 Cat1飆股重塑與大盤風控對齊版】
 
   修改與優化說明：
   - 本策略函數修改自基礎版 `st_qiantang_f1_spt_growth`。
-  - 核心優化目的：解決原 F1 策略在大股票池及全股票池中選股過多、
-    以及 Cat3 深跌陷阱率偏高（約 26.2%）之問題。
-  - 工程架構優化：100% 引用 `engine.py` 預處理完成之技術特徵指標
-    （`dist_to_52w_high_pct`, `ma60_slope`, `ma240_bias`, `body_ratio`,
-    `upper_shadow_ratio`, `is_red_k`），零重複計算；回傳資料統一採用 `make_info()`
-    工廠函式封裝。
-  - 本版本【無右側觀察期】（T0 當日即時表態卡位），
-    並融合「強勢高位過濾、季線助漲斜率、年線過熱防線、輕鬆線低乖離原點、
-    量能雙控與避雷針過濾」等 5 大黃金組合。
-
-  核心篩選條件架構：
-  1. 位階防線：距 52 週高點距離 >= -15.0% (直接讀取 row_t0['dist_to_52w_high_pct'])
-  2. 均線與斜率防線：
-     - 收盤價站上季線 (Close >= MA60) 且 季線斜率 > 0 (直接讀取 row_t0['ma60_slope'])
-     - 年線乖離率 <= 25.0% (直接讀取 row_t0['ma240_bias'])
-  3. 輕鬆線低乖離原點：1.0 < (Close / Easy_Line) <= 1.06（乖離率控制在 0% ~ 6.0% 之間）
-  4. 量能爆發雙控與金額門檻：
-     - 1.5 倍 <= (今日成交量 / 5日均量) <= 2.5 倍
-     - 成交金額 >= 3,000 萬元（過濾冷門與無流動性殭屍股）
-  5. 型態品質與籌碼大單：
-     - 單筆均張連續 2 日遞增 (SPT_T0 > SPT_T-1 > SPT_T-2)
-     - 當日單筆均張爆發力達標 (SPT_T0 >= SPT_MA5 * 1.30)
-     - 實體紅 K (直接讀取 row_t0['is_red_k']) 且 實體比例 >= 40.0% (row_t0['body_ratio'])
-     - 上影線比例 <= 35.0% (直接讀取 row_t0['upper_shadow_ratio'])
+  - 核心優化與修正目的：
+    1. 100% 對齊原始碼大盤風控架構：於函數前段檢查 `market_info`，提取 `taiex_close`、
+       `taiex_EMA60` 與 `taiex_EMA60_slope` 進行 `check_market_trend` 驗證，未通過即即時中斷。
+    2. 修復 2208 版誤殺 Cat1 飆股之重大缺陷：徹底解鎖過度封鎖動能之限制，刪除量能 2.5 倍上限天花板
+       (改為 `vol_ratio >= 2.0` 完全放行 3~5 倍巨量攻擊飆股)。
+    3. 放寬輕鬆線乖離率：由 `<= 1.06` 放寬至 `1.0 < Bias <= 1.12`，捕捉起漲長紅大表態。
+    4. 保留關鍵強勢高位過濾：`dist_to_52w_high_pct >= -15.0%`（實證唯一能翻倍 Cat1 之防線）。
+    5. 嚴控避雷針倒貨：`upper_shadow_ratio <= 30.0%`（精準過濾主力高檔拉高對倒假突破）。
+  - 工程規範：100% 引用 `engine.py` 預處理指標（零重複計算），確定欄位採用中括號直取，
+    回傳統一呼叫 `make_info()` 工廠函式。
   """
   func_name = sys._getframe().f_code.co_name
-   
+
+  # =================================================================
+  # 0. 大盤趨勢第一道風控防線 (100% 對齊原始碼大盤過濾邏輯)
+  # =================================================================
   if market_info:
-      m_close = float(market_info["taiex_close"])
-      m_ema = float(market_info["taiex_EMA60"])
-      m_slope = float(market_info["taiex_EMA60_slope"])
+    m_close = float(market_info["taiex_close"])
+    m_ema = float(market_info["taiex_EMA60"])
+    m_slope = float(market_info["taiex_EMA60_slope"])
 
-      if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-          return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
-
-      print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
-  else:
-      print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+      if verbose:
+        print(
+            f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} >"
+            f" EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。"
+        )
       return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
-    
+  else:
+    if verbose:
+      print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    return False, {}  # 🛑 觀測日或單股無大盤資料時中斷
+
   profile = profile or {}
 
   # 1. 資料長度檢驗（必須包含基礎緩衝天數）
@@ -130,7 +122,7 @@ def st_qiantang_f1_spt_growth_20261121(
   row_tm1 = df_single.iloc[pos_idx - 1]
   row_tm2 = df_single.iloc[pos_idx - 2]
 
-  # 3. 欄位嚴格索取區（遵循零預設值原則：中括號直接存取，缺失即原生拋出 KeyError）
+  # 3. 欄位嚴格索取區（遵循零預設值原則：中括號存取，缺值由 Python 原生拋出 KeyError）
   close_t0 = float(row_t0["close"])
   easy_t0 = float(row_t0["easy_line"])
   vol_t0 = float(row_t0["Trading_Volume"])
@@ -155,36 +147,38 @@ def st_qiantang_f1_spt_growth_20261121(
   spts_5d = df_single["shares_per_trans"].iloc[pos_idx - 4 : pos_idx + 1]
   spt_ma5 = float(spts_5d.mean())
 
-  # 5. 策略核心 5 大黃金條件評估
+  # 5. 策略核心 5 大 Cat1 飆股重塑條件評估
   # -------------------------------------------------------------------------
   # 條件 1：強勢高位過濾 (距 52W 高點 >= -15.0%)
   cond1_position_ok = dist_52w_high_pct >= -15.0
 
-  # 條件 2：均線與斜率防線 (站上季線 且 季線斜率 > 0 且 年線乖離率 <= 25.0%)
+  # 條件 2：均線與斜率防線 (站上季線 且 季線斜率 > 0 且 年線乖離率 <= 30.0%)
   cond2_ma_ok = (
       (close_t0 >= ma60_t0)
       and (ma60_slope > 0.0)
-      and (ma240_bias_pct <= 25.0)
+      and (ma240_bias_pct <= 30.0)
   )
 
-  # 條件 3：輕鬆線低乖離原點 (1.0 < 乖離率 <= 1.06)
+  # 條件 3：輕鬆線強勢表態 (1.0 < 乖離率 <= 1.12)
   easy_bias = close_t0 / easy_t0
-  cond3_easy_ok = 1.0 < easy_bias <= 1.06
+  cond3_easy_ok = 1.0 < easy_bias <= 1.12
 
-  # 條件 4：量能爆發雙控與金額門檻 (1.5倍 <= 量增 <= 2.5倍 且 成交金額 >= 3,000萬元)
+  # 條件 4：爆發動能無上限與金額門檻 (量增 >= 2.0倍 且 成交金額 >= 3,000萬元)
   vol_ratio = vol_t0 / vol_ma5 if vol_ma5 > 0 else 0.0
   turnover_amount = vol_t0 * close_t0
-  cond4_vol_ok = (1.5 <= vol_ratio <= 2.5) and (turnover_amount >= 30_000_000)
+  cond4_vol_ok = (vol_ratio >= 2.0) and (turnover_amount >= 30_000_000)
 
   # 條件 5：型態品質與籌碼大單
   cond5_spt_growing = spt_t0 > spt_tm1 > spt_tm2
-  cond5_spt_surge = spt_t0 >= spt_ma5 * 1.30
-  cond5_k_pattern = is_red_k and (body_ratio >= 40.0) and (upper_shadow_ratio <= 35.0)
+  cond5_spt_surge = spt_t0 >= spt_ma5 * 1.25
+  cond5_k_pattern = (
+      is_red_k and (body_ratio >= 35.0) and (upper_shadow_ratio <= 30.0)
+  )
   cond5_spt_pattern_ok = (
       cond5_spt_growing and cond5_spt_surge and cond5_k_pattern
   )
 
-  # 總體判定：必須同時滿足 5 大核心防線
+  # 總體判定：必須同時滿足 5 大飆股核心條件
   is_hit = bool(
       cond1_position_ok
       and cond2_ma_ok
@@ -209,23 +203,23 @@ def st_qiantang_f1_spt_growth_20261121(
         f"  [{ '✓' if cond2_ma_ok else '✕' }] 2. 均線與斜率過濾   :"
         f" Close({close_t0:.2f}) >= MA60({ma60_t0:.2f}),"
         f" 季線斜率({ma60_slope:.4f}) > 0, 年線乖離({ma240_bias_pct:.1f}%) <="
-        " 25.0%"
+        " 30.0%"
     )
     print(
-        f"  [{ '✓' if cond3_easy_ok else '✕' }] 3. 輕鬆線低乖離原點 : 乖離率"
-        f" {easy_bias:.3f} (1.0 < Bias <= 1.06)"
+        f"  [{ '✓' if cond3_easy_ok else '✕' }] 3. 輕鬆線強勢表態   : 乖離率"
+        f" {easy_bias:.3f} (1.0 < Bias <= 1.12)"
     )
     print(
-        f"  [{ '✓' if cond4_vol_ok else '✕' }] 4. 量能雙控與金額   : 放大"
-        f" {vol_ratio:.2f}倍 (1.5~2.5倍), 成交金額"
+        f"  [{ '✓' if cond4_vol_ok else '✕' }] 4. 巨量爆發無上限   : 放大"
+        f" {vol_ratio:.2f}倍 (>=2.0倍無上限), 成交金額"
         f" {turnover_amount/10000:,.0f}萬 (>=3000萬)"
     )
     print(
-        f"  [{ '✓' if cond5_spt_pattern_ok else '✕' }] 5. SPT單筆均張與型態 :"
+        f"  [{ '✓' if cond5_spt_pattern_ok else '✕' }] 5. SPT大單與避雷針過濾:"
         f" SPT遞增({spt_t0:.2f}>{spt_tm1:.2f}>{spt_tm2:.2f}),"
         f" 均張爆發({spt_t0:.2f} vs"
-        f" MA5*1.30={spt_ma5*1.30:.2f}), 紅K實體({body_ratio:.1f}%>=40%),"
-        f" 上影線({upper_shadow_ratio:.1f}%<=35%)"
+        f" MA5*1.25={spt_ma5*1.25:.2f}), 紅K實體({body_ratio:.1f}%>=35%),"
+        f" 上影線({upper_shadow_ratio:.1f}%<=30%)"
     )
     print("-" * 65)
     print(
@@ -239,21 +233,22 @@ def st_qiantang_f1_spt_growth_20261121(
   info = (
       make_info(
           strategy_name=func_name,
-          position="10% (標準倉位)",
+          position="10% (強勢卡位)",
           stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
-          win_rate="預期 Cat1 飆股率 ≥ 35%",
-          drawdown="預期 Cat3 陷阱率 ≤ 12%",
+          win_rate="重塑 Cat1 飆股爆發力",
+          drawdown="嚴防 Cat3 假突破避雷針",
           advice=(
-              "單筆均張強勢爆發且連續集結，搭配輕鬆線低乖離原點與季線助漲斜率，"
-              f"型態純淨無上影線倒貨賣壓，請嚴格掛好 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。"
+              "大單集結強勢爆發，巨量解鎖突破輕鬆線，搭配大盤順風趨勢與季線助漲斜率，"
+              f"且無上影線倒貨避雷針，請掛好 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單積極卡位。"
           ),
-          doc_ref="F1_筆張現形_20261121",
+          doc_ref="F1_筆張現形_20261121_Cat1重塑大盤風控對齊版",
           觸發價格=close_t0,
           距52W高點=f"{dist_52w_high_pct:.2f}%",
           輕鬆線乖離率=f"{(easy_bias - 1.0)*100:.2f}%",
           季線斜率=f"{ma60_slope:.4f}",
           年線乖離率=f"{ma240_bias_pct:.2f}%",
           當日成交金額=f"{turnover_amount / 100_000_000.0:.2f}億元",
+          量能放大倍數=f"{vol_ratio:.2f}倍",
       )
       if is_hit
       else {}
