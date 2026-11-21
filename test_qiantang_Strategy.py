@@ -253,7 +253,7 @@ def scan_qiantang_strategy_day(
     if not market_info:
         print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
       
-    print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+    print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
     try:
         # 執行當日單一股票掃描
         hits = scan_single_stock(
@@ -286,13 +286,15 @@ def scan_qiantang_strategy_day(
           stock_id=sid, trigger_date_str=day_str, global_df=global_df
       )
 
+      print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  len(hits) : {len(hits)}************************************" )
+        
       for hit in hits:
           # =================================================================
           # 📌 1. 基本資訊：實盤建倉買進日 (Day 0) 基礎標籤
           # =================================================================
           strat_func_name = hit.get("strategy_name", hit.get("選股策略", ""))
           formula_label = hit.get("選股策略", strat_func_name if strat_func_name else "未知策略")
-        
+          
           try:
             delay_days_val = int(hit.get("delay_days", 0))
           except (ValueError, TypeError):
