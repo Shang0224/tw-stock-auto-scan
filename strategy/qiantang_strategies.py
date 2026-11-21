@@ -1110,6 +1110,7 @@ def st_qiantang_f3_after_shakeout_TW50(
             advice=advice_str,
             doc_ref="洗盤後TW50策略統計資料20261108_2043.pdf",
             訊號評等=tier_label,
+            delay_days=delay_days,
         )
         if is_hit
         else {}
