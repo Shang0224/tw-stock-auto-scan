@@ -432,14 +432,10 @@ def run_qiantang_strategy_excel_scan(
 
     # 11. 產出 Excel 多工作表 (Multi-Sheet) 報告
     # 判斷是否為自動排程執行 (GitHub Actions 排程事件為 'schedule')
-    is_scheduled = os.getenv("GITHUB_EVENT_NAME") == "schedule"
     prefix = "" if is_scheduled else "測試_"
 
-    file_name = f"{prefix}錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
-    file_path = os.path.abspath(file_name)
-   
     # 11. 產出 Excel 多工作表 (Multi-Sheet) 報告
-    file_name = f"錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
+    file_name = f"{prefix}錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
     file_path = os.path.abspath(file_name)
 
     with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
@@ -466,7 +462,7 @@ def run_qiantang_strategy_excel_scan(
         # 📝 A. 建立共用之卡片式精簡訊息 (含 6 大風控特徵與操作建議)
         # ---------------------------------------------------------------------
         card_lines = [
-            f"📅 【錢塘潮選股】觸發速報 ({scan_date_str})",
+            f"{prefix}📅 【錢塘潮選股】觸發速報 ({scan_date_str})",
             f"=== 🎯 觸發個股清單 (共 {len(day_hits)} 筆訊號) ===\n"
         ]
 
@@ -527,7 +523,7 @@ def run_qiantang_strategy_excel_scan(
             email_subject = f"📊 錢塘潮選股每日報告 - {scan_date_str} (共 {len(day_hits)} 筆觸發)"
             
             email_body = (
-                f"您好：\n\n"
+                f"{prefix}您好：\n\n"
                 f"【錢塘潮選股系統】已完成 {scan_date_str} 交易日之選股掃描。\n\n"
                 f"{formatted_content}\n"
                 f"=================================================================\n"
