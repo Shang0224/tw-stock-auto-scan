@@ -68,6 +68,7 @@ def st_qiantang_f1_spt_growth_20261121(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None     # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
   """【F1_筆張現形 - 20261121 極速降噪卡位版 (預處理指標直取+make_info版)】
 
