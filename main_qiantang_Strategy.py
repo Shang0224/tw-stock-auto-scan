@@ -94,6 +94,9 @@ STOCK_INPUT = "data/TestData/qiantang_ICDesign_test.csv,data/TestData/qiantang_m
 #STOCK_INPUT = "data/ICDesignList.csv,data/TW50.csv"
 GLOBAL_TEST_DATE = "2016-07-26" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
 
+ENABLE_LINE_NOTIFY = False #測試/手動執行時是否發送 LINE 通知 (True: 發送, False: 不發送)
+                           #💡 提示：若為定時排程執行 (GITHUB_EVENT_NAME == 'schedule')，系統將會無視此設定並【強制發送】
+
 
 # =============================================================================
 # 🛠️ 輔助工具：籌碼股數安全轉換為張數
@@ -491,7 +494,7 @@ def run_qiantang_strategy_excel_scan(
                 f"   • 最佳績效: {win}\n\n"
                 f"   • 最大回檔: {dd}\n\n"
                 f"   • 操作建議: {adv}\n\n"
-                f"   • 策略文件: {doc}\n"
+                f"   • 策略文件: {doc}\n\n"
             )
             card_lines.append(card)
 
@@ -500,11 +503,18 @@ def run_qiantang_strategy_excel_scan(
         # ---------------------------------------------------------------------
         # 📱 B. 發送 LINE 訊息 (加上 4500 字上限防呆截斷)
         # ---------------------------------------------------------------------
-        line_msg = formatted_content
-        if len(line_msg) > 4500:
-            line_msg = line_msg[:4400] + "\n\n⚠️ (訊息內容較長，完整資料請參閱 Email 與 Excel 附件)"
-        
-        send_line_message(line_msg)
+
+        # 3. 判定條件：定時排程執行必發送 OR 手動測試時開關開啟才發送
+        should_send_line = is_scheduled or ENABLE_LINE_NOTIFY
+
+        if should_send_line:
+            line_msg = formatted_content
+            if len(line_msg) > 4500:
+                line_msg = line_msg[:4400] + "\n\n⚠️ (訊息內容較長，完整資料請參閱 Email 與 Excel 附件)"
+            
+            send_line_message(line_msg)
+        else:
+            print("ℹ️ [LINE 提示] 當前為非排程 (測試/手動) 執行且 ENABLE_LINE_NOTIFY 為 False，已跳過 LINE 訊息發送。")
 
         # ---------------------------------------------------------------------
         # 📧 C. 發送 Email (內文帶入同樣訊息 + 附帶 Excel 附件)
