@@ -445,14 +445,6 @@ def run_qiantang_strategy_excel_scan(
 
     print(f"🎉 掃描完成！選股報告已匯出至：【{file_path}】")
 
-    # 12. 自動同步至 NAS 遠端備份
-    if os.path.exists(file_path) and os.getenv("NAS_SFTP_PATH"):
-        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_daily_scan/{file_name}"
-        try:
-            archive_and_cleanup(file_path, remote_path)
-            print(f"📦 已成功將 Excel 報告備份至 NAS 遠端：{remote_path}")
-        except Exception as e:
-            print(f"⚠️ NAS 備份過程跳過或失敗: {e}")
 
     # =========================================================================
     # 🌟 12. 發送 LINE 簡報與 Email 詳細報告 (LINE 與 Email 共用卡片訊息)
@@ -541,6 +533,14 @@ def run_qiantang_strategy_excel_scan(
     except Exception as notify_err:
         print(f"⚠️ [通知發送失敗] 發生預期外錯誤: {notify_err}")
 
+    # 12. 自動同步至 NAS 遠端備份
+    if os.path.exists(file_path) and os.getenv("NAS_SFTP_PATH"):
+        remote_path = f"{os.getenv('NAS_SFTP_PATH')}/qiantang_daily_scan/{file_name}"
+        try:
+            archive_and_cleanup(file_path, remote_path)
+            print(f"📦 已成功將 Excel 報告備份至 NAS 遠端：{remote_path}")
+        except Exception as e:
+            print(f"⚠️ NAS 備份過程跳過或失敗: {e}")
 
 # =============================================================================
 # 🏁 程式執行進入點 (CLI Entry Point)
