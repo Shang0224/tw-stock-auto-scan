@@ -6,7 +6,6 @@
 2. 整合大盤 (TAIEX) EMA60 (季線) 趨勢防線，當大盤修正或處於空頭 (Close <= EMA60) 時，啟動避險機制暫停當日選股。
 3. 自動計算觸發後 T+3/T+5/T+10/T+20 報酬率與未來 1 年內最高/最低極值報酬，支援 Excel 與 CSV 輸出。
 """
-
 import os
 import sys
 import traceback
