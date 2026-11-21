@@ -234,6 +234,67 @@ def scan_qiantang_strategy_day(
                 # -------------------------------------------------------------
                 # 🧬 欄位 4: T0 發動日技術面與籌碼基因特徵 (根據 row_t0 提取)
                 # -------------------------------------------------------------
+                # 🌟 判斷是否有 delay_days 機制，動態為發動日特徵加上 "Tbase" 前綴
+                prefix = "Tbase" if delay_days_val > 0 else ""
+
+                # 1. 當存在 delay_days 時，補上 Tbase 基礎發動日資訊 (日期/收盤/成交量)
+                if delay_days_val > 0:
+                    vol_t0_lots = int(round(float(row_t0.get("Trading_Volume", 0)) / 1000.0))
+                    hit_record.update({
+                        "Tbase發動日期": str(row_t0.get("date", day_str)),
+                        "Tbase收盤價": round(float(row_t0.get("close", close_price)), 2),
+                        "Tbase成交量(張)": vol_t0_lots,
+                    })
+
+                # 2. 寫入 Tbase 發動日特徵 (使用動態 prefix 標籤)
+                t0_features = {
+                    # K 線型態與特徵
+                    f"{prefix}實體K棒比例(%)": round(float(row_t0.get("body_ratio", 0)), 2),
+                    f"{prefix}上影線比例(%)": round(float(row_t0.get("upper_shadow_ratio", 0)), 2),
+                    f"{prefix}是否紅K": bool(row_t0.get("is_red_k", True)),
+                    f"{prefix}距52週高點(%)": (
+                        round(float(row_t0["dist_to_52w_high_pct"]), 2)
+                        if ("dist_to_52w_high_pct" in row_t0 and pd.notnull(row_t0["dist_to_52w_high_pct"]))
+                        else "N/A"
+                    ),
+                    f"{prefix}打底沉澱天數": int(row_t0.get("base_consolidation_days", 0)),   
+
+                    # 均量與動能
+                    f"{prefix}單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
+                    f"{prefix}輕鬆線乖離率(%)": round(float(row_t0.get("easy_line_bias", 0)), 2),
+                    f"{prefix}輕鬆線OLS斜率": round(float(row_t0.get("easy_line_slope", 0)), 4),   
+                    f"{prefix}季線乖離率(%)": round(float(row_t0.get("ma60_bias", 0)), 2),
+                    f"{prefix}年線乖離率(%)": (
+                        round(float(row_t0["ma240_bias"]), 2)
+                        if ("ma240_bias" in row_t0 and pd.notnull(row_t0["ma240_bias"]))
+                        else "N/A"
+                    ),
+                    f"{prefix}年線扣抵位置(%)": (
+                        round(float(row_t0["ma240_deduct_bias"]), 2)
+                        if ("ma240_deduct_bias" in row_t0 and pd.notnull(row_t0["ma240_deduct_bias"]))
+                        else "N/A"
+                    ),
+                    f"{prefix}均線多頭排列": bool(row_t0.get("is_bull_alignment", False)),
+                    f"{prefix}均線糾結度(%)": (
+                        round(float(row_t0["ma_tangle_ratio"]), 2)
+                        if ("ma_tangle_ratio" in row_t0 and pd.notnull(row_t0["ma_tangle_ratio"]))
+                        else "N/A"
+                    ),
+
+                    # 籌碼特徵
+                    f"{prefix}外資買超(張)": safe_lots_from_shares(row_t0.get("Foreign_Investor")),
+                    f"{prefix}投信買超(張)": safe_lots_from_shares(row_t0.get("Investment_Trust")),   
+                    f"{prefix}主力買超(張)": safe_lots_from_shares(row_t0.get("major_net")),
+                    f"{prefix}外資近5日累計(張)": safe_lots_from_shares(row_t0.get("foreign_5d_shares_sum")),
+                    f"{prefix}投信近5日累計(張)": safe_lots_from_shares(row_t0.get("trust_5d_shares_sum")),
+                    f"{prefix}主力近5日累計(張)": safe_lots_from_shares(row_t0.get("major_5d_shares_sum")),
+                    f"{prefix}融資當日增減(張)": safe_lots_from_shares(row_t0.get("margin_diff_shares")),
+                }
+
+                hit_record.update(t0_features)
+                day_hits.append(hit_record)
+       
+                """
                 hit_record.update({
                     "實體K棒比例(%)": round(float(row_t0.get("body_ratio", 0)), 2),
                     "上影線比例(%)": round(float(row_t0.get("upper_shadow_ratio", 0)), 2),
@@ -260,7 +321,7 @@ def scan_qiantang_strategy_day(
                 })
 
                 day_hits.append(hit_record)
-
+                """
     return day_hits
 
 
