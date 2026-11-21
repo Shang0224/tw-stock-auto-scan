@@ -428,6 +428,14 @@ def run_qiantang_strategy_excel_scan(
         dashboard_rows.append(row)
 
     # 11. 產出 Excel 多工作表 (Multi-Sheet) 報告
+    # 判斷是否為自動排程執行 (GitHub Actions 排程事件為 'schedule')
+    is_scheduled = os.getenv("GITHUB_EVENT_NAME") == "schedule"
+    prefix = "" if is_scheduled else "測試_"
+
+    file_name = f"{prefix}錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
+    file_path = os.path.abspath(file_name)
+   
+    # 11. 產出 Excel 多工作表 (Multi-Sheet) 報告
     file_name = f"錢塘潮選股報告_{tw_time.strftime('%Y%m%d_%H%M')}.xlsx"
     file_path = os.path.abspath(file_name)
 
