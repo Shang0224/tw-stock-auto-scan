@@ -465,7 +465,7 @@ def run_qiantang_strategy_excel_scan(
         if sid not in stock_dashboard:
             stock_dashboard[sid] = {
                 "掃描交易日": hit["掃描交易日"],
-                "傳入建立日(create_day)": hit["傳入建立日(create_day)"],
+                #"傳入建立日(create_day)": hit["傳入建立日(create_day)"],
                 "股票代號": sid,
                 "名稱": hit["名稱"],
                 "收盤": hit["今日收盤"],
@@ -481,7 +481,7 @@ def run_qiantang_strategy_excel_scan(
         strats = item["符合策略清單"]
         row = {
             "掃描交易日": item["掃描交易日"],
-            "傳入建立日(create_day)": item["傳入建立日(create_day)"],
+            #"傳入建立日(create_day)": item["傳入建立日(create_day)"],
             "股票代號": item["股票代號"],
             "名稱": item["名稱"],
             "收盤": item["收盤"],
