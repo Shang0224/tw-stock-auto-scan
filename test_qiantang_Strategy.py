@@ -26,6 +26,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f3_after_shakeout,  # 洗盤後
 
     st_qiantang_f3_after_shakeout_mid100, #MID100專用策略
+    st_qiantang_f3_after_shakeout_TW50, #TW50專用策略
 
     st_qiantang_f3_after_shakeout_20261001,
     st_qiantang_f3_after_shakeout_20261001_1,
@@ -101,6 +102,7 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f3_after_shakeout,  # F3: 洗盤後
     
     st_qiantang_f3_after_shakeout_mid100, #MID100專用策略
+    st_qiantang_f3_after_shakeout_TW50, #TW50專用策略
     
     #st_qiantang_f3_after_shakeout_20261020_2,
     #st_qiantang_f3_after_shakeout_20261020_3,
@@ -467,13 +469,16 @@ def scan_qiantang_strategy_day(
           hit_record["右側觀察天數"] = delay_days_val
           hit_record[formal_ret_key] = hit.get(formal_ret_key, hit.get(f"T+{delay_days_val}觀察期報酬", "N/A"))
 
+          # 🌟 判斷是否有 delay_days 機制，動態為發動日特徵加上 "Tbase" 前綴
+          prefix = "Tbase" if delay_days_val > 0 else ""
+
           # 讀取 Tbase 發動當天的特徵指標
           vol_t0_lots = int(round(float(row_t0.get("Trading_Volume", 0)) / 1000.0))
           hit_record.update({
               "Tbase發動日期": str(row_t0.get("date", day_str)),
               "Tbase收盤價": round(float(row_t0.get("close", close_price)), 2),
               "Tbase成交量(張)": vol_t0_lots,
-              "單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
+              f"{prefix}單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
               "前5日均量(張)": int(round(float(row_t0.get("vol_ma5_prior", row_t0.get("vol_ma5", 0))) / 1000.0)),
               "前20日均量(張)": int(round(float(row_t0.get("vol_ma20_prior", row_t0.get("vol_ma20", 0))) / 1000.0)),
               "前5日均量斜率(%/日)": round(float(row_t0.get("vol_ma5_slope_prior_pct", 0)), 2),
