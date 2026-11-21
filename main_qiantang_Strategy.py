@@ -315,7 +315,7 @@ def run_qiantang_strategy_excel_scan(
     # =========================================================================
     passed_in_create_day = target_date
 
-    if not is_schedule and passed_in_create_day:
+    if not is_scheduled and passed_in_create_day:
         # 🧪 【情境 A：測試模式且明確傳入指定日期 (Non-Schedule + target_date)】
         # 邏輯：使用者手動或測試時指定特定日期 (如 '2024-05-20')，100% 採用該日期進行歷史回測，
         #       資料擷取區間自動設為 [指定日期 - 400天 ~ 指定日期]，不強制歸位至最新交易日。
