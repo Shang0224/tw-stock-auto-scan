@@ -452,6 +452,93 @@ def run_qiantang_strategy_excel_scan(
         except Exception as e:
             print(f"⚠️ NAS 備份過程跳過或失敗: {e}")
 
+    # =========================================================================
+    # 🌟 12. 發送 LINE 簡報與 Email 詳細報告 (LINE 與 Email 共用卡片訊息)
+    # =========================================================================
+    print("📡 正在發送選股結果通知 (LINE & Email)...")
+    try:
+        # ---------------------------------------------------------------------
+        # 📝 A. 建立共用之卡片式精簡訊息 (含 6 大風控特徵與操作建議)
+        # ---------------------------------------------------------------------
+        card_lines = [
+            f"📅 【錢塘潮選股】觸發速報 ({scan_date_str})",
+            f"=== 🎯 觸發個股清單 (共 {len(day_hits)} 筆訊號) ===\n"
+        ]
+
+        for idx, hit in enumerate(day_hits, start=1):
+            sid = hit.get("股票代號", "")
+            sname = hit.get("名稱", "")
+            strat = hit.get("選股策略", "")
+            close_px = hit.get("今日收盤", "")
+            cat = hit.get("選股池分類", "")
+
+            # 提取 6 大關鍵策略風控資訊 (若缺值自動補 N/A)
+            pos = hit.get("建議部位", "N/A")
+            sl = hit.get("停損價格", "N/A")
+            win = hit.get("最佳績效", "N/A")
+            dd = hit.get("最大回檔", "N/A")
+            adv = hit.get("操作建議", "N/A")
+            doc = hit.get("策略文件", "N/A")
+
+            card = (
+                f"🔹 [{sid}] {sname} ({cat})\n"
+                f"   • 觸發策略: {strat}\n"
+                f"   • 今日收盤: ${close_px}\n"
+                f"   • 建議部位: {pos}\n"
+                f"   • 停損價格: {sl}\n"
+                f"   • 最佳績效: {win}\n"
+                f"   • 最大回檔: {dd}\n"
+                f"   • 操作建議: {adv}\n"
+                f"   • 策略文件: {doc}\n"
+            )
+            card_lines.append(card)
+
+        formatted_content = "\n".join(card_lines)
+
+        # ---------------------------------------------------------------------
+        # 📱 B. 發送 LINE 訊息 (加上 4500 字上限防呆截斷)
+        # ---------------------------------------------------------------------
+        line_msg = formatted_content
+        if len(line_msg) > 4500:
+            line_msg = line_msg[:4400] + "\n\n⚠️ (訊息內容較長，完整資料請參閱 Email 與 Excel 附件)"
+        
+        send_line_message(line_msg)
+
+        # ---------------------------------------------------------------------
+        # 📧 C. 發送 Email (內文帶入同樣訊息 + 附帶 Excel 附件)
+        # ---------------------------------------------------------------------
+        sender_email = os.getenv("SENDER_EMAIL")
+        recipient_email = os.getenv("RECIPIENT_EMAIL")
+        app_password = os.getenv("EMAIL_APP_PASSWORD")
+
+        if sender_email and recipient_email and app_password:
+            email_subject = f"📊 錢塘潮選股每日報告 - {scan_date_str} (共 {len(day_hits)} 筆觸發)"
+            
+            email_body = (
+                f"您好：\n\n"
+                f"【錢塘潮選股系統】已完成 {scan_date_str} 交易日之選股掃描。\n\n"
+                f"{formatted_content}\n"
+                f"=================================================================\n"
+                f"💡 完整的綜合儀表板與各策略獨立 Sheet 分頁，請參閱隨信附帶之 Excel 附件：\n"
+                f"   【{file_name}】\n\n"
+                f"祝 投資順利！\n"
+                f"錢塘潮自動選股系統 敬上"
+            )
+
+            send_email_with_attachment(
+                file_paths=file_path,
+                recipient_email=recipient_email,
+                sender_email=sender_email,
+                app_password=app_password,
+                subject=email_subject,
+                body=email_body,
+            )
+        else:
+            print("⚠️ [Email 提示] 缺少 SENDER_EMAIL / RECIPIENT_EMAIL / EMAIL_APP_PASSWORD 環境變數，跳過 Email 發送。")
+
+    except Exception as notify_err:
+        print(f"⚠️ [通知發送失敗] 發生預期外錯誤: {notify_err}")
+
 
 # =============================================================================
 # 🏁 程式執行進入點 (CLI Entry Point)
