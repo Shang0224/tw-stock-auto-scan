@@ -79,7 +79,8 @@ from utils import (
 TEST_QIANTANG_STRATEGY = [
     st_qiantang_f1_spt_growth,              # F1: 筆張現形
     st_qiantang_f2_volume_breakout,         # F2: 出量上輕
-    st_qiantang_f3_after_shakeout_mid100,  # F3: 洗盤後 MID100 雙策略共振實戰版
+    st_qiantang_f3_after_shakeout_mid100,   # F3: 洗盤後 MID100 雙策略共振實戰版
+    st_qiantang_f3_after_shakeout_TW50,     #F3: 洗盤後TW50專用策略
     #st_qiantang_f4_strong_rise,             # F4: 強力上
     #st_qiantang_f5_major_buy_easy,          # F5: 主外上輕
     #st_qiantang_f6_flower,                  # F6: 一朵花
@@ -92,7 +93,7 @@ STOCK_MODE = "csv"                          # 預設股票池讀取模式 ('csv'
 STOCK_INPUT = "data/TestData/qiantang_ICDesign_test.csv,data/TestData/qiantang_mid100_test.csv,data/TestData/qiantang_tw50_test.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/TW50.csv"
-GLOBAL_TEST_DATE = "2016-07-26" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
+GLOBAL_TEST_DATE = "2023-08-07" #None                     # 預設單機測試指定日期 (None 代表自動定位大盤最新交易日)
 
 ENABLE_LINE_NOTIFY = True #測試/手動執行時是否發送 LINE 通知 (True: 發送, False: 不發送)
                            #💡 提示：若為定時排程執行 (GITHUB_EVENT_NAME == 'schedule')，系統將會無視此設定並【強制發送】
