@@ -35,6 +35,8 @@ import sys
 import argparse
 from datetime import datetime, timedelta, timezone
 import pandas as pd
+from utils.notifier import send_line_message, send_email_with_attachment
+
 
 # -----------------------------------------------------------------------------
 # 1. 匯入核心執行引擎與預處理
