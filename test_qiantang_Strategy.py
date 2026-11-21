@@ -253,7 +253,7 @@ def scan_qiantang_strategy_day(
     if not market_info:
         print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
       
-    print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+    #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
     try:
         # 執行當日單一股票掃描
         hits = scan_single_stock(
