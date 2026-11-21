@@ -1184,6 +1184,7 @@ SOP v2.0》
           doc_ref="洗盤後MID100策略統計資料20261108_2237.pdf",
           # 🌟 特有自訂欄位透過 **extra_fields 動態合流
           訊號評等=tier_label,
+          delay_days=delay_days,
       )
       if is_hit
       else {}
