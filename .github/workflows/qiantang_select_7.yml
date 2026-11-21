@@ -94,7 +94,9 @@ jobs:
           
           # 2. 🌟 在 Shell 裡面直接將 created_at 轉成台灣時間 (Asia/Taipei) 的 YYYY-MM-DD 日期
           TW_CREATED_DATE=$(TZ='Asia/Taipei' date -d "$CREATED_AT_UTC" +'%Y-%m-%d')
-          echo -e "📌 官方 Trigger Created at (台灣時間): ${TW_CREATED_DATE} <--- 檢查這一天是否與預計執行日期一樣\n\n"
+          echo -e "================================================================================================\n"
+          echo -e "📌 官方 Trigger Created at (台灣時間): ${TW_CREATED_DATE} <--- 檢查這一天是否與預計執行日期一樣\n"
+          echo -e "================================================================================================\n\n\n"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo -e "🧪 [測試環境] 偵測到網頁手動點擊，正在執行 test_qiantang_Strategy.py...\n觸發日期為${TW_CREATED_DATE}"
