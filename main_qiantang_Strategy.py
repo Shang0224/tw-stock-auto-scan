@@ -350,7 +350,7 @@ def run_qiantang_strategy_excel_scan(
     # 輸出 Console 日誌比對區塊
     print("\n" + "=" * 75)
     print("🔍 【日期對比與環境感知觀察區塊】")
-    print(f"  ► 執行環境感知 (is_schedule)       : 【{'📅 定時排程模式 (Schedule)' if is_schedule else '🧪 單機/測試模式 (Non-Schedule)'}】")
+    print(f"  ► 執行環境感知 (is_scheduled)       : 【{'📅 定時排程模式 (Schedule)' if is_scheduled else '🧪 單機/測試模式 (Non-Schedule)'}】")
     print(f"  ► 傳入之 create_day (target_date) : 【{passed_in_create_day if passed_in_create_day else '未指定 (None)'}】")
     print(f"  ► 最終定案之掃描交易日 (scan_date) : 【{scan_date_str}】")
     print(f"  ► 日期校正狀態說明                 : {calib_status}")
