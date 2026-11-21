@@ -54,6 +54,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth,              # F1: 筆張現形
     st_qiantang_f2_volume_breakout,         # F2: 出量上輕
     st_qiantang_f3_after_shakeout_mid100,  # F3: MID100 雙策略共振實戰總控旗艦版
+    st_qiantang_f3_after_shakeout_TW50,     #F3: 洗盤後TW50專用策略
     #st_qiantang_f4_strong_rise,             # F4: 強力上
     #st_qiantang_f5_major_buy_easy,          # F5: 主外上輕
     #st_qiantang_f6_flower,                  # F6: 一朵花
