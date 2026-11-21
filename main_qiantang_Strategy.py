@@ -197,7 +197,7 @@ def scan_qiantang_strategy_day(
                 # -------------------------------------------------------------
                 hit_record = {
                     "掃描交易日": day_str,
-                    "傳入建立日(create_day)": create_day_str if create_day_str else day_str,
+                    #"傳入建立日(create_day)": create_day_str if create_day_str else day_str,
                     "股票代號": sid,
                     "名稱": stock_name,
                     "選股池分類": stock_cat,
