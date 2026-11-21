@@ -9,15 +9,15 @@
    - CLI 命令行傳入 (-d, -s, -m) 具備最高優先權。
    - 若未傳入參數，系統自動備退採用控制面板預設值 (STOCK_MODE, STOCK_INPUT, GLOBAL_TEST_DATE)。
 
-2. 自動環境感知與日期雙軌決策 (is_schedule 自動判斷)：
+2. 自動環境感知與日期雙軌決策 (is_scheduled 自動判斷)：
    - 函數內部直接讀取 `os.getenv("GITHUB_EVENT_NAME") == "schedule"` 判斷執行環境，無需手動傳遞開關參數。
    
-   - 【🧪 測試模式 (is_schedule = False)】:
+   - 【🧪 測試模式 (is_scheduled = False)】:
      - 若使用者明確傳入 -d 指定日期 (如 '2024-05-20')：系統 100% 採用該指定歷史日期進行掃描，
        並自動將資料擷取區間回溯 150 天，不強制歸位至大盤最新交易日，確保歷史回測精準性。
      - 若未傳入日期 (None)：自動採用大盤最新已收盤交易日 (max_market_date)。
 
-   - 【📅 排程模式 (is_schedule = True)】:
+   - 【📅 排程模式 (is_schedued = True)】:
      - 由 GitHub Actions Cron 自動發動。
      - 自動比對傳入之 create_day (target_date) 與大盤資料庫 (TAIEX)。
      - 若傳入日期無大盤資料 (如颱風假休市、週末，或 GitHub Actions 跨夜延遲至隔日凌晨)：
@@ -288,7 +288,7 @@ def run_qiantang_strategy_excel_scan(
 
     # 1. 自動感知 GitHub Actions 執行環境
     # 說明：若 GITHUB_EVENT_NAME 環境變數等於 "schedule"，代表由 GitHub 伺服器定時 Cron 排程觸發
-    is_schedule = (os.getenv("GITHUB_EVENT_NAME") == "schedule")
+    is_scheduled = (os.getenv("GITHUB_EVENT_NAME") == "schedule")
 
     # 2. 時間設定 (UTC+8 台灣時間)
     tz_tw = timezone(timedelta(hours=8))
