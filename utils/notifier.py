@@ -10,6 +10,72 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+def send_email_with_attachment(
+    file_paths: str | list[str],
+    recipient_email: str,
+    sender_email: str,
+    app_password: str,
+    subject: str = None,
+    body: str = None,
+) -> bool:
+    """發送包含單一或多個檔案附件 (Excel/CSV/PNG/PDF 等) 的 Email"""
+
+    # 1. 統一將輸入轉為串列 (List)
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
+
+    # 2. 過濾並檢查實體檔案是否存在
+    valid_files = [f for f in file_paths if f and os.path.exists(f)]
+    if not valid_files:
+        print("❌ 寄送 Email 失敗: 找不到任何可寄送的附件檔案")
+        return False
+
+    # 3. 設定郵件標頭與內文
+    filename_summary = os.path.basename(valid_files[0])
+    if not subject:
+        subject = f"📊 股市掃描報告 - {filename_summary} (共 {len(valid_files)} 個附件)"
+    if not body:
+        body = "您好，附件為今日的股市掃描結果與相關圖檔，請查收。"
+
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = recipient_email
+    msg["Subject"] = Header(subject, "utf-8").encode()
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+
+    # 4. 逐一讀取並加入所有附件
+    for fpath in valid_files:
+        fname = os.path.basename(fpath)
+        try:
+            with open(fpath, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=Header(fname, "utf-8").encode(),
+            )
+            msg.attach(part)
+            print(f"📎 已成功掛載附件: {fname}")
+        except Exception as attach_err:
+            print(f"⚠️ 載入附件 {fname} 失敗: {attach_err}")
+
+    # 5. 連線 SMTP 發送郵件
+    try:
+        print("🔄 正在連線至 Gmail SMTP 伺服器...")
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, app_password)
+            server.send_message(msg)
+
+        print(f"✅ Email 已成功寄送至 {recipient_email} (共夾帶 {len(valid_files)} 個附件)")
+        return True
+    except Exception as e:
+        print(f"❌ 寄送 Email 發生預期外錯誤: {e}")
+        return False
+
 def send_line_message(message: str):
     """透過 LINE Messaging API 發送 Push 訊息給指定 User"""
     token = os.getenv("LINE_ACCESS_TOKEN")
