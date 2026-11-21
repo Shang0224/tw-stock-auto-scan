@@ -484,13 +484,13 @@ def run_qiantang_strategy_excel_scan(
 
             card = (
                 f"🔹 [{sid}] {sname} ({cat})\n"
-                f"   • 觸發策略: {strat}\n"
                 f"   • 今日收盤: ${close_px}\n"
                 f"   • 建議部位: {pos}\n"
-                f"   • 停損價格: {sl}\n"
-                f"   • 最佳績效: {win}\n"
-                f"   • 最大回檔: {dd}\n"
-                f"   • 操作建議: {adv}\n"
+                f"   • 停損價格: {sl}\n\n"
+                f"   • 觸發策略: {strat}\n\n"
+                f"   • 最佳績效: {win}\n\n"
+                f"   • 最大回檔: {dd}\n\n"
+                f"   • 操作建議: {adv}\n\n"
                 f"   • 策略文件: {doc}\n"
             )
             card_lines.append(card)
