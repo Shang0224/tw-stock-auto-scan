@@ -226,7 +226,7 @@ def scan_qiantang_strategy_day(
 ) -> list:
   """單日個股選股掃描核心，並於觸發時附加全方位技術面、大盤環境、前瞻與極值績效"""
   day_hits = []
-
+  error_logs = []  # 收集當天所有異常
     
   # 1. 直接對全市場 K 線依 stock_id 分組
   grouped = all_df_slice.groupby("stock_id")
@@ -426,8 +426,26 @@ def scan_qiantang_strategy_day(
     except Exception as e:
         # 攔截該檔股票當天發生的任何例外    
         print(f'⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤: {e}')
-        traceback.print_exc()    
+        traceback.print_exc()
+        error_logs.append(err_msg)
         continue
+        
+    # 3. 🟢 當日所有股票掃描結束後，若有累積異常，直接呼叫 send_email_with_attachment 寄出一封總結信
+    if error_logs:
+        summary_body = f"【{day_str} 潛龍策略歷史掃描異常數據彙整】\n\n"
+        summary_body += f"當日共有 {len(error_logs)} 檔個股在掃描或欄位轉換時發生例外，系統已自動跳過並完成歷史掃描：\n\n"
+        summary_body += "\n".join(error_logs)
+        summary_body += "\n\n(此為系統自動發送之當日彙整報告)"
+
+        try:
+            send_email_with_attachment(
+                file_paths=None,  # 🟢 傳入 None，直接作為純文字 Email 發送
+                subject=f"⚠️ [數據異常彙整告警] {day_str} 共 {len(error_logs)} 筆資料例外",
+                body=summary_body
+            )
+            print(f"📧 已成功寄出當日異常彙整通知信 (共彙整 {len(error_logs)} 筆異常)")
+        except Exception as mail_err:
+            print(f"❌ 彙整告警 Email 發送失敗: {mail_err}")
           
   return day_hits
 
