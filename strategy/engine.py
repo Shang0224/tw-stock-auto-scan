@@ -352,8 +352,8 @@ def _preprocess_technical_indicators(df_single: pd.DataFrame) -> pd.DataFrame:
   df['vol_ma5_slope_prior_lots'] = raw_slope_prior_5 / 1000.0
   df['vol_ma20_slope_prior_lots'] = raw_slope_prior_20 / 1000.0
 
-  # 3. T-2~T-4 甩轎期最大成交量  
-  df['vol_shakeout_max'] = df['Trading_Volume'].shift(2).rolling(3, min_periods=1).max()
+  # 3. T-1~T-3 甩轎期最大成交量  
+  df['vol_shakeout_max'] = df['Trading_Volume'].shift(1).rolling(3, min_periods=1).max()
     
   return df
 
