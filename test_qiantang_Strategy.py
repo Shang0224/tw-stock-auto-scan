@@ -252,10 +252,12 @@ def scan_qiantang_strategy_day(
       
     # 4. 查閱當日大盤環境數據
     #m_info = market_dict.get(day_str, {}) if market_dict else {}
+
+    funcname = sys._getframe().f_code.co_name
     if not market_info:
-        print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
+        print(f"\n\n{funcname} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
       
-    print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+    print(f"{funcname} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
     try:
         # 執行當日單一股票掃描
         hits = scan_single_stock(
@@ -435,7 +437,7 @@ def scan_qiantang_strategy_day(
         
     # 3. 🟢 當日所有股票掃描結束後，若有累積異常，直接呼叫 send_email_with_attachment 寄出一封總結信
   if error_logs:
-      summary_body = f"【{day_str} 潛龍策略歷史掃描異常數據彙整】\n\n"
+      summary_body = f"【{day_str} [{funcname}] 策略歷史掃描異常數據彙整】\n\n"
       summary_body += f"當日共有 {len(error_logs)} 檔個股在掃描或欄位轉換時發生例外，系統已自動跳過並完成歷史掃描：\n\n"
       summary_body += "\n".join(error_logs)
       summary_body += "\n\n(此為系統自動發送之當日彙整報告)"
