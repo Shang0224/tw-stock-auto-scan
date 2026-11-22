@@ -267,7 +267,9 @@ def scan_qiantang_strategy_day(
         print(f'⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤: {e}')
         traceback.print_exc()    
         continue
-     
+
+    print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  len(hits) : {len(hits)}************************************" )
+      
     if hits:
       # 取得觸發當日 (Day T) 的預處理資料列
       latest_row = df_single.iloc[-1]
@@ -284,9 +286,9 @@ def scan_qiantang_strategy_day(
       # 6. 計算第二類：未來 1 年內最高/最低極值與軌跡風險 (MAE/MFE/登頂天數/Cat標籤)
       extreme_perf = calculate_one_year_extremes(
           stock_id=sid, trigger_date_str=day_str, global_df=global_df
-      )
+      )   
 
-      print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  len(hits) : {len(hits)}************************************" )
+      
         
       for hit in hits:
           # =================================================================
@@ -294,6 +296,8 @@ def scan_qiantang_strategy_day(
           # =================================================================
           strat_func_name = hit.get("strategy_name", hit.get("選股策略", ""))
           formula_label = hit.get("選股策略", strat_func_name if strat_func_name else "未知策略")
+
+          print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  hit : {hit}************************************" )
           
           try:
             delay_days_val = int(hit.get("delay_days", 0))
