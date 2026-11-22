@@ -297,7 +297,7 @@ def scan_qiantang_strategy_day(
           strat_func_name = hit.get("strategy_name", hit.get("選股策略", ""))
           formula_label = hit.get("選股策略", strat_func_name if strat_func_name else "未知策略")
 
-          print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  hit : {hit}************************************" )
+          #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  hit : {hit}************************************" )
           
           try:
             delay_days_val = int(hit.get("delay_days", 0))
@@ -356,7 +356,7 @@ def scan_qiantang_strategy_day(
                 "大盤季線與年線乖離率(%)": round(float(market_info.get("taiex_ma60_ma240_bias_pct", 0)), 2),
             })
 
-          print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) delay_days_val : {delay_days_val}")
+          #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) delay_days_val : {delay_days_val}")
           
           # =================================================================
           # 🧬 欄位 4: T0 / Tbase 發動日技術面與籌碼基因特徵 (根據 row_t0 提取)
