@@ -425,9 +425,10 @@ def scan_qiantang_strategy_day(
               day_hits.append(hit_record)
     except Exception as e:
         # 攔截該檔股票當天發生的任何例外    
-        print(f'⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤: {e}')
-        traceback.print_exc()
+        err_msg = f"⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤類型: {type(e).__name__} - {e}"
+        print(err_msg)
         error_logs.append(err_msg)
+        traceback.print_exc()
         continue
         
     # 3. 🟢 當日所有股票掃描結束後，若有累積異常，直接呼叫 send_email_with_attachment 寄出一封總結信
