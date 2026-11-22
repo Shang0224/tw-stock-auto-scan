@@ -262,6 +262,223 @@ def scan_qiantang_strategy_day(
             param_profiles=profiles_map,
             market_info=market_info,
         )
+
+        print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  len(hits) : {len(hits)}************************************" )
+      
+        if hits:
+          # 取得觸發當日 (Day T) 的預處理資料列
+          latest_row = df_single.iloc[-1]
+          close_price = round(float(latest_row["close"]), 2)
+          vol_today = float(latest_row.get("Trading_Volume", 0))
+          vol_lots = int(vol_today / 1000)
+          amount_100m = round(float(vol_today * close_price / 100_000_000.0), 2)
+
+          # 5. 計算第二類：前瞻天數報酬 (T+3, T+5, T+10, T+20, T+60, T+120, T+240)
+          fwd_perf = calculate_forward_horizon_returns(
+              stock_id=sid, trigger_date_str=day_str, global_df=global_df
+          )
+
+          # 6. 計算第二類：未來 1 年內最高/最低極值與軌跡風險 (MAE/MFE/登頂天數/Cat標籤)
+          extreme_perf = calculate_one_year_extremes(
+              stock_id=sid, trigger_date_str=day_str, global_df=global_df
+          )   
+
+      
+        
+          for hit in hits:
+              # =================================================================
+              # 📌 1. 基本資訊：實盤建倉買進日 (Day 0) 基礎標籤
+              # =================================================================
+              strat_func_name = hit.get("strategy_name", hit.get("選股策略", ""))
+              formula_label = hit.get("選股策略", strat_func_name if strat_func_name else "未知策略")
+
+              #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  hit : {hit}************************************" )
+          
+              try:
+                delay_days_val = int(hit.get("delay_days", 0))
+              except (ValueError, TypeError):
+                delay_days_val = 0
+
+              # 精準定位 Tbase 發動日相對資料列 (-1 - delay_days)
+              t0_pos = -(1 + delay_days_val)
+              if len(df_single) >= abs(t0_pos):
+                row_t0 = df_single.iloc[t0_pos]
+              else:
+                row_t0 = latest_row
+
+              hit_record = {
+                "日期": day_str,              # 實盤建倉買進日 (Confirmation Date)
+                "股票代號": sid,
+                "名稱": stock_name,
+                "選股池分類": stock_cat,
+                "今日收盤": close_price,      # 實際買進成本價
+                "今日成交量(張)": vol_lots,
+                "成交金額(億元)": amount_100m,
+                "選股策略": hit.get("選股策略", "未知策略"),  # 🌟 顯式寫入，防止 KeyError
+              }
+
+              # =================================================================
+              # 🌟 2. 策略動態回傳資料 (Strategy Hits) ➔ 【移至大盤資料之前】
+              # =================================================================
+              # 自動透傳策略內部的自訂診斷指標（如：'所屬軌道'、'Tbase+3觀察期報酬'、'飆股豁免啟動' 等）
+              # 既可保持 100% 欄位無損輸出，又不會覆蓋基本資訊
+
+              #if delay_days_val > 0: 
+              #  hit_record["右側觀察天數"] = delay_days_val
+          
+              for key, value in hit.items():
+                if key in ["strategy_name", "選股策略"]:
+                    continue  # 忽略已顯式處理或廢棄的欄位                
+                if key not in hit_record:
+                    hit_record[key] = value
+
+              # =================================================================
+              # 🛡️ 3. 大盤環境資訊 (Market Environment Info)
+              # =================================================================
+              if market_info and isinstance(market_info, dict):
+                m_close = float(market_info.get("taiex_close", 0))
+                m_ma60 = float(market_info.get("taiex_MA60", 0))
+
+                hit_record.update({
+                    "大盤收盤": m_close,
+                    "大盤位階": ("大盤>MA60" if (m_close > 0 and m_ma60 > 0 and m_close > m_ma60) else "大盤<=MA60"),
+                    "大盤當日漲跌幅(%)": round(float(market_info.get("taiex_change_pct", 0)), 2),
+                    "大盤EMA60斜率(5日差值/OLS)": round(float(market_info.get("taiex_EMA60_slope", 0)), 4),
+                    "大盤EMA60月乖離率(%)": round(float(market_info.get("taiex_ema60_bias_pct", 0)), 2),
+                    "大盤月線乖離率(%)": round(float(market_info.get("taiex_ma20_bias_pct", 0)), 2),
+                    "大盤季線乖離率(%)": round(float(market_info.get("taiex_ma60_bias_pct", 0)), 2),
+                    "大盤年線乖離率(%)": round(float(market_info.get("taiex_ma240_bias_pct", 0)), 2),
+                    "大盤季線與年線乖離率(%)": round(float(market_info.get("taiex_ma60_ma240_bias_pct", 0)), 2),
+                })
+
+              #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) delay_days_val : {delay_days_val}")
+          
+              # =================================================================
+              # 🧬 欄位 4: T0 / Tbase 發動日技術面與籌碼基因特徵 (根據 row_t0 提取)
+              # -------------------------------------------------------------
+              # 🌟 判斷是否有 delay_days 機制，動態為發動日特徵加上 "Tbase" 前綴
+              print(f"row_t0.get('Trading_Volume', 0) : {row_t0.get('Trading_Volume', 0.0)}, 日期: {day_str}, 股票代號 : {sid}, t0_pos : {t0_pos}")
+          
+              vol_t0_lots = int(round(float(row_t0.get("Trading_Volume", 0.0)) / 1000.0))
+              prefix = "Tbase" if delay_days_val > 0 else ""
+
+              # 1. 當存在 delay_days 時，補上 Tbase 基礎發動日資訊 (日期/收盤/成交量)
+              if delay_days_val > 0:
+                  vol_t0_lots = int(round(float(row_t0.get('Trading_Volume', 0)) / 1000.0))
+                  hit_record.update({
+                      "Tbase發動日期": str(row_t0.get('date', day_str)),
+                      "Tbase收盤價": round(float(row_t0.get('close', close_price)), 2),
+                      "Tbase成交量(張)": vol_t0_lots,
+                  })
+
+              # 2. 寫入 Tbase 發動日特徵 (全數統一加上 f"{prefix}..." 前綴)
+              t0_features = {
+                  # K 線型態與特徵
+                  f"{prefix}實體K棒比例(%)": round(float(row_t0.get('body_ratio', 0)), 2),
+                  f"{prefix}上影線比例(%)": round(float(row_t0.get('upper_shadow_ratio', 0)), 2),
+                  f"{prefix}是否紅K": bool(row_t0.get('is_red_k', True)),
+                  f"{prefix}距52週高點(%)": (
+                      round(float(row_t0['dist_to_52w_high_pct']), 2)
+                      if ('dist_to_52w_high_pct' in row_t0 and pd.notnull(row_t0['dist_to_52w_high_pct']))
+                      else "N/A"
+                  ),
+                  f"{prefix}打底沉澱天數": int(row_t0.get('base_consolidation_days', 0)),
+                  # 均線與動能特徵
+                  f"{prefix}單筆均張(SPT)": round(float(row_t0.get('shares_per_trans', 0)), 2),
+                  f"{prefix}輕鬆線乖離率(%)": round(float(row_t0.get('easy_line_bias', 0)), 2),
+                  f"{prefix}輕鬆線OLS斜率": round(float(row_t0.get('easy_line_slope', 0)), 4),
+                  f"{prefix}季線乖離率(%)": round(float(row_t0.get('ma60_bias', 0)), 2),
+                  f"{prefix}年線乖離率(%)": (
+                      round(float(row_t0['ma240_bias']), 2)
+                      if ('ma240_bias' in row_t0 and pd.notnull(row_t0['ma240_bias']))
+                      else "N/A"
+                  ),
+                  f"{prefix}年線扣抵位置(%)": (
+                      round(float(row_t0['ma240_deduct_bias']), 2)
+                      if ('ma240_deduct_bias' in row_t0 and pd.notnull(row_t0['ma240_deduct_bias']))
+                      else "N/A"
+                  ),
+                  f"{prefix}均線多頭排列": bool(row_t0.get('is_bull_alignment', False)),
+                  f"{prefix}均線糾結度(%)": (
+                      round(float(row_t0['ma_tangle_ratio']), 2)
+                      if ('ma_tangle_ratio' in row_t0 and pd.notnull(row_t0['ma_tangle_ratio']))
+                      else "N/A"
+                  ),
+                  # 籌碼特徵
+                  f"{prefix}外資買超(張)": safe_lots_from_shares(row_t0.get('Foreign_Investor')),
+                  f"{prefix}投信買超(張)": safe_lots_from_shares(row_t0.get('Investment_Trust')),
+                  f"{prefix}主力買超(張)": safe_lots_from_shares(row_t0.get('major_net')),
+                  f"{prefix}外資近5日累計(張)": safe_lots_from_shares(row_t0.get('foreign_5d_shares_sum')),
+                  f"{prefix}投信近5日累計(張)": safe_lots_from_shares(row_t0.get('trust_5d_shares_sum')),
+                  f"{prefix}主力近5日累計(張)": safe_lots_from_shares(row_t0.get('major_5d_shares_sum')),
+                  f"{prefix}融資當日增減(張)": safe_lots_from_shares(row_t0.get('margin_diff_shares')),
+              }
+
+              hit_record.update(t0_features)
+          
+              # =================================================================
+              # ⏱️ 5. 前瞻與極值績效統計 (Performance Metrics)
+              #=================================================================
+              hit_record.update(fwd_perf)      # 寫入 T+1 ~ T+240 天期報酬率
+              hit_record.update(extreme_perf)  # 寫入 MFE / MAE / 1Y極值與 Cat 走勢標籤
+
+              day_hits.append(hit_record)
+    except Exception as e:
+        # 攔截該檔股票當天發生的任何例外    
+        print(f'⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤: {e}')
+        traceback.print_exc()    
+        continue
+          
+  return day_hits
+
+def scan_qiantang_strategy_day_old(
+    day_str: str,
+    all_df_slice: pd.DataFrame,
+    global_df: pd.DataFrame,
+    stocks_dict: dict[str, dict],
+    strategies: list,
+    profiles_map: dict = BUY_PARAM_PROFILES,
+    market_info: dict = None,  # 🌟傳入大盤指定日期的資料
+    #market_dict: dict = None,  # 🌟 新增：傳入大盤資料秒查字典
+) -> list:
+  """單日個股選股掃描核心，並於觸發時附加全方位技術面、大盤環境、前瞻與極值績效"""
+  day_hits = []
+
+    
+  # 1. 直接對全市場 K 線依 stock_id 分組
+  grouped = all_df_slice.groupby("stock_id")
+
+  for stock_id, group_df in grouped:
+    sid = str(stock_id)
+
+    # 2. 快速過濾與查詢監控股票資訊
+    if sid not in stocks_dict:
+      continue
+
+    stock_info = stocks_dict[sid]
+    stock_name = stock_info.get("name", "未知股票")
+    stock_cat = stock_info.get("category", "MID100")
+
+    df_single = group_df.sort_values("date").copy()
+    if df_single.empty or len(df_single) < 5:
+      continue
+
+    df_single["category"] = stock_cat  # 將股票池分類直接加入df_single
+      
+    # 4. 查閱當日大盤環境數據
+    #m_info = market_dict.get(day_str, {}) if market_dict else {}
+    if not market_info:
+        print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
+      
+    #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+    try:
+        # 執行當日單一股票掃描
+        hits = scan_single_stock(
+            df_single=df_single,
+            func_list=strategies,
+            param_profiles=profiles_map,
+            market_info=market_info,
+        )
     except Exception as e:
         # 攔截該檔股票當天發生的任何例外    
         print(f'⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤: {e}')
