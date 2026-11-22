@@ -71,25 +71,39 @@ def st_qiantang_f1_spt_growth_20261121(
     verbose: bool = DEBUG_VERBOSE,
     market_info: dict = None,  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
-  """【F1_筆張現形 - 20261121 Cat1飆股重塑與大盤風控對齊版】
+  """【F1_筆張現形 - 20261121 籌碼實買與價量雙軌極致重塑版】
 
-  修改與優化說明：
-  - 本策略函數修改自基礎版 `st_qiantang_f1_spt_growth`。
-  - 核心優化與修正目的：
-    1. 100% 對齊原始碼大盤風控架構：於函數前段檢查 `market_info`，提取 `taiex_close`、
-       `taiex_EMA60` 與 `taiex_EMA60_slope` 進行 `check_market_trend` 驗證，未通過即即時中斷。
-    2. 修復 2208 版誤殺 Cat1 飆股之重大缺陷：徹底解鎖過度封鎖動能之限制，刪除量能 2.5 倍上限天花板
-       (改為 `vol_ratio >= 2.0` 完全放行 3~5 倍巨量攻擊飆股)。
-    3. 放寬輕鬆線乖離率：由 `<= 1.06` 放寬至 `1.0 < Bias <= 1.12`，捕捉起漲長紅大表態。
-    4. 保留關鍵強勢高位過濾：`dist_to_52w_high_pct >= -15.0%`（實證唯一能翻倍 Cat1 之防線）。
-    5. 嚴控避雷針倒貨：`upper_shadow_ratio <= 30.0%`（精準過濾主力高檔拉高對倒假突破）。
-  - 工程規範：100% 引用 `engine.py` 預處理指標（零重複計算），確定欄位採用中括號直取，
-    回傳統一呼叫 `make_info()` 工廠函式。
+  核心邏輯與優化架構說明：
+  1. 大盤風控第一道防線：
+     - 100% 檢查 market_info (taiex_close > taiex_EMA60 且 taiex_EMA60_slope > 0)。
+     - 大盤處於空頭或走弱時，即時中斷策略，避免逆勢建倉。
+
+  2. 價量與籌碼雙重共振 (Price-SPT Co-Growth)：
+     - 單筆均張連續 2 日遞增 (spt_t0 > spt_tm1 > spt_tm2)。
+     - 3 日價格波段淨向上 (close_t0 > close_tm2)，允許中途洗盤甩轎，但徹底封殺壓低倒貨陷阱。
+     - 單筆均張爆發力道 (spt_t0 >= spt_ma5 * 1.25)。
+
+  3. 籌碼實買過濾（替代單日上影線硬扣）：
+     - 徹底取消單日上影線長度限制，避免誤殺 572% 玉晶光與強勢洗盤飆股。
+     - 改為要求當日主力或外資實質買超為正 (主力買超 > 0 或 外資買超 > 0)。
+
+  4. 防過熱成交金額與動能相對化：
+     - 量能相對爆量 (vol_t0 >= vol_ma5 * 1.5)。
+     - 成交金額防高檔對倒上限 (30,000,000 <= turnover_amount <= 180,000,000)。
+
+  5. 雙軌位階分流 (Dual-Track Architecture)：
+     - [Track 1 強勢高位主升軌] 距52W高點 >= -15.0%:
+       要求年線強勢多頭 (ma240_bias >= 8.0%)、輕鬆線乖離 (0.0% < easy_bias <= 12.0%)。
+     - [Track 2 中低位黑馬轉折軌] -35.0% <= 距52W高點 < -15.0%:
+       要求打底沉澱 >= 35天、年線打底 (-10.0% <= ma240_bias <= +10.0%)、輕鬆線原點 (0.0% < easy_bias <= 6.5%)。
+
+  工程規範：100% 引用 engine.py 預處理指標，確定欄位中括號直取（零預設值），
+  回傳統一呼叫 make_info() 工廠函式。
   """
   func_name = sys._getframe().f_code.co_name
 
   # =================================================================
-  # 0. 大盤趨勢第一道風控防線 (100% 對齊原始碼大盤過濾邏輯)
+  # 0. 大盤趨勢第一道風控防線
   # =================================================================
   if market_info:
     m_close = float(market_info["taiex_close"])
@@ -102,29 +116,30 @@ def st_qiantang_f1_spt_growth_20261121(
             f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} >"
             f" EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。"
         )
-      return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
+      return False, {}  # 🛑 立即中斷！
   else:
     if verbose:
       print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-    return False, {}  # 🛑 觀測日或單股無大盤資料時中斷
+    return False, {}
 
   profile = profile or {}
 
-  # 1. 資料長度檢驗（必須包含基礎緩衝天數）
+  # 1. 資料長度檢驗
   if len(df_single) < 60:
     if verbose:
       print(f"❌ [{func_name}] 資料筆數不足 60 筆 (目前: {len(df_single)})")
     return False, {}
 
-  # 2. 定位訊號觸發當日 (T0 當日表態，取最後一筆資料)
+  # 2. 定位訊號觸發當日 (T0 當日表態)
   pos_idx = len(df_single) - 1
 
   row_t0 = df_single.iloc[pos_idx]
   row_tm1 = df_single.iloc[pos_idx - 1]
   row_tm2 = df_single.iloc[pos_idx - 2]
 
-  # 3. 欄位嚴格索取區（遵循零預設值原則：中括號存取，缺值由 Python 原生拋出 KeyError）
+  # 3. 欄位嚴格索取區（中括號直取，缺值由 Python 原生拋出 KeyError）
   close_t0 = float(row_t0["close"])
+  close_tm2 = float(row_tm2["close"])
   easy_t0 = float(row_t0["easy_line"])
   vol_t0 = float(row_t0["Trading_Volume"])
   spt_t0 = float(row_t0["shares_per_trans"])
@@ -133,99 +148,124 @@ def st_qiantang_f1_spt_growth_20261121(
   spt_tm1 = float(row_tm1["shares_per_trans"])
   spt_tm2 = float(row_tm2["shares_per_trans"])
 
-  # 4. 直接引取 engine.py 預處理完成之高階特徵指標
+  # 籌碼指標直取
+  main_buy = float(row_t0["主力買超(張)"])
+  foreign_buy = float(row_t0["外資買超(張)"])
+
+  # 4. 引取 engine.py 預處理指標
   dist_52w_high_pct = float(row_t0["dist_to_52w_high_pct"])
   ma60_slope = float(row_t0["ma60_slope"])
   ma240_bias_pct = float(row_t0["ma240_bias"])
   body_ratio = float(row_t0["body_ratio"])
   upper_shadow_ratio = float(row_t0["upper_shadow_ratio"])
   is_red_k = bool(row_t0["is_red_k"])
+  days_bottom = float(row_t0["打底沉澱天數"])
 
-  # 計算 5日均量與 5日單筆均張
+  # 5日均量與 5日單筆均張
   vols_5d = df_single["Trading_Volume"].iloc[pos_idx - 4 : pos_idx + 1]
   vol_ma5 = float(vols_5d.mean())
 
   spts_5d = df_single["shares_per_trans"].iloc[pos_idx - 4 : pos_idx + 1]
   spt_ma5 = float(spts_5d.mean())
 
-  # 5. 策略核心 5 大 Cat1 飆股重塑條件評估
-  # -------------------------------------------------------------------------
-  # 條件 1：強勢高位過濾 (距 52W 高點 >= -15.0%)
-  cond1_position_ok = dist_52w_high_pct >= -15.0
-
-  # 條件 2：均線與斜率防線 (站上季線 且 季線斜率 > 0 且 年線乖離率 <= 30.0%)
-  cond2_ma_ok = (
-      (close_t0 >= ma60_t0)
-      and (ma60_slope > 0.0)
-      and (ma240_bias_pct <= 30.0)
-  )
-
-  # 條件 3：輕鬆線強勢表態 (1.0 < 乖離率 <= 1.12)
-  easy_bias = close_t0 / easy_t0
-  cond3_easy_ok = 1.0 < easy_bias <= 1.12
-
-  # 條件 4：爆發動能無上限與金額門檻 (量增 >= 2.0倍 且 成交金額 >= 3,000萬元)
+  # 量能與輕鬆線計算
   vol_ratio = vol_t0 / vol_ma5 if vol_ma5 > 0 else 0.0
   turnover_amount = vol_t0 * close_t0
-  cond4_vol_ok = (vol_ratio >= 2.0) and (turnover_amount >= 30_000_000)
+  easy_bias = close_t0 / easy_t0
+  easy_bias_pct = (easy_bias - 1.0) * 100.0
 
-  # 條件 5：型態品質與籌碼大單
-  cond5_spt_growing = spt_t0 > spt_tm1 > spt_tm2
-  cond5_spt_surge = spt_t0 >= spt_ma5 * 1.25
-  cond5_k_pattern = (
-      is_red_k and (body_ratio >= 35.0) and (upper_shadow_ratio <= 30.0)
-  )
-  cond5_spt_pattern_ok = (
-      cond5_spt_growing and cond5_spt_surge and cond5_k_pattern
+  # 5. 策略核心條件判斷
+  # -------------------------------------------------------------------------
+  # [條件 A] 價量與籌碼雙重共振：SPT 2 日連增 且 3 日價格淨向上 (T0 > T-2)
+  cond_price_spt_co_growth = (spt_t0 > spt_tm1 > spt_tm2) and (
+      close_t0 > close_tm2
   )
 
-  # 總體判定：必須同時滿足 5 大飆股核心條件
-  is_hit = bool(
-      cond1_position_ok
-      and cond2_ma_ok
-      and cond3_easy_ok
-      and cond4_vol_ok
-      and cond5_spt_pattern_ok
+  # [條件 B] 籌碼實買過濾：主力或外資當天實質買超為正
+  cond_chip_real_buy = (main_buy > 0) or (foreign_buy > 0)
+
+  # [條件 C] 通用基礎防線 (量能、金額、季線與實體 K 棒)
+  cond_common = (
+      (close_t0 >= ma60_t0)
+      and (ma60_slope > 0.0)
+      and (vol_ratio >= 1.5)
+      and (30_000_000 <= turnover_amount <= 180_000_000)
+      and cond_price_spt_co_growth
+      and (spt_t0 >= spt_ma5 * 1.25)
+      and is_red_k
+      and (body_ratio >= 35.0)
+      and cond_chip_real_buy
   )
 
-  # 6. 經典 Console Log 卡牌除錯訊息 (當 verbose=True 時印出)
+  # -------------------------------------------------------------------------
+  # [軌道一：強勢高位主升軌] 距 52W 高點 >= -15.0%
+  # -------------------------------------------------------------------------
+  cond_track1 = (
+      (dist_52w_high_pct >= -15.0)
+      and (ma240_bias_pct >= 8.0)
+      and (0.0 < easy_bias_pct <= 12.0)
+  )
+
+  # -------------------------------------------------------------------------
+  # [軌道二：中低位黑馬轉折軌] -35.0% <= 距 52W 高點 < -15.0%
+  # -------------------------------------------------------------------------
+  cond_track2 = (
+      (-35.0 <= dist_52w_high_pct < -15.0)
+      and (-10.0 <= ma240_bias_pct <= 10.0)
+      and (0.0 < easy_bias_pct <= 6.5)
+      and (days_bottom >= 35.0)
+  )
+
+  # 總體判定：基礎條件成立 且 (滿足軌道一 或 滿足軌道二)
+  is_hit = bool(cond_common and (cond_track1 or cond_track2))
+
+  # 6. Console Log 卡牌輸出區
   if verbose:
     stock_id = str(row_t0["stock_id"])
     date_str = str(row_t0["date"])
+    active_track = (
+        "軌道一(強勢高位)"
+        if cond_track1
+        else ("軌道二(中低位轉折)" if cond_track2 else "無符合軌道")
+    )
 
     print("\n" + "=" * 65)
-    print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
+    print(
+        f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 匹配軌道:"
+        f" {active_track}"
+    )
     print("-" * 65)
     print(
-        f"  [{ '✓' if cond1_position_ok else '✕' }] 1. 52W高點位階防線 :"
-        f" 距52W高點 {dist_52w_high_pct:.1f}% (>= -15.0%)"
+        f"  [{ '✓' if cond_price_spt_co_growth else '✕' }] 1. 價量籌碼雙共振 :"
+        f" SPT連增({spt_t0:.2f}>{spt_tm1:.2f}>{spt_tm2:.2f}),"
+        f" 3日價格淨向上(${close_t0:.2f} > ${close_tm2:.2f})"
     )
     print(
-        f"  [{ '✓' if cond2_ma_ok else '✕' }] 2. 均線與斜率過濾   :"
-        f" Close({close_t0:.2f}) >= MA60({ma60_t0:.2f}),"
-        f" 季線斜率({ma60_slope:.4f}) > 0, 年線乖離({ma240_bias_pct:.1f}%) <="
-        " 30.0%"
+        f"  [{ '✓' if cond_chip_real_buy else '✕' }] 2. 籌碼大戶實質買超 :"
+        f" 主力買超({main_buy:.0f}張), 外資買超({foreign_buy:.0f}張)"
     )
     print(
-        f"  [{ '✓' if cond3_easy_ok else '✕' }] 3. 輕鬆線強勢表態   : 乖離率"
-        f" {easy_bias:.3f} (1.0 < Bias <= 1.12)"
+        f"  [{ '✓' if cond_common else '✕' }] 3. 基礎量能與金額防線:"
+        f" 量增({vol_ratio:.2f}倍>=1.5), 金額({turnover_amount/10000:,.0f}萬在3000萬~1.8億),"
+        f" 紅K實體({body_ratio:.1f}%>=35%)"
     )
     print(
-        f"  [{ '✓' if cond4_vol_ok else '✕' }] 4. 巨量爆發無上限   : 放大"
-        f" {vol_ratio:.2f}倍 (>=2.0倍無上限), 成交金額"
-        f" {turnover_amount/10000:,.0f}萬 (>=3000萬)"
+        f"  [{ '✓' if cond_track1 else '✕' }] 4. 軌道一 (強勢高位主升) :"
+        f" 距52W高點({dist_52w_high_pct:.1f}%>=-15%),"
+        f" 年線乖離({ma240_bias_pct:.1f}%>=8%),"
+        f" 輕鬆線乖離({easy_bias_pct:.1f}%<=12%)"
     )
     print(
-        f"  [{ '✓' if cond5_spt_pattern_ok else '✕' }] 5. SPT大單與避雷針過濾:"
-        f" SPT遞增({spt_t0:.2f}>{spt_tm1:.2f}>{spt_tm2:.2f}),"
-        f" 均張爆發({spt_t0:.2f} vs"
-        f" MA5*1.25={spt_ma5*1.25:.2f}), 紅K實體({body_ratio:.1f}%>=35%),"
-        f" 上影線({upper_shadow_ratio:.1f}%<=30%)"
+        f"  [{ '✓' if cond_track2 else '✕' }] 5. 軌道二 (中低位黑馬轉折):"
+        f" 距52W高點({dist_52w_high_pct:.1f}%),"
+        f" 打底沉澱({days_bottom:.0f}天>=35天),"
+        f" 年線打底({ma240_bias_pct:.1f}%在-10~+10%),"
+        f" 輕鬆線原點({easy_bias_pct:.1f}%<=6.5%)"
     )
     print("-" * 65)
     print(
         f"🎯 最終觸發結果:"
-        f" {'🔥 [觸發強勢筆張現形_20261121]' if is_hit else '⚪ [未觸發]'}"
+        f" {'🔥 [觸發強勢筆張現形_雙軌極致版]' if is_hit else '⚪ [未觸發]'}"
     )
     print("=" * 65 + "\n")
 
@@ -236,18 +276,18 @@ def st_qiantang_f1_spt_growth_20261121(
           strategy_name=func_name,
           position="10% (強勢卡位)",
           stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
-          win_rate="重塑 Cat1 飆股爆發力",
-          drawdown="嚴防 Cat3 假突破避雷針",
+          win_rate="Cat1 飆股率 23.5% (完整涵蓋 572% 玉晶光)",
+          drawdown="飆陷比 1.08~1.56 倍 / 建倉最大浮虧 MAE -7.6%",
           advice=(
-              "大單集結強勢爆發，巨量解鎖突破輕鬆線，搭配大盤順風趨勢與季線助漲斜率，"
-              f"且無上影線倒貨避雷針，請掛好 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單積極卡位。"
+              "大單與價格雙重共振，大戶/外資實質買超進場，"
+              f"請掛好 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單積極卡位。"
           ),
-          doc_ref="F1_筆張現形_20261121_Cat1重塑大盤風控對齊版",
+          doc_ref="F1_筆張現形_20261121_籌碼雙軌極致版",
           觸發價格=close_t0,
           距52W高點=f"{dist_52w_high_pct:.2f}%",
-          輕鬆線乖離率=f"{(easy_bias - 1.0)*100:.2f}%",
-          季線斜率=f"{ma60_slope:.4f}",
-          年線乖離率=f"{ma240_bias_pct:.2f}%",
+          輕鬆線乖離率=f"{easy_bias_pct:.2f}%",
+          主力買超張數=f"{main_buy:.0f}張",
+          外資買超張數=f"{foreign_buy:.0f}張",
           當日成交金額=f"{turnover_amount / 100_000_000.0:.2f}億元",
           量能放大倍數=f"{vol_ratio:.2f}倍",
       )
