@@ -386,10 +386,10 @@ def scan_qiantang_strategy_day(
                   f"{prefix}MACD快線(DIF)": bool(row_t0.get('dif', True)),
                   f"{prefix}MACD慢線(DEM)": bool(row_t0.get('dem', True)),
                   f"{prefix}MACD柱狀體": bool(row_t0.get('osc', True)),
-
-
                   
                   f"{prefix}距52週高點(%)": round(float(row_t0['dist_to_52w_high_pct']), 2),
+                  f"{prefix}52週高點": round(float(row_t0['high_52w']), 2),
+                  f"{prefix}52週低點": round(float(row_t0['low_52w']), 2),
                   f"{prefix}打底沉澱天數": int(row_t0.get('base_consolidation_days', 0)),
                   
                   # 均線與動能特徵
@@ -400,7 +400,6 @@ def scan_qiantang_strategy_day(
                   f"{prefix}前20日均量斜率(%/日)": round(float(row_t0.get("vol_ma20_slope_prior_pct", 0)), 2),
                   f"{prefix}前5日均量斜率(張/日)": round(float(row_t0.get("vol_ma5_slope_prior_lots", 0)), 1),
                   f"{prefix}前20日均量斜率(張/日)": round(float(row_t0.get("vol_ma20_slope_prior_lots", 0)), 1),
-
                   
                   # 輕鬆線與均線位階 (帶新股 N/A 安全護城河)                  
                   f"{prefix}輕鬆線價格": round(float(row_t0.get("easy_line", 0)), 2),
@@ -418,9 +417,10 @@ def scan_qiantang_strategy_day(
                   f"{prefix}MA240斜率": round(float(row_t0.get("ma240_slope", 0)), 4),
                   f"{prefix}年線乖離率(%)": round(float(row_t0["ma240_bias"]), 2),
                   f"{prefix}年線扣抵位置(%)": round(float(row_t0["ma240_deduct_bias"]), 2),
-                  
+                                    
                   f"{prefix}均線多頭排列": bool(row_t0.get("is_bull_alignment", False)),
                   f"{prefix}均線糾結度(%)": round(float(row_t0["ma_tangle_ratio"]), 2),
+                  f"{prefix}T-1~T-3甩轎期最大成交量": round(float(row_t0["vol_shakeout_max"]), 2),
 
                   # 籌碼特徵
                   f"{prefix}外資買超(張)": safe_lots_from_shares(row_t0.get('Foreign_Investor')),
