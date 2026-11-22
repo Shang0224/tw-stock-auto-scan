@@ -377,15 +377,22 @@ def scan_qiantang_strategy_day(
 
               # 2. 寫入 Tbase 發動日特徵 (全數統一加上 f"{prefix}..." 前綴)
               t0_features = {
-                  # K 線型態與特徵
+                  # K 線型態、KD值與MACD
                   f"{prefix}實體K棒比例(%)": round(float(row_t0.get('body_ratio', 0)), 2),
                   f"{prefix}上影線比例(%)": round(float(row_t0.get('upper_shadow_ratio', 0)), 2),
-                  f"{prefix}是否紅K": bool(row_t0.get('is_red_k', True)),
+                  f"{prefix}是否紅K": bool(row_t0.get('is_red_k', True)),                  
+                  f"{prefix}K值": bool(row_t0.get('K', True)),
+                  f"{prefix}D值": bool(row_t0.get('D', True)),
+                  f"{prefix}MACD快線(DIF)": bool(row_t0.get('dif', True)),
+                  f"{prefix}MACD慢線(DEM)": bool(row_t0.get('dem', True)),
+                  f"{prefix}MACD柱狀體": bool(row_t0.get('osc', True)),
+
+
+                  
                   f"{prefix}距52週高點(%)": round(float(row_t0['dist_to_52w_high_pct']), 2),
                   f"{prefix}打底沉澱天數": int(row_t0.get('base_consolidation_days', 0)),
                   
                   # 均線與動能特徵
-                  f"{prefix}單筆均張(SPT)": round(float(row_t0.get('shares_per_trans', 0)), 2),
                   f"{prefix}單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
                   f"{prefix}前5日均量(張)": int(round(float(row_t0.get("vol_ma5_prior", row_t0.get("vol_ma5", 0))) / 1000.0)),
                   f"{prefix}前20日均量(張)": int(round(float(row_t0.get("vol_ma20_prior", row_t0.get("vol_ma20", 0))) / 1000.0)),
@@ -395,18 +402,23 @@ def scan_qiantang_strategy_day(
                   f"{prefix}前20日均量斜率(張/日)": round(float(row_t0.get("vol_ma20_slope_prior_lots", 0)), 1),
 
                   
-                  # 輕鬆線與均線位階 (帶新股 N/A 安全護城河)
+                  # 輕鬆線與均線位階 (帶新股 N/A 安全護城河)                  
                   f"{prefix}輕鬆線價格": round(float(row_t0.get("easy_line", 0)), 2),
+                  f"{prefix}輕鬆買進快線": round(float(row_t0.get("easy_buy", 0)), 2),
+                  f"{prefix}輕鬆賣出慢線": round(float(row_t0.get("easy_sell", 0)), 2),                  
                   f"{prefix}輕鬆線乖離率(%)": round(float(row_t0.get('easy_line_bias', 0)), 2),
                   f"{prefix}輕鬆線OLS斜率": round(float(row_t0.get('easy_line_slope', 0)), 4),
+                  
                   f"{prefix}MA60季線": round(float(row_t0.get("MA60", 0)), 2),
                   f"{prefix}MA60斜率": round(float(row_t0.get("ma60_slope", 0)), 4),   
                   f"{prefix}季線乖離率(%)": round(float(row_t0.get("ma60_bias", 0)), 2),
                   f"{prefix}季線扣抵位置(%)": round(float(row_t0.get("ma60_deduct_bias", 0)), 2),
+                  
                   f"{prefix}MA240年線": round(float(row_t0["MA240"]), 2),
                   f"{prefix}MA240斜率": round(float(row_t0.get("ma240_slope", 0)), 4),
                   f"{prefix}年線乖離率(%)": round(float(row_t0["ma240_bias"]), 2),
                   f"{prefix}年線扣抵位置(%)": round(float(row_t0["ma240_deduct_bias"]), 2),
+                  
                   f"{prefix}均線多頭排列": bool(row_t0.get("is_bull_alignment", False)),
                   f"{prefix}均線糾結度(%)": round(float(row_t0["ma_tangle_ratio"]), 2),
 
