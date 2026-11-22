@@ -381,41 +381,47 @@ def scan_qiantang_strategy_day(
                   f"{prefix}實體K棒比例(%)": round(float(row_t0.get('body_ratio', 0)), 2),
                   f"{prefix}上影線比例(%)": round(float(row_t0.get('upper_shadow_ratio', 0)), 2),
                   f"{prefix}是否紅K": bool(row_t0.get('is_red_k', True)),
-                  f"{prefix}距52週高點(%)": (
-                      round(float(row_t0['dist_to_52w_high_pct']), 2)
-                      if ('dist_to_52w_high_pct' in row_t0 and pd.notnull(row_t0['dist_to_52w_high_pct']))
-                      else "N/A"
-                  ),
+                  f"{prefix}距52週高點(%)": round(float(row_t0['dist_to_52w_high_pct']), 2),
                   f"{prefix}打底沉澱天數": int(row_t0.get('base_consolidation_days', 0)),
+                  
                   # 均線與動能特徵
                   f"{prefix}單筆均張(SPT)": round(float(row_t0.get('shares_per_trans', 0)), 2),
+                  f"{prefix}單筆均張(SPT)": round(float(row_t0.get("shares_per_trans", 0)), 2),
+                  f"{prefix}前5日均量(張)": int(round(float(row_t0.get("vol_ma5_prior", row_t0.get("vol_ma5", 0))) / 1000.0)),
+                  f"{prefix}前20日均量(張)": int(round(float(row_t0.get("vol_ma20_prior", row_t0.get("vol_ma20", 0))) / 1000.0)),
+                  f"{prefix}前5日均量斜率(%/日)": round(float(row_t0.get("vol_ma5_slope_prior_pct", 0)), 2),
+                  f"{prefix}前20日均量斜率(%/日)": round(float(row_t0.get("vol_ma20_slope_prior_pct", 0)), 2),
+                  f"{prefix}前5日均量斜率(張/日)": round(float(row_t0.get("vol_ma5_slope_prior_lots", 0)), 1),
+                  f"{prefix}前20日均量斜率(張/日)": round(float(row_t0.get("vol_ma20_slope_prior_lots", 0)), 1),
+
+                  
+                  # 輕鬆線與均線位階 (帶新股 N/A 安全護城河)
+                  f"{prefix}輕鬆線價格": round(float(row_t0.get("easy_line", 0)), 2),
                   f"{prefix}輕鬆線乖離率(%)": round(float(row_t0.get('easy_line_bias', 0)), 2),
                   f"{prefix}輕鬆線OLS斜率": round(float(row_t0.get('easy_line_slope', 0)), 4),
-                  f"{prefix}季線乖離率(%)": round(float(row_t0.get('ma60_bias', 0)), 2),
-                  f"{prefix}年線乖離率(%)": (
-                      round(float(row_t0['ma240_bias']), 2)
-                      if ('ma240_bias' in row_t0 and pd.notnull(row_t0['ma240_bias']))
-                      else "N/A"
-                  ),
-                  f"{prefix}年線扣抵位置(%)": (
-                      round(float(row_t0['ma240_deduct_bias']), 2)
-                      if ('ma240_deduct_bias' in row_t0 and pd.notnull(row_t0['ma240_deduct_bias']))
-                      else "N/A"
-                  ),
-                  f"{prefix}均線多頭排列": bool(row_t0.get('is_bull_alignment', False)),
-                  f"{prefix}均線糾結度(%)": (
-                      round(float(row_t0['ma_tangle_ratio']), 2)
-                      if ('ma_tangle_ratio' in row_t0 and pd.notnull(row_t0['ma_tangle_ratio']))
-                      else "N/A"
-                  ),
+                  f"{prefix}MA60季線": round(float(row_t0.get("MA60", 0)), 2),
+                  f"{prefix}MA60斜率": round(float(row_t0.get("ma60_slope", 0)), 4),   
+                  f"{prefix}季線乖離率(%)": round(float(row_t0.get("ma60_bias", 0)), 2),
+                  f"{prefix}季線扣抵位置(%)": round(float(row_t0.get("ma60_deduct_bias", 0)), 2),
+                  f"{prefix}MA240年線": round(float(row_t0["MA240"]), 2),
+                  f"{prefix}MA240斜率": round(float(row_t0.get("ma240_slope", 0)), 4),
+                  f"{prefix}年線乖離率(%)": round(float(row_t0["ma240_bias"]), 2),
+                  f"{prefix}年線扣抵位置(%)": round(float(row_t0["ma240_deduct_bias"]), 2),
+                  f"{prefix}均線多頭排列": bool(row_t0.get("is_bull_alignment", False)),
+                  f"{prefix}均線糾結度(%)": round(float(row_t0["ma_tangle_ratio"]), 2),
+
                   # 籌碼特徵
                   f"{prefix}外資買超(張)": safe_lots_from_shares(row_t0.get('Foreign_Investor')),
                   f"{prefix}投信買超(張)": safe_lots_from_shares(row_t0.get('Investment_Trust')),
+                  f"{prefix}自營商買超(張)": safe_lots_from_shares(row_t0.get("Dealer_self")),
                   f"{prefix}主力買超(張)": safe_lots_from_shares(row_t0.get('major_net')),
                   f"{prefix}外資近5日累計(張)": safe_lots_from_shares(row_t0.get('foreign_5d_shares_sum')),
                   f"{prefix}投信近5日累計(張)": safe_lots_from_shares(row_t0.get('trust_5d_shares_sum')),
                   f"{prefix}主力近5日累計(張)": safe_lots_from_shares(row_t0.get('major_5d_shares_sum')),
+                  f"{prefix}融資餘額(張)": safe_lots_from_lots(row_t0.get("MarginPurchaseTodayBalance")),
                   f"{prefix}融資當日增減(張)": safe_lots_from_shares(row_t0.get('margin_diff_shares')),
+                  f"{prefix}融券餘額(張)": safe_lots_from_lots(row_t0.get("ShortSaleTodayBalance")),
+                  f"{prefix}融券當日增減(張)": safe_lots_from_lots(row_t0.get("short_diff_shares")),                  
               }
 
               hit_record.update(t0_features)
