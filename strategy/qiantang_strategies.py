@@ -76,29 +76,23 @@ def st_qiantang_f1_spt_growth_20261121(
   核心邏輯與優化架構說明：
   1. 大盤風控第一道防線：
      - 100% 檢查 market_info (taiex_close > taiex_EMA60 且 taiex_EMA60_slope > 0)。
-     - 大盤處於空頭或走弱時，即時中斷策略，避免逆勢建倉。
-
   2. 價量與籌碼雙重共振 (Price-SPT Co-Growth)：
      - 單筆均張連續 2 日遞增 (spt_t0 > spt_tm1 > spt_tm2)。
-     - 3 日價格波段淨向上 (close_t0 > close_tm2)，允許中途洗盤甩轎，但徹底封殺壓低倒貨陷阱。
+     - 3 日價格波段淨向上 (close_t0 > close_tm2)，允許中途洗盤甩轎，徹底封殺壓低倒貨陷阱。
      - 單筆均張爆發力道 (spt_t0 >= spt_ma5 * 1.25)。
-
   3. 籌碼實買過濾（替代單日上影線硬扣）：
-     - 徹底取消單日上影線長度限制，避免誤殺 572% 玉晶光與強勢洗盤飆股。
-     - 改為要求當日主力或外資實質買超為正 (主力買超 > 0 或 外資買超 > 0)。
-
+     - 嚴格對齊 engine.py 英文欄位 (row_t0["major_net"] > 0 或 row_t0["Foreign_Investor"] > 0)。
   4. 防過熱成交金額與動能相對化：
      - 量能相對爆量 (vol_t0 >= vol_ma5 * 1.5)。
      - 成交金額防高檔對倒上限 (30,000,000 <= turnover_amount <= 180,000,000)。
-
   5. 雙軌位階分流 (Dual-Track Architecture)：
      - [Track 1 強勢高位主升軌] 距52W高點 >= -15.0%:
-       要求年線強勢多頭 (ma240_bias >= 8.0%)、輕鬆線乖離 (0.0% < easy_bias <= 12.0%)。
+       年線強勢多頭 (ma240_bias >= 8.0%)、輕鬆線乖離 (0.0% < easy_bias <= 12.0%)。
      - [Track 2 中低位黑馬轉折軌] -35.0% <= 距52W高點 < -15.0%:
-       要求打底沉澱 >= 35天、年線打底 (-10.0% <= ma240_bias <= +10.0%)、輕鬆線原點 (0.0% < easy_bias <= 6.5%)。
+       打底沉澱 >= 35天、年線打底 (-10.0% <= ma240_bias <= +10.0%)、輕鬆線原點 (0.0% < easy_bias <= 6.5%)。
 
-  工程規範：100% 引用 engine.py 預處理指標，確定欄位中括號直取（零預設值），
-  回傳統一呼叫 make_info() 工廠函式。
+  工程規範：100% 引用 engine.py 原生英文欄位名稱，確定欄位中括號直取，
+  缺失即原生拋出 KeyError，回傳統一呼叫 make_info() 工廠函式。
   """
   func_name = sys._getframe().f_code.co_name
 
@@ -137,7 +131,7 @@ def st_qiantang_f1_spt_growth_20261121(
   row_tm1 = df_single.iloc[pos_idx - 1]
   row_tm2 = df_single.iloc[pos_idx - 2]
 
-  # 3. 欄位嚴格索取區（中括號直取，缺值由 Python 原生拋出 KeyError）
+  # 3. 欄位嚴格索取區（對齊 engine.py 英文欄位名稱，零預設值，缺值直拋 KeyError）
   close_t0 = float(row_t0["close"])
   close_tm2 = float(row_tm2["close"])
   easy_t0 = float(row_t0["easy_line"])
@@ -148,16 +142,15 @@ def st_qiantang_f1_spt_growth_20261121(
   spt_tm1 = float(row_tm1["shares_per_trans"])
   spt_tm2 = float(row_tm2["shares_per_trans"])
 
-  # 籌碼指標直取
+  # 4. 籌碼指標直取（對齊 engine.py 原生英文欄位，單位為股數）
   main_buy = float(row_t0["major_net"])
   foreign_buy = float(row_t0["Foreign_Investor"])
 
-  # 4. 引取 engine.py 預處理指標
+  # 引取 engine.py 預處理指標
   dist_52w_high_pct = float(row_t0["dist_to_52w_high_pct"])
   ma60_slope = float(row_t0["ma60_slope"])
   ma240_bias_pct = float(row_t0["ma240_bias"])
   body_ratio = float(row_t0["body_ratio"])
-  upper_shadow_ratio = float(row_t0["upper_shadow_ratio"])
   is_red_k = bool(row_t0["is_red_k"])
   days_bottom = float(row_t0["base_consolidation_days"])
 
@@ -181,10 +174,10 @@ def st_qiantang_f1_spt_growth_20261121(
       close_t0 > close_tm2
   )
 
-  # [條件 B] 籌碼實買過濾：主力或外資當天實質買超為正
+  # [條件 B] 籌碼實買過濾：主力淨買超 > 0 或 外資淨買超 > 0 (股數大於 0)
   cond_chip_real_buy = (main_buy > 0) or (foreign_buy > 0)
 
-  # [條件 C] 通用基礎防線 (量能、金額、季線與實體 K 棒)
+  # [條件 C] 通用基礎防線
   cond_common = (
       (close_t0 >= ma60_t0)
       and (ma60_slope > 0.0)
@@ -242,7 +235,7 @@ def st_qiantang_f1_spt_growth_20261121(
     )
     print(
         f"  [{ '✓' if cond_chip_real_buy else '✕' }] 2. 籌碼大戶實質買超 :"
-        f" 主力買超({main_buy/1000.0:.0f}張), 外資買超({foreign_buy/1000.0:.0f}張)"
+        f" 主力淨買超({main_buy/1000.0:.0f}張), 外資淨買超({foreign_buy/1000.0:.0f}張)"
     )
     print(
         f"  [{ '✓' if cond_common else '✕' }] 3. 基礎量能與金額防線:"
@@ -286,8 +279,8 @@ def st_qiantang_f1_spt_growth_20261121(
           觸發價格=close_t0,
           距52W高點=f"{dist_52w_high_pct:.2f}%",
           輕鬆線乖離率=f"{easy_bias_pct:.2f}%",
-          主力買超張數=f"{main_buy/1000.0:.0f}張",
-          外資買超張數=f"{foreign_buy/1000.0:.0f}張",
+          主力買超張數=f"{main_buy / 1000.0:.0f}張",
+          外資買超張數=f"{foreign_buy / 1000.0:.0f}張",
           當日成交金額=f"{turnover_amount / 100_000_000.0:.2f}億元",
           量能放大倍數=f"{vol_ratio:.2f}倍",
       )
