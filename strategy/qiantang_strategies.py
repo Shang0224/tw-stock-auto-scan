@@ -577,6 +577,7 @@ def st_qiantang_f2_volume_breakout(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
   """【F2_出量上輕 (雙軌成交金額優化版 - T-1 Level 2 跳空與 T-2 實體洗盤升級版)】
 
@@ -599,7 +600,9 @@ def st_qiantang_f2_volume_breakout(
         ★ 今日 (T) 收實體紅 K 且 收盤價 >= T-2 實體下緣 (Close_T >= Open_T-2)
   """
 
-  print("st_qiantang_f2_volume_breakout*******************************************************")
+  #print("st_qiantang_f2_volume_breakout*******************************************************")
+
+
   profile = profile or {}
 
   # 歷史資料至少需 4 筆以支援 T-2 與其前一日的突破判定 (T, T-1, T-2, T-3)
