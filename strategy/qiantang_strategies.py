@@ -149,8 +149,8 @@ def st_qiantang_f1_spt_growth_20261121(
   spt_tm2 = float(row_tm2["shares_per_trans"])
 
   # 籌碼指標直取
-  main_buy = float(row_t0["主力買超(張)"])
-  foreign_buy = float(row_t0["外資買超(張)"])
+  main_buy = float(row_t0["major_net"])
+  foreign_buy = float(row_t0["Foreign_Investor"])
 
   # 4. 引取 engine.py 預處理指標
   dist_52w_high_pct = float(row_t0["dist_to_52w_high_pct"])
@@ -159,7 +159,7 @@ def st_qiantang_f1_spt_growth_20261121(
   body_ratio = float(row_t0["body_ratio"])
   upper_shadow_ratio = float(row_t0["upper_shadow_ratio"])
   is_red_k = bool(row_t0["is_red_k"])
-  days_bottom = float(row_t0["打底沉澱天數"])
+  days_bottom = float(row_t0["base_consolidation_days"])
 
   # 5日均量與 5日單筆均張
   vols_5d = df_single["Trading_Volume"].iloc[pos_idx - 4 : pos_idx + 1]
@@ -242,7 +242,7 @@ def st_qiantang_f1_spt_growth_20261121(
     )
     print(
         f"  [{ '✓' if cond_chip_real_buy else '✕' }] 2. 籌碼大戶實質買超 :"
-        f" 主力買超({main_buy:.0f}張), 外資買超({foreign_buy:.0f}張)"
+        f" 主力買超({main_buy/1000.0:.0f}張), 外資買超({foreign_buy/1000.0:.0f}張)"
     )
     print(
         f"  [{ '✓' if cond_common else '✕' }] 3. 基礎量能與金額防線:"
@@ -286,8 +286,8 @@ def st_qiantang_f1_spt_growth_20261121(
           觸發價格=close_t0,
           距52W高點=f"{dist_52w_high_pct:.2f}%",
           輕鬆線乖離率=f"{easy_bias_pct:.2f}%",
-          主力買超張數=f"{main_buy:.0f}張",
-          外資買超張數=f"{foreign_buy:.0f}張",
+          主力買超張數=f"{main_buy/1000.0:.0f}張",
+          外資買超張數=f"{foreign_buy/1000.0:.0f}張",
           當日成交金額=f"{turnover_amount / 100_000_000.0:.2f}億元",
           量能放大倍數=f"{vol_ratio:.2f}倍",
       )
