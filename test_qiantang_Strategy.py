@@ -255,7 +255,7 @@ def scan_qiantang_strategy_day(
     if not market_info:
         print(f"\n\n{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) {day_str} 日無大盤資料終止" )
       
-    #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
+    print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 開始掃描************************************" )
     try:
         # 執行當日單一股票掃描
         hits = scan_single_stock(
@@ -265,7 +265,7 @@ def scan_qiantang_strategy_day(
             market_info=market_info,
         )
 
-        print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  len(hits) : {len(hits)}************************************" )
+        #print(f"{sys._getframe().f_code.co_name} [{sid}] {stock_name} ({stock_cat}) 掃描結束  len(hits) : {len(hits)}************************************" )
       
         if hits:
           # 取得觸發當日 (Day T) 的預處理資料列
@@ -427,7 +427,7 @@ def scan_qiantang_strategy_day(
               day_hits.append(hit_record)
     except Exception as e:
         # 攔截該檔股票當天發生的任何例外    
-        err_msg = f"⚠️ [股票掃描跳過] 股票代號: {str(stock_id)} | 日期: {day_str} | 錯誤類型: {type(e).__name__} - {e}"
+        err_msg = f"⚠️ [股票掃描跳過] 股票: {stock_name}({str(stock_id)}) | 日期: {day_str}\n   錯誤類型: {type(e).__name__} - {e}\n"
         print(err_msg)
         error_logs.append(err_msg)
         traceback.print_exc()
