@@ -434,21 +434,21 @@ def scan_qiantang_strategy_day(
         continue
         
     # 3. 🟢 當日所有股票掃描結束後，若有累積異常，直接呼叫 send_email_with_attachment 寄出一封總結信
-    if error_logs:
-        summary_body = f"【{day_str} 潛龍策略歷史掃描異常數據彙整】\n\n"
-        summary_body += f"當日共有 {len(error_logs)} 檔個股在掃描或欄位轉換時發生例外，系統已自動跳過並完成歷史掃描：\n\n"
-        summary_body += "\n".join(error_logs)
-        summary_body += "\n\n(此為系統自動發送之當日彙整報告)"
+  if error_logs:
+      summary_body = f"【{day_str} 潛龍策略歷史掃描異常數據彙整】\n\n"
+      summary_body += f"當日共有 {len(error_logs)} 檔個股在掃描或欄位轉換時發生例外，系統已自動跳過並完成歷史掃描：\n\n"
+      summary_body += "\n".join(error_logs)
+      summary_body += "\n\n(此為系統自動發送之當日彙整報告)"
 
-        try:
-            send_email_with_attachment(
-                file_paths=None,  # 🟢 傳入 None，直接作為純文字 Email 發送
-                subject=f"⚠️ [數據異常彙整告警] {day_str} 共 {len(error_logs)} 筆資料例外",
-                body=summary_body
-            )
-            print(f"📧 已成功寄出當日異常彙整通知信 (共彙整 {len(error_logs)} 筆異常)")
-        except Exception as mail_err:
-            print(f"❌ 彙整告警 Email 發送失敗: {mail_err}")
+      try:
+          send_email_with_attachment(
+              file_paths=None,  # 🟢 傳入 None，直接作為純文字 Email 發送
+              subject=f"⚠️ [數據異常彙整告警] {day_str} 共 {len(error_logs)} 筆資料例外",
+              body=summary_body
+          )
+          print(f"📧 已成功寄出當日異常彙整通知信 (共彙整 {len(error_logs)} 筆異常)")
+      except Exception as mail_err:
+          print(f"❌ 彙整告警 Email 發送失敗: {mail_err}")
           
   return day_hits
 
