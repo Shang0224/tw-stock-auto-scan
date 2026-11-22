@@ -11,6 +11,89 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 def send_email_with_attachment(
+    file_paths: str | list[str] = None,
+    recipient_email: str = None,
+    sender_email: str = None,
+    app_password: str = None,
+    subject: str = None,
+    body: str = None
+) -> bool:
+    """
+    發送 Email 函式 (支援夾帶附件或純文字告警)
+    - 若傳入 file_paths，會先檢查每個檔案是否存在；若有檔案不存在，將輸出錯誤日誌並丟出 FileNotFoundError 例外。
+    - 若未傳入 file_paths (None 或 [])，則作為純文字郵件處理，跳過附件掛載。
+    """
+    # 1. 自動補齊環境變數 (若未顯式傳入)
+    sender_email = sender_email or os.environ.get("SENDER_EMAIL")
+    recipient_email = recipient_email or os.environ.get("RECIPIENT_EMAIL")
+    app_password = app_password or os.environ.get("EMAIL_APP_PASSWORD")
+
+    if not (sender_email and recipient_email and app_password):
+        err_msg = "❌ [Email 寄送失敗] 缺少發件者、收件者或應用程式密碼環境變數！"
+        print(err_msg)
+        raise ValueError(err_msg)
+
+    # 2. 🟢 優先檢查附件實體檔案是否存在 (Fail-Fast 檢驗)
+    valid_files = []
+    if file_paths:
+        if isinstance(file_paths, str):
+            file_paths = [file_paths]
+
+        # 簡潔檢查：抓出所有指定但不存在的檔案路徑
+        missing_files = [f for f in file_paths if f and not os.path.exists(f)]
+        if missing_files:
+            err_msg = f"❌ [Email 寄送失敗] 找不到指定附件檔案：{missing_files}"
+            print(err_msg)
+            raise FileNotFoundError(err_msg)
+        
+        valid_files = [f for f in file_paths if f and os.path.exists(f)]
+
+    # 3. 建立郵件物件
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = recipient_email
+    msg["Subject"] = Header(subject or "系統通知", "utf-8").encode()
+
+    if body:
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+
+    # 4. 掛載已驗證存在的附件 (若無附件則自動跳過此區塊)
+    for fpath in valid_files:
+        fname = os.path.basename(fpath)
+        try:
+            with open(fpath, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=Header(fname, "utf-8").encode(),
+            )
+            msg.attach(part)
+            print(f"📎 已成功掛載附件: {fname}")
+        except Exception as attach_err:
+            err_msg = f"❌ [Email 寄送失敗] 讀取/掛載附件 '{fname}' 發生例外: {attach_err}"
+            print(err_msg)
+            raise attach_err
+
+    # 5. 連線 SMTP 伺服器並發送
+    try:
+        print("🔄 正在連線至 Gmail SMTP 伺服器...")
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, app_password)
+            server.send_message(msg)
+
+        print(f"✅ Email 已成功寄送至 {recipient_email} (共夾帶 {len(valid_files)} 個附件)")
+        return True
+    except Exception as e:
+        print(f"❌ [Email 寄送失敗] SMTP 發送過程發生預期外錯誤: {e}")
+        raise e
+
+
+def send_email_with_attachment_old(
     file_paths: str | list[str],
     recipient_email: str,
     sender_email: str,
