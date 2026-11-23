@@ -103,7 +103,7 @@ from utils import (
 TEST_QIANTANG_STRATEGY = [
     st_qiantang_f1_spt_growth,      # F1: 筆張現形
     st_qiantang_f1_spt_growth_20261121,
-    #st_qiantang_f2_volume_breakout, # F2: 出量上輕
+    st_qiantang_f2_volume_breakout, # F2: 出量上輕
     #st_qiantang_f3_after_shakeout,  # F3: 洗盤後
     
     #st_qiantang_f3_after_shakeout_mid100, #MID100專用策略
@@ -180,14 +180,14 @@ EXPORT_CSV = True               # 是否輸出與上傳綜合儀表板 CSV 檔
 STOCK_MODE = "csv"
 
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_test.csv,data/TestData/qiantang_mid100_test.csv,data/TestData/qiantang_tw50_test.csv"
-#STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
+STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv,data/TestData/qiantang_mid100_hot.csv,data/TestData/qiantang_tw50_hot.csv"
 #STOCK_INPUT = "data/TestData/qiantang_mid100_test.csv"
 #STOCK_INPUT = "data/TestData/qiantang_ICDesign_hot.csv"
 #STOCK_INPUT = os.getenv("STOCK_FILES", "data/MID100.csv")
 #STOCK_INPUT = "data/TestData/qiantang_mid100_hot.csv"
 #STOCK_INPUT = "data/ICDesignList.csv,data/MID100.csv,data/TW50.csv"
 #STOCK_INPUT = "data/TW50.csv"
-STOCK_INPUT = "data/MID100.csv"
+#STOCK_INPUT = "data/MID100.csv"
 #STOCK_INPUT = "data/ICDesignList.csv"
 
 
