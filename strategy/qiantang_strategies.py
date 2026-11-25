@@ -807,7 +807,7 @@ def st_qiantang_f1_spt_growth(
             #advice=f"單筆均張放大突破，請設定 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單。",
             #doc_ref="F1_筆張現形_標準基礎校正版",
             觸發價格=close_0,
-            對比前5日均量倍數=f"{(vol_0 / vol_ma5_prior):.2f)},
+            對比前5日均量倍數=f"{(vol_0 / vol_ma5_prior):.2f},
         )
         if is_hit
         else {}
