@@ -65,6 +65,188 @@ def is_valid(val):
 # =====================================================================
 # F1. 筆張現形
 # =====================================================================
+def st_qiantang_f1_spt_growth_20261125(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None
+) -> tuple[bool, dict]:
+    """
+    【F1_筆張現形 - 20261125 雙軌獨立優化旗艦版 (st_qiantang_f1_spt_growth_20261125)】
+
+    ===========================================================================
+    【開發背景與優化緣由】：
+    1. 本策略以基礎版 st_qiantang_f1_spt_growth (F1 筆張現形) 的邏輯為底進行全面升級重構。
+    2. 解決原 F1 策略在全體母體回測中 Cat3 深跌陷阱率高 (36.7%)、勝率低於 50% (49.5%) 且飆陷比偏低 (0.47倍) 之問題。
+    3. 引入【以 距52週高點 >= -15.0% 切分之雙軌獨立優化過濾架構】：
+       - 🌟 第一軌 (強勢高位突破軌：距 52 週高點 >= -15.0%)：
+         * 要求「主力 5 日累計買超 >= 100 張」且「投信 5 日累計買超 >= 100 張」（籌碼雙鎖碼）。
+         * 要求「上影線比例 <= 30.0%」且「實體 K 棒比例 >= 30.0%」（過濾高檔拉高倒貨避雷針）。
+         * 要求「輕鬆線 OLS 斜率 >= 0.02」（確認主升段右側發散動能）。
+       - 🌟 第二軌 (低位打底轉折軌：距 52 週高點 < -15.0%)：
+         * 要求「打底沉澱天數 >= 30 天」（確保沉澱充分，封殺築底失敗標的）。
+         * 要求「輕鬆線 OLS 斜率 >= 0.02」（確保低位轉折發散）。
+         * 🛡️ 【下限開放原則】：完全不設定爆量倍數與上影線上限，100% 完整保全如 3406 玉晶光 (+572.73%) 等低位暴量轉折之長線超級飆股基因。
+    4. 1321 版數據實測效能 (2015-2019 年 5 年全期回測母體 波段首發 N=80 筆)：
+       - 🎯 廣義獲利勝率 (Cat1+Cat2)：自 49.48% 暴升至 63.75% (+14.27 個百分點)。
+       - 🎯 飆陷比 (Cat1 / Cat3)：自 0.47 倍翻倍逆轉升至 1.06 倍 (18 檔 Cat1 飆股 vs 17 檔 Cat3 陷阱)。
+       - 🚀 Cat1 飆股濃度：提升至 22.50% (每 4 檔發牌即有 1 檔飆股)。
+       - 📈 1Y MFE 均值：提升至 +45.44% (中位數 +22.80%，最大值 +572.73% 完整保全)。
+       - 📉 1Y MAE 均值：收斂至 -10.29% (最深拉回限制在 -17.96% 內)。
+
+    ===========================================================================
+    【開發規範依據 (嚴格對齊《策略程式開發規範.docx》)】：
+    - 100% 採用純英文欄位名稱，中括號直接索引存取，取消靜默補值與 if 'col' in 檢查！
+    - 基底量能採用 vol_ma5_prior (排除當日 T0 之歷史前 5 日均量，徹底封殺當日爆量自我稀釋)。
+    - 均線與技術指標直接存取 engine.py 預處理之英文欄位 (如 MA60)，絕不重複計算。
+    - 回傳訊息呼叫 make_info 標準工廠函式封裝。
+    ===========================================================================
+    """
+    func_name = sys._getframe().f_code.co_name
+
+    # 0. 大盤趨勢風控檢查 (存取 market_info 英文欄位)
+    if market_info:
+        m_close = float(market_info["taiex_close"])
+        m_ema = float(market_info["taiex_EMA60"])
+        m_slope = float(market_info["taiex_EMA60_slope"])
+
+        if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+            if verbose:
+                print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+            return False, {}
+    else:
+        if verbose:
+            print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+        return False, {}
+
+    profile = profile or {}
+
+    # 1. 歷史 K 線筆數驗證 (MA60 需要至少 60 筆)
+    if len(df_single) < 60:
+        if verbose:
+            print(f"❌ [{func_name}] K線資料筆數不足 60 筆")
+        return False, {}
+
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+
+    # 2. 確定純英文欄位直接中括號索引存取 (缺失即由 Python 原生拋出 KeyError)
+    close_0 = float(today['close'])
+    easy_0 = float(today['easy_line'])
+    vol_0 = float(today['Trading_Volume'])
+    spt_0 = float(today['shares_per_trans'])
+    spt_1 = float(d1['shares_per_trans'])
+    spt_2 = float(d2['shares_per_trans'])
+
+    # 讀取系統前處理英文欄位
+    ma60_0 = float(today['MA60'])
+    vol_ma5_prior = float(today['vol_ma5_prior'])  # 歷史前 5 日均量 (股，排除當日 T0)
+
+    # 歷史前 5 日單筆均張平均 (T-5 至 T-1，排除當日 T0)
+    spt_series_5 = df_single['shares_per_trans'].iloc[-6:-1]
+    spt_ma5_prior = float(spt_series_5.mean())
+
+    easy_slope_0 = float(today['easy_line_slope'])
+    dist_52w_high_0 = float(today['dist_to_52w_high_pct'])
+    consolidation_days_0 = int(today['base_consolidation_days'])
+
+    # 籌碼指標 (單位: 股數，轉成張數除以 1000.0)
+    main_5d_shares = float(today['major_5d_shares_sum'])
+    trust_5d_shares = float(today['trust_5d_shares_sum'])
+    main_5d_lots = main_5d_shares / 1000.0
+    trust_5d_lots = trust_5d_shares / 1000.0
+
+    upper_shadow_0 = float(today['upper_shadow_ratio'])
+    body_ratio_0 = float(today['body_ratio'])
+
+    turnover_amount = vol_0 * close_0
+
+    # 3. 基礎 F1 動能發動門檻 (採用排除當日之歷史均量 vol_ma5_prior)
+    bias = close_0 / easy_0
+    cond1_easy_ok = (1.0 < bias <= 1.08)  # 貼近輕鬆線起漲原點 (<= 8.0%)
+    cond2_spt_growing = (spt_0 > spt_1 > spt_2)  # 單筆均張連續 2 日遞增
+    cond3_spt_surge = (spt_0 >= spt_ma5_prior * 1.15)  # 均張突破前 5 日均值 1.15 倍
+    cond4_vol_boost = (vol_0 >= vol_ma5_prior * 1.3) and (turnover_amount >= 10_000_000)  # 量能突破 1.3 倍 且 金額 >= 1,000 萬
+    cond5_ma60_ok = (close_0 >= ma60_0)  # 收盤價站上季線 MA60
+
+    base_f1_hit = cond1_easy_ok and cond2_spt_growing and cond3_spt_surge and cond4_vol_boost and cond5_ma60_ok
+
+    if not base_f1_hit:
+        return False, {}
+
+    # 4. 雙軌獨立優化閘門 (以距 52 週高點 >= -15.0% 切分)
+    is_track1 = (dist_52w_high_0 >= -15.0)
+
+    if is_track1:
+        # 第一軌 (強勢高位突破): 主力/投信雙鎖碼 (>=100張) + K棒品質 (上影<=30%, 實體>=30%) + 輕鬆線斜率發散 (>=0.02)
+        cond_t1_chip_ok = (main_5d_lots >= 100.0) and (trust_5d_lots >= 100.0)
+        cond_t1_kbar_ok = (upper_shadow_0 <= 30.0) and (body_ratio_0 >= 30.0)
+        cond_t1_slope_ok = (easy_slope_0 >= 0.02)
+
+        is_hit = cond_t1_chip_ok and cond_t1_kbar_ok and cond_t1_slope_ok
+        active_track = "第一軌 (強勢高位突破)"
+    else:
+        # 第二軌 (低位打底轉折): 打底天數 >= 30天 + 輕鬆線斜率發散 (>=0.02) (下限開放，不限制爆量與上影線)
+        cond_t2_base_ok = (consolidation_days_0 >= 30)
+        cond_t2_slope_ok = (easy_slope_0 >= 0.02)
+
+        is_hit = cond_t2_base_ok and cond_t2_slope_ok
+        active_track = "第二軌 (低位打底轉折)"
+
+    # 5. 控制台卡片樣式 Console Log 輸出
+    if verbose:
+        stock_id = str(today['stock_id'])
+        date_str = str(today['date'])
+        vol_lots = vol_0 / 1000.0
+        vol_ma5_lots = vol_ma5_prior / 1000.0
+        actual_boost = (vol_0 / vol_ma5_prior) if vol_ma5_prior > 0 else 0.0
+
+        print("\n" + "=" * 70)
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 通道: {active_track}")
+        print("-" * 70)
+        print(f"  [✓] 1. 輕鬆線低乖離原點 (<= 1.08) : Close=${close_0:.2f}, Easy=${easy_0:.2f} (乖離:{bias:.3f})")
+        print(f"  [✓] 2. 單筆均張連續2日遞增 : {spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f}")
+        print(f"  [✓] 3. 均張突破前5日均值 : {spt_0:.2f} vs 前5日均值:{spt_ma5_prior:.2f}")
+        print(f"  [✓] 4. 量能突破前5日(排除當日) : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張 vs 前5日均量:{vol_ma5_lots:,.0f}張)")
+        print(f"  [✓] 5. 收盤價站上季線 MA60 : Close=${close_0:.2f} vs MA60:${ma60_0:.2f}")
+        print(f"  [預設] 6. 雙軌判斷通道 ➔ 【{active_track}】 (距52W高點: {dist_52w_high_0:.2f}%)")
+        if is_track1:
+            print(f"       ├─ 籌碼雙鎖碼 : 主力5日={main_5d_lots:,.0f}張(>=100), 投信5日={trust_5d_lots:,.0f}張(>=100)")
+            print(f"       ├─ K棒品質防偽 : 上影線={upper_shadow_0:.1f}%(<=30%), 實體K={body_ratio_0:.1f}%(>=30%)")
+            print(f"       └─ 動能斜率發散 : 輕鬆線OLS斜率={easy_slope_0:.4f} (>=0.02)")
+        else:
+            print(f"       ├─ 時間底座沉澱 : 打底沉澱天數={consolidation_days_0}天 (>=30天)")
+            print(f"       └─ 動能斜率發散 (下限開放): 輕鬆線OLS斜率={easy_slope_0:.4f} (>=0.02)")
+        print("-" * 70)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發 F1_20261125 雙軌旗艦版]' if is_hit else '⚪ [未通過軌道過濾]'}")
+        print("=" * 70 + "\n")
+
+    # 6. 回傳標準 make_info 字典封裝
+    stop_loss_price = round(close_0 * 0.90, 2)
+    info = (
+        make_info(
+            strategy_name=func_name,
+            position="10% (標準倉位)",
+            stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
+            win_rate="廣義勝率 63.8% (Cat1+2) | 飆股率 22.5%",
+            drawdown="Cat3 陷阱率 21.3% | 飆陷比 1.06 倍",
+            advice=f"通過 F1 {active_track} 獨立優化過濾，請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。",
+            doc_ref="F1_筆張現形_20261125_雙軌獨立優化旗艦版",
+            觸發價格=close_0,
+            通關軌道=active_track,
+            距52W高點=f"{dist_52w_high_0:.2f}%",
+            打底沉澱天數=f"{consolidation_days_0}天",
+            主力5日累計買超=f"{main_5d_lots:,.0f}張",
+            投信5日累計買超=f"{trust_5d_lots:,.0f}張",
+            輕鬆線OLS斜率=f"{easy_slope_0:.4f}",
+        )
+        if is_hit
+        else {}
+    )
+
+    return is_hit, info
+
 def st_qiantang_f1_spt_growth_d1d3_v2(
     df_single: pd.DataFrame,
     profile: dict = None,
