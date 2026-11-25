@@ -146,11 +146,20 @@ def calculate_forward_horizon_returns(
       close_ret = ((close_tn - close_t0) / close_t0) * 100.0
       min_ret = ((low_tn - close_t0) / close_t0) * 100.0
 
+      perf_dict[f"T+{offset}績效"] = round(close_ret, 2)
+      perf_dict[f"T+{offset}盤中最低拉回"] = round(min_ret, 2)
+        
+      """
       perf_dict[f"T+{offset}_Pct"] = round(close_ret, 2)
       perf_dict[f"T+{offset}_Min_Pct"] = round(min_ret, 2)
+      """
     else:
+      perf_dict[f"T+{offset}績效"] = "N/A"
+      perf_dict[f"T+{offset}盤中最低拉回"] = "N/A"
+      """
       perf_dict[f"T+{offset}_Pct"] = "N/A"
       perf_dict[f"T+{offset}_Min_Pct"] = "N/A"
+      """
 
   # 3. 前瞻時間階梯報酬 (T+3, T+5, T+10, T+20, T+60, T+120, T+240)
   horizon_days = [3, 5, 10, 20, 60, 120, 240]
@@ -161,14 +170,19 @@ def calculate_forward_horizon_returns(
       close_n = float(row_n["close"])
       ret_n = ((close_n - close_t0) / close_t0) * 100.0
 
-      # 輸出帶有日期與價格的可讀字串與純數值
+
+      perf_dict[f"T+{N}日績效"] = round(ret_n, 2)
+      # 輸出帶有日期與價格的可讀字串與純數值      
+      """
       perf_dict[f"T+{N}日績效"] = (
           f"{ret_n:+.2f}% ({date_n}, 價:{close_n:.2f})"
       )
       perf_dict[f"T+{N}_Return_Pct"] = round(ret_n, 2)
+      """
     else:
       perf_dict[f"T+{N}日績效"] = "N/A"
-      perf_dict[f"T+{N}_Return_Pct"] = "N/A"
+      #perf_dict[f"T+{N}_Return_Pct"] = "N/A"
+      
 
   return perf_dict
 
