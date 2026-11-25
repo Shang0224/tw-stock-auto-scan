@@ -697,146 +697,121 @@ def st_qiantang_f1_spt_growth(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
-    market_info: dict = None     # 當日大盤秒查資料字典
+    market_info: dict = None
 ) -> tuple[bool, dict]:
     """
-    【F1_筆張現形 - 策略完整說明】
-    捕捉市場中主力大單敲進、量能同步放大且站穩多頭主升段的潛在飆股。
+    【F1_筆張現形 - 標準基礎校正版 (st_qiantang_f1_spt_growth)】
     
-    核心邏輯：
-    1. 嚴格欄位取值：若缺少必要欄位直接報錯 (KeyError)，避免隱性錯誤。
-    2. 股數基準：Trading_Volume 全程以「真實股數」進行運算與門檻判定。
-    3. 價格乖離控制：收盤價 > 輕鬆線 (easy_line)，且未過度偏離 (close / easy <= 1.12)。
-    4. 籌碼連續性：單筆均張連續 2 日遞增 (t > t-1 > t-2)，代表大單持續集結。
-    5. 單筆均張爆發：當日單筆均張顯著超越 5 日均張 (spt_0 >= spt_ma5 * 1.15)。
-    6. 量能與金額門檻：當日成交股數相較於 5 日均量顯著放大 (vol_0 >= vol_ma5 * 1.3)，
-       且成交金額需達 1,000 萬元以上（過濾無流動性殭屍股）。
-    7. MA60 趨勢濾網：收盤價必須站上 60 日均線 (MA60)，過濾弱勢反彈與空頭排列個股。
-
-    修改自st_qiantang_f1_spt_growth_20261001
+    ===========================================================================
+    【核心邏輯說明】：
+    1. 大盤風控：大盤收盤價 > EMA60 且 EMA60 斜率 > 0。
+    2. 輕鬆線支撐：當日收盤價 > 輕鬆線價格 (Close > Easy_Line)。
+    3. SPT 雙重動能：
+       - 單筆均張連續 2 日遞增 (spt_0 > spt_1 > spt_2)。
+       - 當日單筆均張突破 5 日均張 1.15 倍 (spt_0 >= spt_ma5 * 1.15)。
+    4. 量能爆發與金額門檻 (校正版)：
+       - 當日成交量 >= 前 5 日均量 (vol_ma5_prior，不含當日) 的 1.3 倍。
+       - 當日成交金額 >= 1,000 萬元。
+    5. 季線保護：當日收盤價 >= MA60 季線。
+    
+    【開發規範】：
+    - 100% 採用英文 Key 中括號直接索引存取，缺失即原生拋出 KeyError。
+    ===========================================================================
     """
-    #print("st_qiantang_f1_spt_growth*******************************************************")
-
     func_name = sys._getframe().f_code.co_name
-    
+
+    # 1. 大盤趨勢風控檢查
     if market_info:
         m_close = float(market_info["taiex_close"])
         m_ema = float(market_info["taiex_EMA60"])
         m_slope = float(market_info["taiex_EMA60_slope"])
 
-        if not check_market_trend(market_info, filter_key="taiex_EMA60"):          
-            print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-            return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
-
-        print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} >: EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
+        if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+            if verbose:
+                print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
+            return False, {}
     else:
-        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-        return False, {}  # 🛑 立即中斷！後續個股運算與卡牌輸出完全跳過
-    
-    profile = profile or {}
-
-    # ==========================================
-    # 內部過濾條件參數設定區
-    # ==========================================
-    vol_boost_ratio = 1.3               # 相對量能放大倍數 (當日股數 / 5日均量股數)
-    min_safety_turnover = 10_000_000    # 底層安全門檻：1,000 萬台幣 (以股數 * 收盤價計算)
-    spt_growth_ratio = 1.15             # 單筆均張放大倍數 (相較於 5日均張的門檻)
-    max_easy_bias = 1.12                # 輕鬆線乖離率上限 (防止追高過熱)
-
-    # 必須確保資料筆數至少有 60 筆以上，否則無法計算 MA60 均線
-    if len(df_single) < 60:
         if verbose:
-            print("❌ [筆張現形] 資料筆數不足 60 筆（無法計算 MA60 濾網）")
+            print(f"{func_name}  [✕] 🛑 無大盤風控資料")
         return False, {}
 
-    # 取得最近三個交易日的資料列 (0 代表今天/當日，1 代表昨天，2 代表前天)
+    profile = profile or {}
+
+    # 2. 歷史 K 線筆數驗證
+    if len(df_single) < 60:
+        if verbose:
+            print(f"❌ [{func_name}] K線資料筆數不足 60 筆")
+        return False, {}
+
+    # 3. 定位當日 (T0) 與前兩日 (T-1, T-2)
     today = df_single.iloc[-1]
     d1 = df_single.iloc[-2]
     d2 = df_single.iloc[-3]
 
-    # ==========================================
-    # 欄位嚴格取值區 (若欄位拼寫錯誤或遺失，直接引發 KeyError 報錯)
-    # ==========================================
-    close_0 = today['close']              # 當日收盤價
-    easy_0 = today['easy_line']          # 當日輕鬆線數值
-    vol_0 = today['Trading_Volume']      # 當日成交量 (單位：股數)
+    # 4. 英文 Key 直接中括號索引存取 (缺失報 KeyError)
+    close_0 = float(today['close'])
+    easy_0 = float(today['easy_line'])
+    vol_0 = float(today['Trading_Volume'])
+    vol_ma5_prior = float(today['vol_ma5_prior'])  # 🌟 校正為前 5 日均量 (不含當日)
 
-    spt_0 = today['shares_per_trans']    # 當日單筆均張
-    spt_1 = d1['shares_per_trans']       # 昨日單筆均張
-    spt_2 = d2['shares_per_trans']       # 前日單筆均張
+    spt_0 = float(today['shares_per_trans'])
+    spt_1 = float(d1['shares_per_trans'])
+    spt_2 = float(d2['shares_per_trans'])
 
-    # 計算 5 日成交量均值與 5 日單筆均張均值
-    vol_series = df_single['Trading_Volume'].tail(5)
-    vol_ma5 = vol_series.mean()
-
-    spt_series = df_single['shares_per_trans'].tail(5)
-    spt_ma5 = spt_series.mean()
-
-    # 計算 60 日均線 (MA60) 基準
-    close_series_60 = df_single['close'].tail(60)
-    ma60_0 = close_series_60.mean()
-
-    # 當日成交金額計算 (真實股數 * 收盤價)
+    # 計算當日 5 日均張與 60 日季線
+    spt_ma5 = float(df_single['shares_per_trans'].tail(5).mean())
+    ma60_0 = float(df_single['close'].tail(60).mean())
     turnover_amount = vol_0 * close_0
 
-    # ==========================================
-    # 策略核心條件判斷區
-    # ==========================================
+    # 5. 策略核心條件判斷
+    cond1_easy_ok = (close_0 > easy_0)
+    cond2_spt_grow = (spt_0 > spt_1 > spt_2)
+    cond3_spt_surge = (spt_0 >= spt_ma5 * 1.15)
     
-    # 條件 1：站上輕鬆線且未過熱 (1.0 < 乖離率 <= max_easy_bias)
-    bias = close_0 / easy_0
-    cond1_easy_ok = (1.0 < bias <= max_easy_bias)
-
-    # 條件 2：單筆均張連續 2 日遞增 (t > t-1 > t-2)
-    cond2_spt_growing = (spt_0 > spt_1 > spt_2)
-
-    # 條件 3：當日單筆均張顯著突破 5 日均張達指定倍數
-    cond3_spt_surge = (spt_0 >= spt_ma5 * spt_growth_ratio)
-
-    # 條件 4：量能相對放大率達標 + 底層安全成交金額門檻
-    is_relative_boost = (vol_0 >= vol_ma5 * vol_boost_ratio)
-    is_not_zombie = (turnover_amount >= min_safety_turnover)
-    cond4_vol_boost_ok = is_relative_boost and is_not_zombie
-
-    # 條件 5：收盤價必須站上 60 日均線 (MA60 多頭過濾)
+    # 🌟 採用 vol_ma5_prior 判斷放量 1.3 倍與金額門檻
+    cond4_vol_ok = (vol_0 >= vol_ma5_prior * 1.3) and (turnover_amount >= 10_000_000)
     cond5_ma60_ok = (close_0 >= ma60_0)
 
-    # 總體過濾結果：必須同時滿足以上 5 大核心條件
-    is_hit = (
-        cond1_easy_ok 
-        and cond2_spt_growing 
-        and cond3_spt_surge 
-        and cond4_vol_boost_ok 
-        and cond5_ma60_ok
+    is_hit = bool(
+        cond1_easy_ok and cond2_spt_grow and cond3_spt_surge and
+        cond4_vol_ok and cond5_ma60_ok
     )
 
-    # ==========================================
-    # 除錯與詳細 Log 輸出區
-    # ==========================================
+    # 6. 控制台日誌輸出
     if verbose:
-        stock_id = today['stock_id']
+        stock_id = str(today['stock_id'])
         date_str = str(today['date'])
-        
-        vol_lots = vol_0 / 1000.0  # 轉換為張數方便閱讀
-        actual_boost = vol_0 / vol_ma5 if vol_ma5 > 0 else 0.0
+        vol_boost = (vol_0 / vol_ma5_prior) if vol_ma5_prior > 0 else 0.0
 
-        print("\n" + "=" * 65)
-        print(f"🔔 [F1_筆張現形] 股票: {stock_id} | 日期: {date_str}")
-        print("-" * 65)
-        print(f"  [{ '✓' if cond1_easy_ok else '✕' }] 1. 站上輕鬆線且未過熱 : Close=({close_0:.2f}, Easy=){easy_0:.2f} (乖離率:{bias:.3f})")
-        print(f"  [{ '✓' if cond2_spt_growing else '✕' }] 2. 單筆均張連續2日遞增 : {spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f}")
-        print(f"  [{ '✓' if cond3_spt_surge else '✕' }] 3. 均張顯著放大 (>= MA5*{spt_growth_ratio}) : {spt_0:.2f} vs MA5:{spt_ma5:.2f}")
-        print(f"  [{ '✓' if cond4_vol_boost_ok else '✕' }] 4. 量能相對放大與金額門檻 : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張, 金額:{turnover_amount/10000:,.0f}萬)")
-        print(f"  [{ '✓' if cond5_ma60_ok else '✕' }] 5. 收盤價站上 60 日均線 : Close=({close_0:.2f} vs MA60:){ma60_0:.2f}")
-        print("-" * 65)
-        print(f"🎯 最終觸發結果: {'🔥 [觸發強勢筆張現形]' if is_hit else '⚪ [未觸發]'}")
-        print("=" * 65 + "\n")
+        print("\n" + "=" * 70)
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 70)
+        print(f"  [{'✓' if cond1_easy_ok else '✕'}] 1. 站上輕鬆線 : Close=${close_0:.2f} > Easy=${easy_0:.2f}")
+        print(f"  [{'✓' if cond2_spt_grow else '✕'}] 2. 單筆均張連續2日遞增 : {spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f}")
+        print(f"  [{'✓' if cond3_spt_surge else '✕'}] 3. 均張顯著放大 (>= MA5*1.15) : {spt_0:.2f} vs MA5:{spt_ma5:.2f}")
+        print(f"  [{'✓' if cond4_vol_ok else '✕'}] 4. 放量門檻 (對比前5日均量) : {vol_boost:.2f}倍 (成交量:{vol_0/1000:,.0f}張, 金額:{turnover_amount/10000:,.0f}萬)")
+        print(f"  [{'✓' if cond5_ma60_ok else '✕'}] 5. 收盤價站上季線 : Close=${close_0:.2f} vs MA60:${ma60_0:.2f}")
+        print("-" * 70)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發基礎 F1 訊號]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 70 + "\n")
 
-    # 回傳結果字典
-    info = {
-        '選股策略': 'F1_筆張現形',
-        '操作建議': '單筆均張與當日總量能同步放大，且股價站穩 60 日均線主升段，為主力帶量實質卡位訊號。'
-    } if is_hit else {}
+    # 7. 回傳結果
+    stop_loss_price = round(close_0 * 0.90, 2)
+    info = (
+        make_info(
+            strategy_name=func_name,
+            position="10% (標準倉位)",
+            stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
+            win_rate="基礎 F1 基準檔",
+            drawdown="基礎 F1 基準檔",
+            advice=f"單筆均張放大突破，請設定 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單。",
+            doc_ref="F1_筆張現形_標準基礎校正版",
+            觸發價格=close_0,
+            放量倍數=f"{(vol_0 / vol_ma5_prior):.2f}倍(對比前5日均量)",
+        )
+        if is_hit
+        else {}
+    )
 
     return is_hit, info
     
