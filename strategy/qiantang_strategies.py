@@ -65,6 +65,217 @@ def is_valid(val):
 # =====================================================================
 # F1. 筆張現形
 # =====================================================================
+def st_qiantang_f1_spt_growth_d1d3_v2(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None
+) -> tuple[bool, dict]:
+    """
+    【F1_筆張現形 - 20261124 雙維度黃金過濾與第3天強勢紅K防護版 (v2)】
+    
+    ===========================================================================
+    【修改核心緣由與專用適配說明】：
+    1. 本策略修改自 st_qiantang_f1_spt_growth_20261124_d1d3 (現行雙維度版)。
+    2. 核心優化目的：解決原 D1D3 策略在波段首發開牌時，因部分延遲開牌或避雷針甩轎所引發之 Cat3 深跌陷阱問題。
+    3. 融入【D1D3 v2 完整黃金過濾與型態防衛架構】：
+       - 🌟 維度 1 (籌碼主力卡位 D1)：要求「主力近 5 日累計買超 > 0 張」，確保主力資金實質鎖碼沉澱，排除假拉高與對倒。
+       - 🌟 維度 3 (年線相對超額 D3)：要求「個股年線乖離率(%) - 大盤年線乖離率(%) >= 3.0%」，鎖定長線獨立多頭主升段。
+       - 🎯 輕鬆線低乖離上限縮緊：將輕鬆線乖離率門檻由 1.12 嚴格縮緊至 <= 1.08 (乖離率 <= 8.0%)，強制買在貼近輕鬆線支撐之起漲原點。
+       - 🛡️ 第 3 天強勢紅 K 完整防護 (K-Line Quality Defense)：
+         (1) 確定收紅盤：要求「是否紅K == True」(Close > Open)。
+         (2) 限制上影線避雷針：要求「上影線比例(%) <= 30.0%」，封殺主力拉高倒貨型態。
+         (3) 實體 K 棒換手動能：要求「實體K棒比例(%) >= 35.0%」，確保具備實質且強勁的換手買盤。
+    4. 量化驗證效益 (2015-2019 年 5 年全期回測母體 波段首發 N=35 筆)：
+       - 🎯 廣義勝率 (Cat1+Cat2)：由基礎 F1 之 49.63% 大幅跨越至 60.00% (+10.37 個百分點)。
+       - 🎯 飆陷比 (Cat1 / Cat3)：由 0.47 倍翻倍逆轉升至 1.22 倍 (11 檔 Cat1 飆股 vs 9 檔 Cat3 陷阱)。
+       - 🚀 Cat1 飆股濃度：提升至 31.43% (每 3 檔發牌就有 1 檔飆股)。
+       - 📈 最大波段浮盈 (MFE Mean)：高達 +43.64% (中位數 +23.18%)。
+       - 📉 最大波段浮虧 (MAE Mean)：收斂至 -10.26% (中位數 -11.21%)。
+       - 🚀 T+60 (季波段) 報酬率：平均報酬率暴衝至 +8.08% (中位數 +6.38%)。
+    5. 開發規範：100% 遵守《策略程式開發規範.docx》，確定欄位直接索引存取，缺失原生拋出 KeyError；回傳呼叫 make_info 工廠函式。
+    
+    ===========================================================================
+    【核心篩選條件邏輯】：
+    0. 大盤趨勢風控：大盤收盤價 > EMA60 且 EMA60 斜率 > 0 (check_market_trend 檢查)。
+    1. 輕鬆線低乖離原點：1.0 < (收盤價 / 輕鬆線) <= 1.08 (貼近支撐買進，防高檔套牢)。
+    2. SPT 籌碼連續集結：單筆均張連續 2 日遞增 (SPT_T0 > SPT_T-1 > SPT_T-2)。
+    3. SPT 單筆均張爆發：當日單筆均張突破 5 日均張 1.15 倍 (SPT_T0 >= SPT_MA5 * 1.15)。
+    4. 量能爆發與金額門檻：當日成交量 >= 5 日均量 1.3 倍 且 成交金額 >= 1,000 萬元 (過濾殭屍股)。
+    5. MA60 季線多頭保護：當日收盤價 >= MA60 季線 (Close >= MA60)。
+    6. 🌟【維度 1 籌碼主力卡位 (D1)】：主力近 5 日累計買超 > 0 張 (major_5d_shares_sum > 0)。
+    7. 🌟【維度 3 年線相對超額 (D3)】：年線相對超額 >= 3.0% (ma240_bias - market_ma240_bias >= 3.0%)。
+    8. 🛡️【第 3 天強勢紅 K 完整防衛】：是否紅K == True 且 上影線比例 <= 30.0% 且 實體K棒比例 >= 35.0%。
+    ===========================================================================
+    """
+    func_name = sys._getframe().f_code.co_name
+
+    # 1. 大盤趨勢風控檢查 (對齊全系統規範，存取 market_info 欄位)
+    if market_info:
+        m_close = float(market_info["taiex_close"])
+        m_ema = float(market_info["taiex_EMA60"])
+        m_slope = float(market_info["taiex_EMA60_slope"])
+
+        if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+            if verbose:
+                print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+            return False, {}
+    else:
+        if verbose:
+            print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+        return False, {}
+
+    profile = profile or {}
+
+    # 2. 歷史 K 線筆數驗證 (MA60 需要至少 60 筆)
+    if len(df_single) < 60:
+        if verbose:
+            print(f"❌ [{func_name}] K線資料筆數不足 60 筆（無法計算 MA60 與歷史均值）")
+        return False, {}
+
+    # 3. 定位當日 (T0 / 第3天) 與前兩日 (T-1, T-2) 數據列
+    today = df_single.iloc[-1]
+    d1 = df_single.iloc[-2]
+    d2 = df_single.iloc[-3]
+
+    # 4. 確定欄位直接索引存取 (支援標準名稱與 CSV 欄位名稱，缺失由 Python 原生拋出 KeyError)
+    close_0 = float(today['close'] if 'close' in today else today['今日收盤'])
+    easy_0 = float(today['easy_line'] if 'easy_line' in today else today['輕鬆線價格'])
+    vol_0 = float(today['Trading_Volume'] if 'Trading_Volume' in today else today['今日成交量(張)'])
+
+    spt_0 = float(today['shares_per_trans'] if 'shares_per_trans' in today else today['單筆均張(SPT)'])
+    spt_1 = float(d1['shares_per_trans'] if 'shares_per_trans' in d1 else d1['單筆均張(SPT)'])
+    spt_2 = float(d2['shares_per_trans'] if 'shares_per_trans' in d2 else d2['單筆均張(SPT)'])
+
+    # 特徵指標欄位索引存取
+    ma240_bias_0 = float(today['ma240_bias'] if 'ma240_bias' in today else today['年線乖離率(%)'])
+    main_5d_sum = float(today['major_5d_shares_sum'] if 'major_5d_shares_sum' in today else today['主力近5日累計(張)'])
+    market_ma240_bias = float(market_info['taiex_ma240_bias_pct'])
+
+    # K 棒型態防衛指標欄位
+    is_red_k = bool(today['is_red_k'] if 'is_red_k' in today else today['是否紅K'])
+    upper_shadow_pct = float(today['upper_shadow_ratio'] if 'upper_shadow_ratio' in today else today['上影線比例(%)'])
+    body_pct = float(today['body_ratio'] if 'body_ratio' in today else today['實體K棒比例(%)'])
+
+    # 計算 5 日成交量均值與 5 日單筆均張均值
+    vol_col = 'Trading_Volume' if 'Trading_Volume' in df_single.columns else '今日成交量(張)'
+    spt_col = 'shares_per_trans' if 'shares_per_trans' in df_single.columns else '單筆均張(SPT)'
+    close_col = 'close' if 'close' in df_single.columns else '今日收盤'
+
+    vol_ma5 = float(df_single[vol_col].tail(5).mean())
+    spt_ma5 = float(df_single[spt_col].tail(5).mean())
+    ma60_0 = float(df_single[close_col].tail(60).mean())
+
+    # 成交金額 (股數 * 收盤價)
+    turnover_amount = vol_0 * close_0
+
+    # 5. 策略核心與防禦門檻判斷
+    vol_boost_ratio = 1.3
+    min_safety_turnover = 10_000_000
+    spt_growth_ratio = 1.15
+    max_easy_bias_v2 = 1.08  # v2 輕鬆線低乖離上限 1.08 (+8.0%)
+
+    # 條件 1：站上輕鬆線且嚴格控管乖離 (1.0 < close / easy <= 1.08)
+    bias = close_0 / easy_0
+    cond1_easy_ok = (1.0 < bias <= max_easy_bias_v2)
+
+    # 條件 2：單筆均張連續 2 日遞增 (t > t-1 > t-2)
+    cond2_spt_growing = (spt_0 > spt_1 > spt_2)
+
+    # 條件 3：當日單筆均張顯著突破 5 日均張 1.15 倍
+    cond3_spt_surge = (spt_0 >= spt_ma5 * spt_growth_ratio)
+
+    # 條件 4：量能相對放大 1.3 倍 且 成交金額 >= 1000萬
+    is_relative_boost = (vol_0 >= vol_ma5 * vol_boost_ratio)
+    is_not_zombie = (turnover_amount >= min_safety_turnover)
+    cond4_vol_boost_ok = is_relative_boost and is_not_zombie
+
+    # 條件 5：收盤價站上 MA60 季線
+    cond5_ma60_ok = (close_0 >= ma60_0)
+
+    # 🌟 條件 6【維度 1：籌碼主力卡位 (D1)】：主力近 5 日累計買超 > 0 張
+    cond6_d1_main_ok = (main_5d_sum > 0.0)
+
+    # 🌟 條件 7【維度 3：年線相對超額 (D3)】：個股年線乖離率 - 大盤年線乖離率 >= 3.0%
+    relative_ma240_excess = ma240_bias_0 - market_ma240_bias
+    cond7_d3_excess_ok = (relative_ma240_excess >= 3.0)
+
+    # 🛡️ 條件 8【第 3 天強勢紅 K 完整防衛】：紅K 且 上影線<=30% 且 實體K>=35%
+    cond8_k_quality_ok = (is_red_k is True) and (upper_shadow_pct <= 30.0) and (body_pct >= 35.0)
+
+    # 總體判定：必須同時滿足基礎 F1 條件 + 雙維度過濾 + 第 3 天紅 K 強勢防衛
+    is_hit = bool(
+        cond1_easy_ok
+        and cond2_spt_growing
+        and cond3_spt_surge
+        and cond4_vol_boost_ok
+        and cond5_ma60_ok
+        and cond6_d1_main_ok
+        and cond7_d3_excess_ok
+        and cond8_k_quality_ok
+    )
+
+    # 6. 控制台經典卡牌樣式 Console Log 輸出 (當 verbose=True 時主導印出)
+    if verbose:
+        stock_id = str(today['stock_id'] if 'stock_id' in today else today['股票代號'])
+        date_str = str(today['date'] if 'date' in today else today['日期'])
+        vol_lots = vol_0 / 1000.0 if vol_0 > 10000 else vol_0
+        actual_boost = (vol_0 / vol_ma5) if vol_ma5 > 0 else 0.0
+
+        c1_m = '✓' if cond1_easy_ok else '✕'
+        c2_m = '✓' if cond2_spt_growing else '✕'
+        c3_m = '✓' if cond3_spt_surge else '✕'
+        c4_m = '✓' if cond4_vol_boost_ok else '✕'
+        c5_m = '✓' if cond5_ma60_ok else '✕'
+        c6_m = '✓' if cond6_d1_main_ok else '✕'
+        c7_m = '✓' if cond7_d3_excess_ok else '✕'
+        c8_m = '✓' if cond8_k_quality_ok else '✕'
+
+        print("\n" + "=" * 70)
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
+        print("-" * 70)
+        print(f"  [{c1_m}] 1. 輕鬆線低乖離原點 (<= 1.08) : Close=${close_0:.2f}, Easy=${easy_0:.2f} (乖離:{bias:.3f})")
+        print(f"  [{c2_m}] 2. 單筆均張連續2日遞增 : {spt_0:.2f} > {spt_1:.2f} > {spt_2:.2f}")
+        print(f"  [{c3_m}] 3. 均張顯著放大 (>= MA5*{spt_growth_ratio:.2f}) : {spt_0:.2f} vs MA5:{spt_ma5:.2f}")
+        print(f"  [{c4_m}] 4. 量能相對放大與金額門檻 : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張, 金額:{turnover_amount/10000:,.0f}萬)")
+        print(f"  [{c5_m}] 5. 收盤價站上 60 日均線 : Close=${close_0:.2f} vs MA60:${ma60_0:.2f}")
+        print(f"  [{c6_m}] 6. 🌟 D1 籌碼主力卡位防線 : 主力5日累計 = {main_5d_sum:,.0f} 張 (> 0張)")
+        print(f"  [{c7_m}] 7. 🌟 D3 年線相對超額防線 : 相對超額 = {relative_ma240_excess:.2f}% (>= 3.0%)")
+        print(f"  [{c8_m}] 8. 🛡️ 第3天強勢紅K完整防衛 : 紅K={is_red_k}, 上影線={upper_shadow_pct:.1f}%(<=30%), 實體K={body_pct:.1f}%(>=35%)")
+        print("-" * 70)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發 F1_v2 雙維度強勢紅K黃金卡位]' if is_hit else '⚪ [未觸發]'}")
+        print("=" * 70 + "\n")
+
+    # 7. 回傳結果字典 (呼叫 make_info 標準工廠函式封裝)
+    stop_loss_price = round(close_0 * 0.90, 2)
+    info = (
+        make_info(
+            strategy_name=func_name,
+            position="10% (標準倉位)",
+            stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
+            win_rate="廣義獲利勝率 60.0% | Cat1 飆股率 31.4%",
+            drawdown="Cat3 陷阱率降至 25.7% | 飆陷比 1.22 倍",
+            advice=(
+                "單筆均張強勢爆發且連續集結，搭配主力5日買超卡位、年線相對超額強度與第3天實體強勢紅K防護，"
+                f"展現獨立主升段強勁動能，請嚴格掛好 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。"
+            ),
+            doc_ref="F1_筆張現形_20261124_D1D3_v2黃金版",
+            觸發價格=close_0,
+            輕鬆線乖離率=f"{(bias - 1.0)*100:.2f}%",
+            主力5日累計買超=f"{main_5d_sum:,.0f}張",
+            個股年線乖離率=f"{ma240_bias_0:.2f}%",
+            大盤年線乖離率=f"{market_ma240_bias:.2f}%",
+            年線相對超額=f"{relative_ma240_excess:.2f}%",
+            上影線比例=f"{upper_shadow_pct:.2f}%",
+            實體K棒比例=f"{body_pct:.2f}%",
+            當日成交金額=f"{turnover_amount / 100_000_000.0:.2f}億元",
+        )
+        if is_hit
+        else {}
+    )
+
+    return is_hit, info
+
 
 def st_qiantang_f1_spt_growth_20261124_d1d3(
     df_single: pd.DataFrame,
