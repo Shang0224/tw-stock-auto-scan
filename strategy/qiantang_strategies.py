@@ -1303,7 +1303,22 @@ def st_qiantang_f2_volume_breakout(
   """
 
   #print("st_qiantang_f2_volume_breakout*******************************************************")
+  func_name = sys._getframe().f_code.co_name
 
+  # 0. 大盤趨勢風控檢查
+  if market_info:
+    m_close = float(market_info["taiex_close"])
+    m_ema = float(market_info["taiex_EMA60"])
+    m_slope = float(market_info["taiex_EMA60_slope"])
+
+    if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+      if verbose:
+        print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+        return False, {}
+    else:
+      if verbose:
+        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+        return False, {}
 
   profile = profile or {}
 
@@ -1423,7 +1438,7 @@ def st_qiantang_f2_volume_breakout(
         date_str = str(today["date"])
         print("\n" + "=" * 55)
         print(
-            f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str} | 觸發模式:"
+            f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 觸發模式:"
             " T-1 Level 2 攻擊"
         )
         print("-" * 55)
@@ -1443,7 +1458,7 @@ def st_qiantang_f2_volume_breakout(
         print("=" * 55 + "\n")
 
       return True, {
-          "選股策略": "F2_出量上輕 (T-1強勢攻擊)",
+          "選股策略": func_name,
           "delay_days": info_t1["delay_days"],
           "操作建議": (
               f"昨日突破 ({info_t1['mode']})，今日展現 Level 2 強勢跳空"
@@ -1495,7 +1510,7 @@ def st_qiantang_f2_volume_breakout(
         date_str = str(today["date"])
         print("\n" + "=" * 55)
         print(
-            f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str} | 觸發模式:"
+            f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 觸發模式:"
             " T-2 洗盤確認"
         )
         print("-" * 55)
@@ -1518,7 +1533,7 @@ def st_qiantang_f2_volume_breakout(
         print("=" * 55 + "\n")
 
       return True, {
-          "選股策略": "F2_出量上輕 (T-2洗盤確認)",
+          "選股策略": func_name,
           "delay_days": info_t2["delay_days"],
           "操作建議": (
               f"前日突破 ({info_t2['mode']})，買盤純度達"
@@ -1537,7 +1552,7 @@ def st_qiantang_f2_volume_breakout(
     stock_id = today["stock_id"]
     date_str = str(today["date"])
     print("\n" + "=" * 55)
-    print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str}")
+    print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
     print("-" * 55)
     print("⚪ [未觸發] 不符合 T-1 Level 2 攻擊門檻 或 T-2 洗盤確認條件")
     print("=" * 55 + "\n")
@@ -1548,7 +1563,8 @@ def st_qiantang_f2_volume_breakout(
 def st_qiantang_f2_volume_breakout_20260930_3(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = DEBUG_VERBOSE
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
     """
     【F2_出量上輕 (雙軌成交金額優化版 - 大小型股動態倍數升級版)】
@@ -1563,6 +1579,23 @@ def st_qiantang_f2_volume_breakout_20260930_3(
           ★ 質化濾網：漲幅 >= 3.5% (中小型實體紅K) 且 輕鬆線呈向上揚升趨勢
     修改自st_qiantang_f2_volume_breakout_20260930_2
     """
+    func_name = sys._getframe().f_code.co_name
+
+    # 0. 大盤趨勢風控檢查
+    if market_info:
+      m_close = float(market_info["taiex_close"])
+      m_ema = float(market_info["taiex_EMA60"])
+      m_slope = float(market_info["taiex_EMA60_slope"])
+
+      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+          return False, {}
+      else:
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+          return False, {}
+
     profile = profile or {}
     if len(df_single) < 2:
         if verbose:
@@ -1636,7 +1669,7 @@ def st_qiantang_f2_volume_breakout_20260930_3(
         multiple = (vol_0 / vol_1) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else 0.0
 
         print("\n" + "=" * 55)
-        print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str}")
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
         print(f"    [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ({close_0:.2f} > {easy_0:.2f})" if is_valid(close_0) and is_valid(easy_0) else "    [✕] 1. 收盤 > 輕鬆線 : N/A")
         print(f"    [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "    [✕] 2. 收盤價 >= 5元 : N/A")
@@ -1647,7 +1680,7 @@ def st_qiantang_f2_volume_breakout_20260930_3(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F2_出量上輕',
+        '選股公式': func_name,
         '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
         '成交金額億': round(turnover_0, 2),
         '觸發模式': '模式A(主流大型)' if mode_a else ('模式B(中小型/IC設計)' if mode_b else '未觸發')
@@ -1659,7 +1692,8 @@ def st_qiantang_f2_volume_breakout_20260930_3(
 def st_qiantang_f2_volume_breakout_20260930_2(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = DEBUG_VERBOSE
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
     """
     【F2_出量上輕 (台灣50 / 中型100 / IC設計 專用版)】
@@ -1673,6 +1707,23 @@ def st_qiantang_f2_volume_breakout_20260930_2(
 
     從st_qiantang_f2_volume_breakout_20260930_1改過來, 但效果不好改成st_qiantang_f2_volume_breakout_20260930_2
     """
+    func_name = sys._getframe().f_code.co_name
+
+    # 0. 大盤趨勢風控檢查
+    if market_info:
+      m_close = float(market_info["taiex_close"])
+      m_ema = float(market_info["taiex_EMA60"])
+      m_slope = float(market_info["taiex_EMA60_slope"])
+
+      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+          return False, {}
+      else:
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+          return False, {}
+            
     profile = profile or {}
     f2_cfg = profile.get('f2_volume_breakout', {})
     
@@ -1727,7 +1778,7 @@ def st_qiantang_f2_volume_breakout_20260930_2(
         profile_name = profile.get('name', '預設族群')
 
         print("\n" + "=" * 55)
-        print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str} | 適用族群: {profile_name}")
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 適用族群: {profile_name}")
         print("-" * 55)
         print(f"  [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ({close_0:.2f} > {easy_0:.2f})" if (is_valid(close_0) and is_valid(easy_0)) else "  [✕] 1. 收盤 > 輕鬆線 : N/A")
         print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= {min_price:.1f}元 : ${close_0:.2f}" if is_valid(close_0) else f"  [✕] 2. 收盤價 >= {min_price:.1f}元 : N/A")
@@ -1743,7 +1794,7 @@ def st_qiantang_f2_volume_breakout_20260930_2(
         print("=" * 55 + "\n")
 
     info = {
-        '選股策略': 'F2_出量上輕',
+        '選股策略': func_name,
         '套用族群': profile.get('name', '預設族群'),
         '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
         '成交金額億': round(turnover_0, 2),
@@ -1755,7 +1806,8 @@ def st_qiantang_f2_volume_breakout_20260930_2(
 def st_qiantang_f2_volume_breakout_20260930_1(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = DEBUG_VERBOSE
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
     """
     【F2_出量上輕 (雙軌成交金額優化版)】
@@ -1769,6 +1821,24 @@ def st_qiantang_f2_volume_breakout_20260930_1(
 
     st_qiantang_f2_volume_breakout_20260930_1
     """
+
+    func_name = sys._getframe().f_code.co_name
+
+    # 0. 大盤趨勢風控檢查
+    if market_info:
+      m_close = float(market_info["taiex_close"])
+      m_ema = float(market_info["taiex_EMA60"])
+      m_slope = float(market_info["taiex_EMA60_slope"])
+
+      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+          return False, {}
+      else:
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+          return False, {}
+            
     profile = profile or {}
     if len(df_single) < 2:
         if verbose:
@@ -1818,7 +1888,7 @@ def st_qiantang_f2_volume_breakout_20260930_1(
         multiple = (vol_0 / vol_1) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else 0.0
 
         print("\n" + "=" * 55)
-        print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str}")
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
         print(f"  [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ({close_0:.2f} >){easy_0:.2f}" if is_valid(close_0) and is_valid(easy_0) else "  [✕] 1. 收盤 > 輕鬆線 : N/A")
         print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "  [✕] 2. 收盤價 >= 5元 : N/A")
@@ -1829,7 +1899,7 @@ def st_qiantang_f2_volume_breakout_20260930_1(
         print("=" * 55 + "\n")
 
     info = {
-        '選股策略': 'F2_出量上輕',
+        '選股策略': func_name,
         '操作建議': '成交金額與量能同步暴增，主力資金強勢進駐並站上輕鬆線，多頭續航力高。',
         '成交金額億': round(turnover_0, 2),
         '觸發模式': '模式A(大中型)' if mode_a else ('模式B(中小型/IC設計)' if mode_b else '未觸發')
@@ -1840,7 +1910,8 @@ def st_qiantang_f2_volume_breakout_20260930_1(
 def st_qiantang_f2_volume_breakout_20260930(
     df_single: pd.DataFrame,
     profile: dict = None,
-    verbose: bool = DEBUG_VERBOSE
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
     """
     【F2_出量上輕】
@@ -1852,11 +1923,30 @@ def st_qiantang_f2_volume_breakout_20260930(
        - 模式A：昨日量 * 3 且 當日量 >= 3,000 張
        - 模式B：昨日量 * 4.5 且 當日量 < 3,000 張
     """
+    
+    func_name = sys._getframe().f_code.co_name
+
+    # 0. 大盤趨勢風控檢查
+    if market_info:
+      m_close = float(market_info["taiex_close"])
+      m_ema = float(market_info["taiex_EMA60"])
+      m_slope = float(market_info["taiex_EMA60_slope"])
+
+      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+          return False, {}
+      else:
+        if verbose:
+          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+          return False, {}
+            
     profile = profile or {}
     if len(df_single) < 2:
         if verbose:
             print(f"❌ [出量上輕] 資料筆數不足 2 筆 (目前: {len(df_single)})")
         return False, {}
+
 
     today = df_single.iloc[-1]
     d1 = df_single.iloc[-2]
@@ -1883,7 +1973,7 @@ def st_qiantang_f2_volume_breakout_20260930(
         multiple = (vol_0 / vol_1) if (is_valid(vol_0) and is_valid(vol_1) and vol_1 > 0) else 0.0
 
         print("\n" + "=" * 55)
-        print(f"🔔 [F2_出量上輕] 股票: {stock_id} | 日期: {date_str}")
+        print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
         print("-" * 55)
         print(f"  [{ '✓' if cond1_above_easy else '✕' }] 1. 收盤 > 輕鬆線 : ${close_0:.2f} > ${easy_0:.2f}" if is_valid(close_0) and is_valid(easy_0) else "  [✕] 1. 收盤 > 輕鬆線 : N/A")
         print(f"  [{ '✓' if cond2_price_ok else '✕' }] 2. 收盤價 >= 5元 : ${close_0:.2f}" if is_valid(close_0) else "  [✕] 2. 收盤價 >= 5元 : N/A")
@@ -1894,7 +1984,7 @@ def st_qiantang_f2_volume_breakout_20260930(
         print("=" * 55 + "\n")
 
     info = {
-        '選股公式': 'F2_出量上輕',
+        '選股公式': func_name,
         '操作建議': '成交量呈幾何倍數暴增，量能強勢突破並站上輕鬆線，多頭起漲動能極強。'
     } if is_hit else {}
 
