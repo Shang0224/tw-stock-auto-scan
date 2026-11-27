@@ -26,6 +26,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth_d1d3_v2,
     st_qiantang_f1_spt_growth_20261121,
     st_qiantang_f1_spt_growth_20261125, #雙軌策略
+    st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
 
     st_qiantang_f2_volume_breakout, # 出量上輕
     st_qiantang_f3_after_shakeout,  # 洗盤後
@@ -109,6 +110,7 @@ TEST_QIANTANG_STRATEGY = [
     #st_qiantang_f1_spt_growth_d1d3_v2,
     #st_qiantang_f1_spt_growth_20261121,
     st_qiantang_f1_spt_growth_20261125, #雙軌策略
+    st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
     
     #st_qiantang_f2_volume_breakout, # F2: 出量上輕
     #st_qiantang_f3_after_shakeout,  # F3: 洗盤後
