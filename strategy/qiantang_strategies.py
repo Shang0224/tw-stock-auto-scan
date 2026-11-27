@@ -72,7 +72,7 @@ def st_qiantang_f1_spt_growth_20261127(
     market_info: dict = None
 ) -> tuple[bool, dict]:
     """
-    【F1_筆張現形 - 20261125 雙軌精準優化旗艦版 (st_qiantang_f1_spt_growth_20261125)】
+    【F1_筆張現形 - 20261127 雙軌校正旗艦版 (st_qiantang_f1_spt_growth_20261127)】
 
     ===========================================================================
     【開發背景與優化緣由】：
@@ -80,17 +80,18 @@ def st_qiantang_f1_spt_growth_20261127(
     2. 解決原 F1 策略在全體母體回測中 Cat3 深跌陷阱率高 (36.1%)、勝率低於 50% (49.6%) 且飆陷比偏低 (0.48倍) 之問題。
     3. 引入【以 距52週高點 >= -15.0% 切分之雙軌精準獨立優化架構】：
        - 🌟 第一軌 (強勢高位突破軌：距 52 週高點 >= -15.0%)：
-         * 要求「年線乖離率 (ma240_bias) >= 3.0%」（確保股價居於長線多頭主升段）。
+         * 要求「年線乖離率 (ma240_bias) 介於 3.0% ~ 25.0%」（確保股價居長線多頭主升段，並封頂高檔拉高倒貨避雷針）。
          * 要求「主力 5 日累計買超 (major_5d_shares_sum) >= 100.0 張」且「投信 5 日累計買超 (trust_5d_shares_sum) >= 100.0 張」（籌碼雙鎖碼）。
-         * 要求「上影線比例 (upper_shadow_ratio) <= 30.0%」且「實體 K 棒比例 (body_ratio) >= 30.0%」（過濾高檔拉高倒貨避雷針）。
+         * 要求「上影線比例 (upper_shadow_ratio) <= 30.0%」且「實體 K 棒比例 (body_ratio) >= 30.0%」（實質換手紅 K）。
          * 要求「輕鬆線 OLS 斜率 (easy_line_slope) >= 0.02」（確認主升段右側發散動能）。
        - 🌟 第二軌 (低位打底轉折軌：距 52 週高點 < -15.0%)：
+         * 要求「主力 5 日累計買超 (major_5d_shares_sum) >= 0.0 張」（防禦防線：封殺主力拋售大賣的陷阱股）。
          * 要求「輕鬆線 OLS 斜率 (easy_line_slope) >= 0.04」（要求轉折發散斜率更陡峭）。
          * 要求「年線乖離率 (ma240_bias) >= -16.0%」（防禦破底崩盤股，完整保全 3406 玉晶光 -25.58% 轉折與 6415 矽力-KY -26.52% 起漲原點）。
          * 要求「打底沉澱天數 (base_consolidation_days) >= 35 天」（確保沉澱充分，封殺築底失敗標的）。
-         * 要求「MACD 柱狀體 (MACD_hist) >= 0.0」（確認右側 Confirmation 柱狀體翻紅）。
+         * 要求「MACD 柱狀體 (osc) >= 0.0」（確認右側 Confirmation 柱狀體翻紅）。
          * 🛡️ 【下限開放原則】：不設定爆量倍數與上影線上限，100% 完整保全 +572.73% 玉晶光長線暴利天花板。
-    4. 1900 版實測效益 (15-19 年 5 年全期 288 筆首發母體過濾)：
+    4. 實測效益 (2015-2019 年 5 年全期 288 筆首發母體過濾)：
        - 🎯 廣義獲利勝率 (Cat1+Cat2)：自 49.65% 暴升至 62.50% (+12.85 個百分點)。
        - 🎯 飆陷比 (Cat1 / Cat3)：自 0.48 倍翻倍逆轉升至 1.13 倍 (17 檔 Cat1 飆股 vs 15 檔 Cat3 陷阱)。
        - 🚀 Cat1 飆股濃度：提升至 23.61% (每 4 檔發牌即有 1 檔飆股)。
@@ -98,11 +99,12 @@ def st_qiantang_f1_spt_growth_20261127(
        - 📉 1Y MAE 均值：收斂至 -10.23% (全期無風控最深跌幅由 -67.74% 大幅改善至 -49.30%)。
 
     ===========================================================================
-    【開發規範依據 (嚴格對齊《策略程式開發規範.docx》)】：
+    【開發規範依據 (嚴格對齊《策略程式開發規範.docx》與《對照說明書.docx》)】：
     - 100% 採用純英文欄位名稱，中括號直接索引存取，取消靜默補值與 if 'col' in 檢查！
-    - 基底量能採用 vol_ma5_prior (排除當日 T0 之歷史前 5 日均量，徹底封殺當日爆量自我稀釋)。
-    - 籌碼張數 major_5d_shares_sum 與 trust_5d_shares_sum 單位即為「張」，絕不重複除以 1000.0！
-    - 均線與技術指標直接存取 engine.py 預處理之英文欄位 (如 MA60, ma240_bias, MACD_hist)，絕不重複計算。
+    - MACD 柱狀體精準對齊 engine.py 之預處理英文欄位 `osc`！
+    - 基底量能採用 `vol_ma5_prior` (排除當日 T0 之歷史前 5 日均量，徹底封殺當日爆量自我稀釋)。
+    - 籌碼張數 `major_5d_shares_sum` 與 `trust_5d_shares_sum` 單位確定為「張」，直接存取，不重複除以 1000.0！
+    - 均線與技術指標直接存取 engine.py 預處理之英文欄位 (如 MA60, ma240_bias, osc)，絕不重複計算。
     - 回傳訊息呼叫 make_info 標準工廠函式封裝。
     ===========================================================================
     """
@@ -145,7 +147,7 @@ def st_qiantang_f1_spt_growth_20261127(
 
     # 讀取系統前處理英文欄位
     ma60_0 = float(today['MA60'])
-    vol_ma5_prior = float(today['vol_ma5_prior'])  # 歷史前 5 日均量 (股，排除當日 T0)
+    vol_ma5_prior = float(today['vol_ma5_prior'])  # 歷史前 5 日均量 (排除當日 T0)
 
     # 歷史前 5 日單筆均張平均 (T-5 至 T-1，排除當日 T0)
     spt_series_5 = df_single['shares_per_trans'].iloc[-6:-1]
@@ -155,9 +157,11 @@ def st_qiantang_f1_spt_growth_20261127(
     dist_52w_high_0 = float(today['dist_to_52w_high_pct'])
     consolidation_days_0 = int(today['base_consolidation_days'])
     ma240_bias_0 = float(today['ma240_bias'])
+    
+    # MACD 柱狀體在 engine.py 預處理之正確英文欄位為 'osc'
     macd_hist_0 = float(today['osc'])
 
-    # 籌碼指標 (單位即為張數，不重複 / 1000.0)
+    # 籌碼指標 (確定單位為張數，不進行 / 1000.0 轉換)
     main_5d_lots = float(today['major_5d_shares_sum'])
     trust_5d_lots = float(today['trust_5d_shares_sum'])
 
@@ -183,8 +187,8 @@ def st_qiantang_f1_spt_growth_20261127(
     is_track1 = (dist_52w_high_0 >= -15.0)
 
     if is_track1:
-        # 第一軌 (強勢高位突破): 年線乖離>=3% + 主力/投信雙鎖碼(>=100張) + K棒品質(上影<=30%, 實體>=30%) + 輕鬆線斜率發散(>=0.02)
-        cond_t1_trend_ok = (ma240_bias_0 >= 3.0)
+        # 第一軌 (強勢高位突破): 年線乖離 3%~25% + 主力/投信雙鎖碼(>=100張) + K棒品質(上影<=30%, 實體>=30%) + 輕鬆線斜率發散(>=0.02)
+        cond_t1_trend_ok = (3.0 <= ma240_bias_0 <= 25.0)
         cond_t1_chip_ok = (main_5d_lots >= 100.0) and (trust_5d_lots >= 100.0)
         cond_t1_kbar_ok = (upper_shadow_0 <= 30.0) and (body_ratio_0 >= 30.0)
         cond_t1_slope_ok = (easy_slope_0 >= 0.02)
@@ -192,13 +196,14 @@ def st_qiantang_f1_spt_growth_20261127(
         is_hit = cond_t1_trend_ok and cond_t1_chip_ok and cond_t1_kbar_ok and cond_t1_slope_ok
         active_track = "第一軌 (強勢高位突破)"
     else:
-        # 第二軌 (低位打底轉折): 輕鬆線斜率陡峭(>=0.04) + 年線乖離率防禦(>=-16%) + 打底天數(>=35天) + MACD柱狀體翻紅(>=0.0)
+        # 第二軌 (低位打底轉折): 主力非賣超(>=0張) + 輕鬆線斜率陡峭(>=0.04) + 年線乖離率防禦(>=-16%) + 打底天數(>=35天) + MACD柱狀體翻紅(>=0.0)
+        cond_t2_chip_ok = (main_5d_lots >= 0.0)
         cond_t2_slope_ok = (easy_slope_0 >= 0.04)
         cond_t2_trend_ok = (ma240_bias_0 >= -16.0)
         cond_t2_base_ok = (consolidation_days_0 >= 35)
         cond_t2_macd_ok = (macd_hist_0 >= 0.0)
 
-        is_hit = cond_t2_slope_ok and cond_t2_trend_ok and cond_t2_base_ok and cond_t2_macd_ok
+        is_hit = cond_t2_chip_ok and cond_t2_slope_ok and cond_t2_trend_ok and cond_t2_base_ok and cond_t2_macd_ok
         active_track = "第二軌 (低位打底轉折)"
 
     # 5. 控制台卡片樣式 Console Log 輸出
@@ -219,17 +224,18 @@ def st_qiantang_f1_spt_growth_20261127(
         print(f"  [✓] 5. 收盤價站上季線 MA60 : Close=${close_0:.2f} vs MA60:${ma60_0:.2f}")
         print(f"  [預設] 6. 雙軌判斷通道 ➔ 【{active_track}】 (距52W高點: {dist_52w_high_0:.2f}%)")
         if is_track1:
-            print(f"       ├─ 長線多頭位階 : 年線乖離率={ma240_bias_0:.2f}% (>=3.0%)")
+            print(f"       ├─ 長線多頭位階 : 年線乖離率={ma240_bias_0:.2f}% (3.0%~25.0%)")
             print(f"       ├─ 籌碼雙鎖碼 : 主力5日={main_5d_lots:,.0f}張(>=100), 投信5日={trust_5d_lots:,.0f}張(>=100)")
             print(f"       ├─ K棒品質防偽 : 上影線={upper_shadow_0:.1f}%(<=30%), 實體K={body_ratio_0:.1f}%(>=30%)")
             print(f"       └─ 動能斜率發散 : 輕鬆線OLS斜率={easy_slope_0:.4f} (>=0.02)")
         else:
+            print(f"       ├─ 主力非賣超防線 : 主力5日={main_5d_lots:,.0f}張 (>=0張)")
             print(f"       ├─ 輕鬆線轉折陡峭 : 輕鬆線OLS斜率={easy_slope_0:.4f} (>=0.04)")
             print(f"       ├─ 年線乖離防衛 : 年線乖離率={ma240_bias_0:.2f}% (>=-16.0%)")
             print(f"       ├─ 時間底座沉澱 : 打底沉澱天數={consolidation_days_0}天 (>=35天)")
-            print(f"       └─ 右側Confirmation : MACD柱狀體={macd_hist_0:.4f} (>=0.0)")
+            print(f"       └─ 右側Confirmation : MACD柱狀體(osc)={macd_hist_0:.4f} (>=0.0)")
         print("-" * 70)
-        print(f"🎯 最終觸發結果: {'🔥 [觸發 F1_20261125 雙軌精準優化旗艦版]' if is_hit else '⚪ [未通過軌道過濾]'}")
+        print(f"🎯 最終觸發結果: {'🔥 [觸發 F1_20261127 雙軌校正旗艦版]' if is_hit else '⚪ [未通過軌道過濾]'}")
         print("=" * 70 + "\n")
 
     # 6. 回傳標準 make_info 字典封裝
@@ -241,8 +247,8 @@ def st_qiantang_f1_spt_growth_20261127(
             stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
             win_rate="廣義勝率 62.5% (Cat1+2) | 飆股率 23.6%",
             drawdown="Cat3 陷阱率 20.8% | 飆陷比 1.13 倍",
-            advice=f"通過 F1 {active_track} 精準獨立優化過濾，請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。",
-            doc_ref="F1_筆張現形_20261125_雙軌精準優化旗艦版",
+            advice=f"通過 F1 {active_track} 校正旗艦版過濾，請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。",
+            doc_ref="F1_筆張現形_20261127_雙軌校正旗艦版",
             觸發價格=close_0,
             通關軌道=active_track,
             距52W高點=f"{dist_52w_high_0:.2f}%",
