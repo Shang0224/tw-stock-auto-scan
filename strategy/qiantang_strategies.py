@@ -187,21 +187,20 @@ def st_qiantang_f1_spt_growth_20261127(
     is_track1 = (dist_52w_high_0 >= -15.0)
 
     if is_track1:
-        # 第一軌 (強勢高位突破): 年線乖離 3%~25% + 主力/投信雙鎖碼(>=100張) + K棒品質(上影<=30%, 實體>=30%) + 輕鬆線斜率發散(>=0.02)
-        cond_t1_trend_ok = (3.0 <= ma240_bias_0 <= 25.0)
-        cond_t1_chip_ok = (main_5d_lots >= 100.0) and (trust_5d_lots >= 100.0)
+        # 🌟 第一軌：主力>=200張 + 投信>=100張 (取消 <=25% 乖離上限)
+        cond_t1_trend_ok = (ma240_bias_0 >= 3.0)
+        cond_t1_chip_ok = (main_5d_lots >= 200.0) and (trust_5d_lots >= 100.0)
         cond_t1_kbar_ok = (upper_shadow_0 <= 30.0) and (body_ratio_0 >= 30.0)
         cond_t1_slope_ok = (easy_slope_0 >= 0.02)
-
         is_hit = cond_t1_trend_ok and cond_t1_chip_ok and cond_t1_kbar_ok and cond_t1_slope_ok
-        active_track = "第一軌 (強勢高位突破)"
     else:
-        # 第二軌 (低位打底轉折): 主力非賣超(>=0張) + 輕鬆線斜率陡峭(>=0.04) + 年線乖離率防禦(>=-16%) + 打底天數(>=35天) + MACD柱狀體翻紅(>=0.0)
-        cond_t2_chip_ok = (main_5d_lots >= 0.0)
+        # 🌟 第二軌：主力非賣超(>=0張) + 投信非賣超(>=0張) + 斜率>=0.04
+        cond_t2_chip_ok = (main_5d_lots >= 0.0) and (trust_5d_lots >= 0.0)
         cond_t2_slope_ok = (easy_slope_0 >= 0.04)
         cond_t2_trend_ok = (ma240_bias_0 >= -16.0)
-        cond_t2_base_ok = (consolidation_days_0 >= 35)
+        cond_t2_base_ok = (consolidation_days_0 >= 30)
         cond_t2_macd_ok = (macd_hist_0 >= 0.0)
+        is_hit = cond_t2_chip_ok and cond_t2_slope_ok and cond_t2_trend_ok and cond_t2_base_ok and cond_t2_macd_ok
 
         is_hit = cond_t2_chip_ok and cond_t2_slope_ok and cond_t2_trend_ok and cond_t2_base_ok and cond_t2_macd_ok
         active_track = "第二軌 (低位打底轉折)"
