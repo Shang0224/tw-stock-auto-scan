@@ -347,7 +347,7 @@ def st_qiantang_f1_spt_growth_20261125_tbase3(
             投信5日累計買超=f"{trust_5d_lots:,.0f}張",
             輕鬆線OLS斜率=f"{easy_slope_tbase:.4f}",
             delay_days=delay_days,
-            f"Tbase+{delay_days}觀察期報酬"=f"{confirm_return * 100:.2f}%",
+             **{f"Tbase+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%"},
         )
         if is_hit
         else {}
