@@ -1313,11 +1313,11 @@ def st_qiantang_f2_volume_breakout(
     if not check_market_trend(market_info, filter_key="taiex_EMA60"):
       if verbose:
         print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-        return False, {}
-    else:
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-        return False, {}
+      return False, {}
+  else:
+    if verbose:
+      print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    return False, {}
 
   profile = profile or {}
 
@@ -1581,6 +1581,7 @@ def st_qiantang_f2_volume_breakout_20260930_3(
     func_name = sys._getframe().f_code.co_name
 
     # 0. 大盤趨勢風控檢查
+
     if market_info:
       m_close = float(market_info["taiex_close"])
       m_ema = float(market_info["taiex_EMA60"])
@@ -1589,13 +1590,14 @@ def st_qiantang_f2_volume_breakout_20260930_3(
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):
         if verbose:
           print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-          return False, {}
-      else:
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-          return False, {}
+        return False, {}
+    else:
+      if verbose:
+        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+      return False, {}
 
     profile = profile or {}
+    
     if len(df_single) < 2:
         if verbose:
             print(f"❌ [出量上輕] 資料筆數不足 2 筆 (目前: {len(df_single)})")
@@ -1709,6 +1711,7 @@ def st_qiantang_f2_volume_breakout_20260930_2(
     func_name = sys._getframe().f_code.co_name
 
     # 0. 大盤趨勢風控檢查
+
     if market_info:
       m_close = float(market_info["taiex_close"])
       m_ema = float(market_info["taiex_EMA60"])
@@ -1717,11 +1720,11 @@ def st_qiantang_f2_volume_breakout_20260930_2(
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):
         if verbose:
           print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-          return False, {}
-      else:
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-          return False, {}
+        return False, {}
+    else:
+      if verbose:
+        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+      return False, {}
             
     profile = profile or {}
     f2_cfg = profile.get('f2_volume_breakout', {})
@@ -1832,11 +1835,11 @@ def st_qiantang_f2_volume_breakout_20260930_1(
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):
         if verbose:
           print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-          return False, {}
-      else:
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-          return False, {}
+        return False, {}
+    else:
+      if verbose:
+        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+      return False, {}
             
     profile = profile or {}
     if len(df_single) < 2:
@@ -1934,11 +1937,11 @@ def st_qiantang_f2_volume_breakout_20260930(
       if not check_market_trend(market_info, filter_key="taiex_EMA60"):
         if verbose:
           print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-          return False, {}
-      else:
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-          return False, {}
+        return False, {}
+    else:
+      if verbose:
+        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+      return False, {}
             
     profile = profile or {}
     if len(df_single) < 2:
