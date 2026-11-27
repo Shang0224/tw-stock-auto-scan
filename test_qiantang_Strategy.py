@@ -31,7 +31,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f2_volume_breakout_20260930_2,
     st_qiantang_f2_volume_breakout_20260930_1,
     st_qiantang_f2_volume_breakout_20260930,
-
+    st_qiantang_f2_volume_breakout_1127,
 
     st_qiantang_f3_after_shakeout,  # 洗盤後
 
@@ -109,18 +109,19 @@ from utils import (
 # =====================================================================
 # 💡 目前僅單獨測試：st_qiantang_f3_after_shakeout_20261001_1
 TEST_QIANTANG_STRATEGY = [
-    st_qiantang_f1_spt_growth,      # F1: 筆張現形
-    st_qiantang_f1_spt_growth_20261125, #雙軌策略
-    st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
+    #st_qiantang_f1_spt_growth,      # F1: 筆張現形
+    #st_qiantang_f1_spt_growth_20261125, #雙軌策略
+    #st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
     
     #st_qiantang_f1_spt_growth_20261121,
 
     
-    #st_qiantang_f2_volume_breakout, # F2: 出量上輕
+    st_qiantang_f2_volume_breakout, # F2: 出量上輕
     #st_qiantang_f2_volume_breakout_20260930_3,
     #st_qiantang_f2_volume_breakout_20260930_2,
     #st_qiantang_f2_volume_breakout_20260930_1,
     #st_qiantang_f2_volume_breakout_20260930,
+    st_qiantang_f2_volume_breakout_1127,
 
     
     #st_qiantang_f3_after_shakeout,  # F3: 洗盤後    
