@@ -152,20 +152,9 @@ def st_qiantang_f1_spt_growth_20261125_tbase3(
     """
     func_name = sys._getframe().f_code.co_name
 
-    # 0. 大盤趨勢風控檢查 (存取 market_info 英文欄位)
-    if market_info:
-        m_close = float(market_info["taiex_close"])
-        m_ema = float(market_info["taiex_EMA60"])
-        m_slope = float(market_info["taiex_EMA60_slope"])
-
-        if not check_market_trend(market_info, filter_key="taiex_EMA60"):
-            if verbose:
-                print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-            return False, {}
-    else:
-        if verbose:
-            print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
-        return False, {}
+    # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+    if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
+      return False, {}
 
     profile = profile or {}
 
