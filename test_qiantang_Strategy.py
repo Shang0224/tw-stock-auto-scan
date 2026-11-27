@@ -22,8 +22,6 @@ from utils.analytics import PULLBACK_LIMIT_PCT
 # 2. 匯入 7 大多方選股策略與優化策略
 from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth,      # 筆張現形
-    st_qiantang_f1_spt_growth_20261124_d1d3, 
-    st_qiantang_f1_spt_growth_d1d3_v2,
     st_qiantang_f1_spt_growth_20261121,
     st_qiantang_f1_spt_growth_20261125, #雙軌策略
     st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
@@ -115,8 +113,6 @@ TEST_QIANTANG_STRATEGY = [
     st_qiantang_f1_spt_growth_20261125, #雙軌策略
     st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
     
-    #st_qiantang_f1_spt_growth_20261124_d1d3,
-    #st_qiantang_f1_spt_growth_d1d3_v2,
     #st_qiantang_f1_spt_growth_20261121,
 
     
