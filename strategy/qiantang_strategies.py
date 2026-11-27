@@ -43,6 +43,43 @@ def make_info(
         if v not in ("N/A", "", None) and pd.notna(v)
     }
 
+def check_market_risk(
+    market_info: dict,
+    check_market_trend_func,
+    func_name: str,
+    verbose: bool = True,
+    filter_key: str = "taiex_EMA60"
+) -> bool:
+    """
+    大盤風控條件檢查獨立函數
+    
+    :param market_info: 大盤資訊字典 (包含 taiex_close, taiex_EMA60, taiex_EMA60_slope)
+    :param check_market_trend_func: 傳入的 check_market_trend 檢查函數
+    :param func_name: 呼叫端的策略函數名稱 (用於控制台 Log 輸出)
+    :param verbose: 是否列印詳細 Console Log
+    :param filter_key: 風控指標鍵值 (預設為 "taiex_EMA60")
+    :return: bool (True 代表通過風控可繼續執行；False 代表未通過或無資料，應中斷策略)
+    """
+    if market_info:
+        # 直接索引讀取欄位 (缺失由 Python 原生拋出 KeyError)
+        m_close = float(market_info["taiex_close"])
+        m_ema = float(market_info["taiex_EMA60"])
+        m_slope = float(market_info["taiex_EMA60_slope"])
+
+        # 呼叫傳入的風控檢查函數
+        if not check_market_trend_func(market_info, filter_key=filter_key):          
+            if verbose:
+                print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (條件違反 收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
+            return False
+
+        if verbose:
+            print(f"{func_name}  [✓] 🛡️ 通過大盤風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0)")
+        return True
+    else:
+        if verbose:
+            print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+        return False
+
 def check_market_trend(market_info: dict, filter_key: str = "taiex_EMA60") -> bool:
     """
     【大盤趨勢純邏輯檢查】
@@ -1304,21 +1341,10 @@ def st_qiantang_f2_volume_breakout(
   #print("st_qiantang_f2_volume_breakout*******************************************************")
   func_name = sys._getframe().f_code.co_name
 
-  # 0. 大盤趨勢風控檢查
-  if market_info:
-    m_close = float(market_info["taiex_close"])
-    m_ema = float(market_info["taiex_EMA60"])
-    m_slope = float(market_info["taiex_EMA60_slope"])
-
-    if not check_market_trend(market_info, filter_key="taiex_EMA60"):
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-      return False, {}
-  else:
-    if verbose:
-      print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+  # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+  if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
     return False, {}
-
+      
   profile = profile or {}
 
   # 歷史資料至少需 4 筆以支援 T-2 與其前一日的突破判定 (T, T-1, T-2, T-3)
@@ -1580,20 +1606,8 @@ def st_qiantang_f2_volume_breakout_20260930_3(
     """
     func_name = sys._getframe().f_code.co_name
 
-    # 0. 大盤趨勢風控檢查
-
-    if market_info:
-      m_close = float(market_info["taiex_close"])
-      m_ema = float(market_info["taiex_EMA60"])
-      m_slope = float(market_info["taiex_EMA60_slope"])
-
-      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-        return False, {}
-    else:
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+    if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
       return False, {}
 
     profile = profile or {}
@@ -1710,20 +1724,8 @@ def st_qiantang_f2_volume_breakout_20260930_2(
     """
     func_name = sys._getframe().f_code.co_name
 
-    # 0. 大盤趨勢風控檢查
-
-    if market_info:
-      m_close = float(market_info["taiex_close"])
-      m_ema = float(market_info["taiex_EMA60"])
-      m_slope = float(market_info["taiex_EMA60_slope"])
-
-      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-        return False, {}
-    else:
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+    if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
       return False, {}
             
     profile = profile or {}
@@ -1826,19 +1828,8 @@ def st_qiantang_f2_volume_breakout_20260930_1(
 
     func_name = sys._getframe().f_code.co_name
 
-    # 0. 大盤趨勢風控檢查
-    if market_info:
-      m_close = float(market_info["taiex_close"])
-      m_ema = float(market_info["taiex_EMA60"])
-      m_slope = float(market_info["taiex_EMA60_slope"])
-
-      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-        return False, {}
-    else:
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+    if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
       return False, {}
             
     profile = profile or {}
@@ -1928,19 +1919,8 @@ def st_qiantang_f2_volume_breakout_20260930(
     
     func_name = sys._getframe().f_code.co_name
 
-    # 0. 大盤趨勢風控檢查
-    if market_info:
-      m_close = float(market_info["taiex_close"])
-      m_ema = float(market_info["taiex_EMA60"])
-      m_slope = float(market_info["taiex_EMA60_slope"])
-
-      if not check_market_trend(market_info, filter_key="taiex_EMA60"):
-        if verbose:
-          print(f"{func_name}  [✕] 🛑 大盤不符合風控條件 (收盤 ${m_close:.2f} > EMA60 ${m_ema:.2f} 且 斜率 {m_slope:.4f} > 0) ➔ 直接中斷策略。")
-        return False, {}
-    else:
-      if verbose:
-        print(f"{func_name}  [✕] 🛑 無大盤風控資料 ➔ 直接中斷策略。")
+    # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+    if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
       return False, {}
             
     profile = profile or {}
