@@ -161,9 +161,9 @@ def st_qiantang_f1_spt_growth_20261127(
     # MACD 柱狀體在 engine.py 預處理之正確英文欄位為 'osc'
     macd_hist_0 = float(today['osc'])
 
-    # 籌碼指標 (確定單位為張數，不進行 / 1000.0 轉換)
-    main_5d_lots = float(today['major_5d_shares_sum'])
-    trust_5d_lots = float(today['trust_5d_shares_sum'])
+    # 籌碼指標 (確定單位為股數轉換為張數)
+    main_5d_lots = float(today['major_5d_shares_sum'])/1000.0
+    trust_5d_lots = float(today['trust_5d_shares_sum'])/1000.0
 
     upper_shadow_0 = float(today['upper_shadow_ratio'])
     body_ratio_0 = float(today['body_ratio'])
@@ -351,8 +351,8 @@ def st_qiantang_f1_spt_growth_20261125(
     consolidation_days_0 = int(today['base_consolidation_days'])
 
     # 籌碼指標 (單位: 股數，轉成張數除以 1000.0)
-    main_5d_shares = float(today['major_5d_shares_sum'])
-    trust_5d_shares = float(today['trust_5d_shares_sum'])
+    main_5d_shares = float(today['major_5d_shares_sum'])/1000.0
+    trust_5d_shares = float(today['trust_5d_shares_sum'])/1000.0
     main_5d_lots = main_5d_shares
     trust_5d_lots = trust_5d_shares
 
