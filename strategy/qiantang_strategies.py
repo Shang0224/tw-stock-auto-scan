@@ -1164,6 +1164,15 @@ def st_qiantang_f2_volume_breakout_1127(
           ),
       )
 
+  if verbose:
+    stock_id = today["stock_id"]
+    date_str = str(today["date"])
+    print("\n" + "=" * 55)
+    print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
+    print("-" * 55)
+    print("⚪ [未觸發] 不符合 T-1 Level 2 攻擊門檻 或 T-2 洗盤確認條件")
+    print("=" * 55 + "\n")
+    
   return False, {}
 
 def st_qiantang_f2_volume_breakout(
