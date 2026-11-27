@@ -155,7 +155,7 @@ def st_qiantang_f1_spt_growth_20261127(
     dist_52w_high_0 = float(today['dist_to_52w_high_pct'])
     consolidation_days_0 = int(today['base_consolidation_days'])
     ma240_bias_0 = float(today['ma240_bias'])
-    macd_hist_0 = float(today['MACD_hist'])
+    macd_hist_0 = float(today['osc'])
 
     # 籌碼指標 (單位即為張數，不重複 / 1000.0)
     main_5d_lots = float(today['major_5d_shares_sum'])
