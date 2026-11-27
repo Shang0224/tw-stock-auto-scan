@@ -29,6 +29,12 @@ from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth_20261127, #雙軌策略優化
 
     st_qiantang_f2_volume_breakout, # 出量上輕
+    st_qiantang_f2_volume_breakout_20260930_3,
+    st_qiantang_f2_volume_breakout_20260930_2,
+    st_qiantang_f2_volume_breakout_20260930_1,
+    st_qiantang_f2_volume_breakout_20260930,
+
+
     st_qiantang_f3_after_shakeout,  # 洗盤後
 
     st_qiantang_f3_after_shakeout_mid100, #MID100專用策略
@@ -115,6 +121,10 @@ TEST_QIANTANG_STRATEGY = [
 
     
     st_qiantang_f2_volume_breakout, # F2: 出量上輕
+    st_qiantang_f2_volume_breakout_20260930_3,
+    st_qiantang_f2_volume_breakout_20260930_2,
+    st_qiantang_f2_volume_breakout_20260930_1,
+    st_qiantang_f2_volume_breakout_20260930,
 
     
     #st_qiantang_f3_after_shakeout,  # F3: 洗盤後    
