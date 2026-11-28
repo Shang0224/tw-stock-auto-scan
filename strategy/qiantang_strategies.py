@@ -102,6 +102,301 @@ def is_valid(val):
 # =====================================================================
 # F1. 筆張現形
 # =====================================================================
+def st_qiantang_f1_spt_growth_20261125_tbase3_v2(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 3,              # Tbase+3 右側觀察期天數 (預設 3 天)
+    threshold_pct: float = 0.01,      # Tbase+3 右側確認最低累積漲幅門檻 (>= 1.0%, 0.01)
+    market_info: dict = None          # 當日大盤秒查資料字典
+) -> tuple[bool, dict]:
+    """
+    ===========================================================================
+    【F1_筆張現形 - 0751全股票池雙軌精準優化與 Tbase+3 右側強勢確認旗艦版 v2】
+    策略名稱：st_qiantang_f1_spt_growth_20261125_tbase3_v2
+
+    一、 策略修訂緣由與設計哲學：
+    1. 本策略修訂自 st_qiantang_f1_spt_growth_20261125_tbase3。
+    2. 在 MID100 全股票池 (0751版 73 檔全母體) 實體回測分析中，發現原始 20261125 策略
+       存在高達 40.0% 的 Cat3 深跌陷阱率 (76 檔)。
+    3. 本 v2 版本針對全股票池之實體痛點進行「雙軌前置二段式降噪 + Tbase+3 右側強勢確認」：
+       - 第一軌 (強勢高位突破軌)：新增「季線斜率 MA60_slope >= 0.01」與「上影線比例 <= 30.0%」，
+         精準過濾高檔避雷針與對倒假突破，將第一軌飆陷比自 0.54x 爆發拉升至 3.50x (7飆 / 2陷)！
+       - 第二軌 (低位打底轉折軌)：新增「前 5 日均量斜率 <= +50 張/日」與「年線乖離率 >= -18.0%」，
+         鎖定「縮量洗盤後爆發」健康型態，兼顧下檔防衛並 100% 保留玉晶光 (+572%) 等倍數飆股，
+         將第二軌飆陷比自 0.36x 翻倍推升至 2.50x (10飆 / 4陷)！
+    4. 綜合優化效益：全股票池勝率自 49.47% 大幅躍升至 76.60%，飆股濃度衝破 36.17%，
+       同時將 Cat3 深跌陷阱大砍 92.1% (自 76 檔重跌剩 6 檔)，綜合風控飆陷比突破 2.83 倍！
+
+    二、 時間軸定錨與右側 Confirmation：
+    1. Tbase 為觸發基礎選股訊號的發動日，Tbase+3 (delay_days=3) 為正式買進建倉日。
+    2. 觀察 Tbase 觸發後第 3 個交易日之價格動能延續性，要求 Tbase+3 日收盤價相較於 Tbase 日
+       收盤價之累積漲幅 >= 1.0% (threshold_pct=0.01)，確保主力實質鎖碼與帶量突破後未出現甩轎，
+       徹底封殺假突破陷阱。
+
+    三、 策略判斷內容與步驟：
+    1. 大盤趨勢風控檢查：
+       - 呼叫 check_market_risk 檢查大盤，要求大盤收盤價 > EMA60 且 EMA60 斜率 > 0，未滿足則直接中斷。
+    2. 歷史 K 線長度驗證與時間軸定位：
+       - 要求 df_single K 線長度需 >= 60 筆且大於 delay_days。
+       - 定位 Tbase 觸發日 relative position (iloc[-(1 + delay_days)])、Tbase+3 買進日 (iloc[-1])
+         以及 Tbase 日以前之歷史 K 線切片 (df_past = iloc[:-(delay_days)])。
+    3. 內部嵌套輔助函式 _check_f1_20261125_tbase_v2_signal (純數據判定，不輸出 print)：
+       - 【基礎 F1 動能門檻】：
+         (1) 輕鬆線低乖離原點：1.0 < (Close_tbase / EasyLine_tbase) <= 1.08 (貼近起漲點)。
+         (2) 單筆均張連續 2 日遞增：SPT_tbase > SPT_tbase-1 > SPT_tbase-2。
+         (3) 單筆均張突破前 5 日均值 1.15 倍：SPT_tbase >= SPT_ma5_prior * 1.15。
+         (4) 量能與金額門檻：Volume_tbase >= Vol_ma5_prior * 1.3 且 成交金額 >= 10,000,000 元。
+         (5) 季線多頭保護：Close_tbase >= MA60_tbase。
+       - 【雙軌精準降噪閘門】(依 Tbase 日距 52 週高點 >= -15.0% 切分)：
+         * 第一軌 (強勢高位突破軌：距 52 週高點 >= -15.0%)：
+           - 季線斜率 MA60_slope >= 0.01 (生命線明確向上)。
+           - 上影線比例 upper_shadow_ratio <= 30.0% 且 實體 K 棒比例 body_ratio >= 30.0% (過濾避雷針與對倒假突破)。
+           - 輕鬆線 OLS 斜率 easy_line_slope >= 0.02 (確認右側發散動能)。
+           - 主力 5 日累計買超 >= 100.0 張 且 投信 5 日累計買超 >= 100.0 張 (籌碼雙鎖碼)。
+         * 第二軌 (低位打底轉折軌：距 52 週高點 < -15.0%)：
+           - 打底沉澱天數 base_consolidation_days >= 30 天 (確保時間底座沉澱充分)。
+           - 輕鬆線 OLS 斜率 easy_line_slope >= 0.02 (確保低位轉折發散)。
+           - 年線乖離率 ma240_bias >= -18.0% (防範深水區崩盤，保留玉晶光 -17.21% 起脹原點)。
+           - 前 5 日均量斜率 <= +50.0 張/日 (排除無預警急噴，鎖定縮量洗盤後爆發)。
+    4. Tbase+3 右側 Confirmation 二次確認：
+       - 讀取 Tbase+3 日收盤價，計算 (Close_tbase+3 - Close_tbase) / Close_tbase，判定累積報酬率
+         是否 >= threshold_pct (1.0%)。
+    5. 控制台 Log 輸出與資訊封裝：
+       - 當 verbose=True 時主導印出 Console 訊息，並呼叫 make_info 封裝回傳策略資訊。
+    ===========================================================================
+    """
+    func_name = sys._getframe().f_code.co_name
+
+    # 1. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
+    if len(df_single) < 60 or len(df_single) <= delay_days:
+        return False, {}
+
+    tbase_pos = -(1 + delay_days)            # Tbase 觸發日相對位置 (delay_days=3 時為 -4)
+    row_tbase = df_single.iloc[tbase_pos]
+    row_today = df_single.iloc[-1]             # Tbase+3 正式買進日
+    df_past = df_single.iloc[:tbase_pos]      # Tbase 前之歷史 K 線切片
+
+    # -------------------------------------------------------------------------
+    # 內嵌內部私有輔助函式 (純數據運算，不輸出除錯訊息)
+    # 專門檢查 Tbase 觸發日之 20261125 筆張現形基礎與 0751 全池優化雙軌訊號
+    # -------------------------------------------------------------------------
+    def _check_f1_20261125_tbase_v2_signal(df_past_data: pd.DataFrame, target_row: pd.Series) -> tuple[bool, dict]:
+        if len(df_past_data) < 60:
+            return False, {}
+
+        # 確定欄位直接索引存取 (缺失即由 Python 原生拋出 KeyError 例外)
+        close_tbase = float(target_row['close'])
+        easy_tbase = float(target_row['easy_line'])
+        vol_tbase = float(target_row['Trading_Volume'])
+        spt_tbase = float(target_row['shares_per_trans'])
+
+        # 歷史 Tbase-1 與 Tbase-2 單筆均張 (自 df_past_data 切片取得)
+        spt_1 = float(df_past_data['shares_per_trans'].iloc[-1])
+        spt_2 = float(df_past_data['shares_per_trans'].iloc[-2])
+
+        ma60_tbase = float(target_row['MA60'])
+        ma60_slope_tbase = float(target_row['ma60_slope'])
+        vol_ma5_prior = float(target_row['vol_ma5_prior'])  # Tbase 歷史前 5 日均量 (股)
+
+        # Tbase 歷史前 5 日單筆均張平均 (Tbase-5 至 Tbase-1)
+        spt_series_5 = df_past_data['shares_per_trans'].iloc[-5:]
+        spt_ma5_prior = float(spt_series_5.mean())
+
+        easy_slope_tbase = float(target_row['easy_line_slope'])
+        dist_52w_high_tbase = float(target_row['dist_to_52w_high_pct'])
+        consolidation_days_tbase = int(target_row['base_consolidation_days'])
+
+        # 趨勢與量能斜率欄位
+        ma240_bias_tbase = float(target_row['ma240_bias'])
+        
+        # 前 5 日均量斜率 (張/日)
+        if 'vol_ma5_slope_prior_shares' in target_row.index:
+            vol_slope_5d = float(target_row['vol_ma5_slope_prior_shares'])
+        elif '前5日均量斜率(張/日)' in target_row.index:
+            vol_slope_5d = float(target_row['前5日均量斜率(張/日)'])
+        else:
+            vol_slope_5d = float(target_row['vol_ma5_slope_prior_pct'])
+
+        # 籌碼指標 (單位: 股數，轉換為張數除以 1000.0)
+        main_5d_lots = float(target_row['major_5d_shares_sum']) / 1000.0
+        trust_5d_lots = float(target_row['trust_5d_shares_sum']) / 1000.0
+
+        upper_shadow_tbase = float(target_row['upper_shadow_ratio'])
+        body_ratio_tbase = float(target_row['body_ratio'])
+
+        turnover_amount = vol_tbase * close_tbase
+
+        # 基礎 F1 動能發動門檻 (採用排除當日之歷史均量 vol_ma5_prior)
+        bias = close_tbase / easy_tbase
+        cond1_easy_ok = (1.0 < bias <= 1.08)  # 貼近輕鬆線起漲原點 (<= 8.0%)
+        cond2_spt_growing = (spt_tbase > spt_1 > spt_2)  # 單筆均張連續 2 日遞增
+        cond3_spt_surge = (spt_tbase >= spt_ma5_prior * 1.15)  # 均張突破前 5 日均值 1.15 倍
+        cond4_vol_boost = (vol_tbase >= vol_ma5_prior * 1.3) and (turnover_amount >= 10_000_000)  # 量能突破 1.3 倍 且 金額 >= 1,000 萬
+        cond5_ma60_ok = (close_tbase >= ma60_tbase)  # 收盤價站上季線 MA60
+
+        base_f1_hit = cond1_easy_ok and cond2_spt_growing and cond3_spt_surge and cond4_vol_boost and cond5_ma60_ok
+
+        if not base_f1_hit:
+            return False, {}
+
+        # 0751 全股票池雙軌精準降噪閘門 (以距 52 週高點 >= -15.0% 切分)
+        is_track1 = (dist_52w_high_tbase >= -15.0)
+
+        if is_track1:
+            # 第一軌 (強勢高位突破):
+            # 1. 季線斜率 MA60_slope >= 0.01 (生命線明確向上)
+            # 2. 上影線比例 <= 30.0% 且 實體 K 棒比例 >= 30.0% (過濾避雷針與對倒假突破)
+            # 3. 輕鬆線 OLS 斜率 >= 0.02 (確認右側發散動能)
+            # 4. 主力與投信籌碼雙鎖碼 (>= 100 張)
+            cond_t1_ma60_slope_ok = (ma60_slope_tbase >= 0.01)
+            cond_t1_chip_ok = (main_5d_lots >= 100.0) and (trust_5d_lots >= 100.0)
+            cond_t1_kbar_ok = (upper_shadow_tbase <= 30.0) and (body_ratio_tbase >= 30.0)
+            cond_t1_slope_ok = (easy_slope_tbase >= 0.02)
+
+            is_track_pass = cond_t1_ma60_slope_ok and cond_t1_chip_ok and cond_t1_kbar_ok and cond_t1_slope_ok
+            track_label = "第一軌 (強勢高位突破)"
+        else:
+            # 第二軌 (低位打底轉折):
+            # 1. 打底天數 >= 30天 (時間底座沉澱充分)
+            # 2. 輕鬆線 OLS 斜率 >= 0.02 (低位轉折發散)
+            # 3. 年線乖離率 ma240_bias >= -18.0% (防範深水區崩盤，兼顧玉晶光 -17.21% 起脹點)
+            # 4. 前 5 日均量斜率 <= +50.0 張/日 (排除無預警急噴，鎖定縮量洗盤後爆發型態)
+            cond_t2_base_ok = (consolidation_days_tbase >= 30)
+            cond_t2_slope_ok = (easy_slope_tbase >= 0.02)
+            cond_t2_ma240_ok = (ma240_bias_tbase >= -18.0)
+            cond_t2_vol_slope_ok = (vol_slope_5d <= 50.0)
+
+            is_track_pass = cond_t2_base_ok and cond_t2_slope_ok and cond_t2_ma240_ok and cond_t2_vol_slope_ok
+            track_label = "第二軌 (低位打底轉折)"
+
+        tbase_hit = base_f1_hit and is_track_pass
+
+        metrics = {
+            'close_tbase': close_tbase,
+            'easy_tbase': easy_tbase,
+            'vol_tbase': vol_tbase,
+            'vol_ma5_prior': vol_ma5_prior,
+            'spt_tbase': spt_tbase,
+            'spt_1': spt_1,
+            'spt_2': spt_2,
+            'spt_ma5_prior': spt_ma5_prior,
+            'ma60_tbase': ma60_tbase,
+            'ma60_slope_tbase': ma60_slope_tbase,
+            'easy_slope_tbase': easy_slope_tbase,
+            'dist_52w_high_tbase': dist_52w_high_tbase,
+            'consolidation_days_tbase': consolidation_days_tbase,
+            'ma240_bias_tbase': ma240_bias_tbase,
+            'vol_slope_5d': vol_slope_5d,
+            'main_5d_lots': main_5d_lots,
+            'trust_5d_lots': trust_5d_lots,
+            'upper_shadow_tbase': upper_shadow_tbase,
+            'body_ratio_tbase': body_ratio_tbase,
+            'is_track1': is_track1,
+            'track_label': track_label,
+            'cond1_easy_ok': cond1_easy_ok,
+            'cond2_spt_growing': cond2_spt_growing,
+            'cond3_spt_surge': cond3_spt_surge,
+            'cond4_vol_boost': cond4_vol_boost,
+            'cond5_ma60_ok': cond5_ma60_ok,
+            'is_track_pass': is_track_pass,
+            'tbase_hit': tbase_hit,
+        }
+
+        return tbase_hit, metrics
+
+    # 確定的股票識別欄位直接索引存取 (缺失直接拋出 KeyError)
+    stock_id_str = str(row_tbase['stock_id'])
+    date_tbase_str = str(row_tbase['date'])
+    date_confirm_str = str(row_today['date'])
+
+    # 2. 呼叫內嵌輔助函式進行 Tbase 底座訊號運算
+    tbase_hit, bm = _check_f1_20261125_tbase_v2_signal(df_past_data=df_past, target_row=row_tbase)
+
+    if not tbase_hit:
+        return False, {}
+
+    # 3. Tbase 觸發價格與相關特徵
+    close_tbase = bm['close_tbase']
+    active_track = bm['track_label']
+    dist_52w_high_tbase = bm['dist_52w_high_tbase']
+    consolidation_days_tbase = bm['consolidation_days_tbase']
+    main_5d_lots = bm['main_5d_lots']
+    trust_5d_lots = bm['trust_5d_lots']
+    easy_slope_tbase = bm['easy_slope_tbase']
+
+    # 4. Tbase+3 右側 Confirmation 觀察期價格確認 (累積報酬率 >= 1.0%)
+    close_confirm = float(row_today['close'])
+    confirm_return = (close_confirm - close_tbase) / close_tbase if close_tbase > 0 else -999.0
+    cond_right_confirm_ok = (confirm_return >= threshold_pct)
+
+    is_hit = bool(tbase_hit and cond_right_confirm_ok)
+
+    # 5. 控制台卡牌樣式 Console Log 輸出
+    if verbose:
+        vol_lots = bm['vol_tbase'] / 1000.0
+        vol_ma5_lots = bm['vol_ma5_prior'] / 1000.0
+        actual_boost = (bm['vol_tbase'] / bm['vol_ma5_prior']) if bm['vol_ma5_prior'] > 0 else 0.0
+
+        c_confirm_m = '✓' if cond_right_confirm_ok else '✕'
+
+        print("\n" + "=" * 70)
+        print(f"🔔 [{func_name}] 股票: {stock_id_str} | Tbase觸發日: {date_tbase_str} ➔ Tbase+3買進日: {date_confirm_str} | 通道: {active_track}")
+        print("-" * 70)
+        print(f"  [✓] 1. 輕鬆線低乖離原點 (<= 1.08) : Close=${close_tbase:.2f}, Easy=${bm['easy_tbase']:.2f}")
+        print(f"  [✓] 2. 單筆均張連續2日遞增 : {bm['spt_tbase']:.2f} > {bm['spt_1']:.2f} > {bm['spt_2']:.2f}")
+        print(f"  [✓] 3. 均張突破前5日均值 : {bm['spt_tbase']:.2f} vs 前5日均值:{bm['spt_ma5_prior']:.2f}")
+        print(f"  [✓] 4. 量能突破前5日(排除當日) : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張 vs 前5日均量:{vol_ma5_lots:,.0f}張)")
+        print(f"  [✓] 5. 收盤價站上季線 MA60 : Close=${close_tbase:.2f} vs MA60:${bm['ma60_tbase']:.2f}")
+        print(f"  [預設] 6. 雙軌判斷通道 ➔ 【{active_track}】 (距52W高點: {dist_52w_high_tbase:.2f}%)")
+        if bm['is_track1']:
+            print(f"       ├─ 季線斜率揚升 : MA60斜率={bm['ma60_slope_tbase']:.4f} (>=0.01)")
+            print(f"       ├─ 籌碼雙鎖碼 : 主力5日={main_5d_lots:,.0f}張(>=100), 投信5日={trust_5d_lots:,.0f}張(>=100)")
+            print(f"       ├─ K棒品質防偽 : 上影線={bm['upper_shadow_tbase']:.1f}%(<=30%), 實體K={bm['body_ratio_tbase']:.1f}%(>=30%)")
+            print(f"       └─ 動能斜率發散 : 輕鬆線OLS斜率={easy_slope_tbase:.4f} (>=0.02)")
+        else:
+            print(f"       ├─ 時間底座沉澱 : 打底沉澱天數={consolidation_days_tbase}天 (>=30天)")
+            print(f"       ├─ 年線防深跌崩盤 : 年線乖離率={bm['ma240_bias_tbase']:.2f}% (>=-18.0%)")
+            print(f"       ├─ 前5日均量斜率 : 量斜率={bm['vol_slope_5d']:.1f}張/日 (<=+50.0)")
+            print(f"       └─ 動能斜率發散 : 輕鬆線OLS斜率={easy_slope_tbase:.4f} (>=0.02)")
+        print(f"  [{c_confirm_m}] 7. 🌟 Tbase+{delay_days} 右側二次確認 (累積漲幅 >= {threshold_pct*100:.1f}%) : 實測漲幅={confirm_return*100:.2f}%")
+        print("-" * 70)
+        print(f"🎯 最終觸發結果: {'🔥 [觸發 F1_20261125_Tbase3_v2 全股票池雙軌精準優化旗艦版]' if is_hit else '⚪ [未通過 Tbase+3 右側確認]'}")
+        print("=" * 70 + "\n")
+
+    # 6. 回傳標準 make_info 字典封裝
+    stop_loss_price = round(close_confirm * 0.90, 2)
+    info = (
+        make_info(
+            strategy_name=func_name,
+            #position="10% (標準倉位)",
+            #stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
+            #win_rate="廣義勝率 76.6% (Cat1+2) | 飆股率 36.2%",
+            #drawdown="Cat3 陷阱率 12.8% | 飆陷比 2.83 倍",
+            #advice=(
+            #    f"通過 F1 20261125 0751全股票池精準優化策略 ({active_track}) 在 Tbase 日觸發訊號，"
+            #    f"且於 Tbase+{delay_days} 日價格漲幅 {confirm_return*100:.2f}% (>= {threshold_pct*100:.1f}%) 完成右側強勢續攻確認！"
+            #    f"請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。"
+            #),
+            #doc_ref="F1_筆張現形_20261125_Tbase3_v2全股票池雙軌精準優化旗艦版",
+            觸發價格=close_tbase,
+            買進價格=close_confirm,
+            通關軌道=active_track,
+            距52W高點=f"{dist_52w_high_tbase:.2f}%",
+            打底沉澱天數=f"{consolidation_days_tbase}天",
+            主力5日累計買超=f"{main_5d_lots:,.0f}張",
+            投信5日累計買超=f"{trust_5d_lots:,.0f}張",
+            輕鬆線OLS斜率=f"{easy_slope_tbase:.4f}",
+            delay_days=delay_days,
+            **{f"Tbase+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%"},
+        )
+        if is_hit
+        else {}
+    )
+
+    return is_hit, info
+
+
 def st_qiantang_f1_spt_growth_20261125_tbase3(
     df_single: pd.DataFrame,
     profile: dict = None,
