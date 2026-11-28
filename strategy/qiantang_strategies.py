@@ -1686,17 +1686,11 @@ def st_qiantang_f2_volume_breakout_1128(
 
   【修改緣由與優化內容】：
   1. 本策略以 st_qiantang_f2_volume_breakout 為基礎進行重構。
-  2. 依據 0751 版全量回測資料分析，T-1 強勢跳空攻擊模式勝率極佳
-  (64.3%~75.0%)，故 100% 完整保留未做任何改動。
-  3. 針對 T-2 洗盤確認模式 (占全套 Cat3 深跌陷阱單高達 81.5%)
-  專向引入三大動能結構濾網，並修復受測時間軸對齊至 T-2 發動日 (d2 =
-  df_single.iloc[-3])：
-     - ★ 【量能預熱動能】：d2['vol_ma5_slope_prior_pct'] > 0.0 (對齊 T-2
-     發動日，要求突破前 5 日成交量呈現溫和增加推升，排除無預熱急刺爆量陷阱)
-     - ★ 【MACD 動能張力】：d2['osc'] >= 0.2 (對齊 T-2
-     發動日，要求突破時快慢線開花且柱狀體具備動能張力，排除動能枯竭假沉澱)
-     - ★ 【年線長線趨勢】：d2['ma240_slope'] >= 0.0 或 d2['ma240_bias'] >= 0.0
-     (對齊 T-2 發動日，要求年線非下彎走勢，保護個股處於長線多頭/主升段格局，排除空頭反彈陷阱)
+  2. 依據 0751 版全量回測資料分析，T-1 強勢跳空攻擊模式勝率極佳 (64.3%~75.0%)，故 100% 完整保留未做任何改動。
+  3. 針對 T-2 洗盤確認模式 (占全套 Cat3 深跌陷阱單高達 81.5%) 專向引入三大動能結構濾網，並修復受測時間軸對齊至 T-2 發動日 (d2 = df_single.iloc[-3])：
+     - ★ 【量能預熱動能】：d2['vol_ma5_slope_prior_pct'] > 0.0 (對齊 T-2 發動日，要求突破前 5 日成交量呈現溫和增加推升，排除無預熱急刺爆量陷阱)
+     - ★ 【MACD 動能張力】：d2['osc'] >= 0.2 (對齊 T-2 發動日，要求突破時快慢線開花且柱狀體具備動能張力，排除動能枯竭假沉澱)
+     - ★ 【年線長線趨勢】：d2['ma240_slope'] >= 0.0 (對齊 T-2 發動日，要求年線非下彎走勢，保護個股處於長線多頭/主升段格局，排除空頭反彈陷阱)
 
   雙軌觸發機制：
   1. T-1 模式 (Level 2 強勢跳空攻擊，delay_days = 1)：
@@ -1865,20 +1859,20 @@ def st_qiantang_f2_volume_breakout_1128(
         print("🎯 最終觸發結果: 🔥 [觸發 T-1 強勢攻擊]")
         print("=" * 55 + "\n")
 
-      return True, make_info(
-          選股策略=func_name,
-          delay_days=info_t1["delay_days"],
-          操作建議=(
+      return True, {
+          "選股策略": func_name,
+          "delay_days": info_t1["delay_days"],
+          "操作建議": (
               f"昨日突破 ({info_t1['mode']})，今日展現 Level 2 強勢跳空"
               f" (+{gap_pct:.1f}%) 並收紅 K，主力買盤強烈，攻勢延續。"
           ),
-          成交金額億=round(turnover_0, 2),
-          觸發模式=f"T-1強勢攻擊 [{info_t1['mode']}]",
-          跳空細節=(
+          "成交金額億": round(turnover_0, 2),
+          "觸發模式": f"T-1強勢攻擊 [{info_t1['mode']}]",
+          "跳空細節": (
               f"跳空 +{gap_pct:.2f}%, 上影線佔比"
               f" {upper_shadow_ratio*100:.1f}%"
           ),
-      )
+      }
 
   # 模式二：T-2 模式 (前日爆量高純度紅 K + 兩日洗盤守住 + 今日轉強 + T-2 發動日動能過濾)
   # =============================================================
@@ -1911,18 +1905,11 @@ def st_qiantang_f2_volume_breakout_1128(
     # 4. T-2 專屬三大動能精準過濾關卡 (對齊至 T-2 發動日 d2 提取，純英文欄位直接存取)
     vol_slope_5d = float(d2["vol_ma5_slope_prior_pct"])
     macd_osc = float(d2["osc"])
-
-    # 讀取 T-2 發動日之年線斜率 (若未滿 260 筆則相容讀取年線乖離率 ma240_bias)
-    raw_ma240_slope = d2.get("ma240_slope", np.nan)
-    if pd.isna(raw_ma240_slope):
-      ma240_slope = 0.0
-      cond_ma240_trend = float(d2["ma240_bias"]) >= 0.0
-    else:
-      ma240_slope = float(raw_ma240_slope)
-      cond_ma240_trend = ma240_slope >= 0.0  # 要求年線非下彎走勢 (>= 0.0)
+    ma240_slope = float(d2["ma240_slope"])
 
     cond_vol_warmup = vol_slope_5d > 0.0  # 1. T-2 發動前 5 日均量斜率 > 0 (溫和預熱)
     cond_macd_momentum = macd_osc >= 0.2  # 2. T-2 發動時 MACD 柱狀體 >= 0.2 (動能張力開花)
+    cond_ma240_trend = ma240_slope >= 0.0  # 3. T-2 年線斜率 >= 0.0 (長線非下彎)
 
     cond_t2_momentum_ok = (
         cond_vol_warmup and cond_macd_momentum and cond_ma240_trend
@@ -1969,24 +1956,24 @@ def st_qiantang_f2_volume_breakout_1128(
         print("🎯 最終觸發結果: 🔥 [觸發 T-2 洗盤確認 (動能純化版)]")
         print("=" * 55 + "\n")
 
-      return True, make_info(
-          選股策略=func_name,
-          delay_days=info_t2["delay_days"],
-          操作建議=(
+      return True, {
+          "選股策略": func_name,
+          "delay_days": info_t2["delay_days"],
+          "操作建議": (
               f"前日突破 ({info_t2['mode']})，買盤純度達"
               f" {body_ratio_2*100:.0f}%，經過兩日沉澱洗盤守住成本線並通過動能預熱與長線趨勢驗證，今日轉強紅"
               " K 再次發動。"
           ),
-          成交金額億=round(turnover_0, 2),
-          觸發模式=f"T-2洗盤確認 [{info_t2['mode']}]",
-          發動日品質=(
+          "成交金額億": round(turnover_0, 2),
+          "觸發模式": f"T-2洗盤確認 [{info_t2['mode']}]",
+          "發動日品質": (
               f"買盤純度 {body_ratio_2*100:.1f}%, 實體漲幅"
               f" +{body_pct_2:.2f}%"
           ),
-          均量斜率=f"{vol_slope_5d:.2f}%/日",
-          MACD柱狀體=f"{macd_osc:.2f}",
-          年線斜率=f"{ma240_slope:.4f}",
-      )
+          "均量斜率": f"{vol_slope_5d:.2f}%/日",
+          "MACD柱狀體": f"{macd_osc:.2f}",
+          "年線斜率": f"{ma240_slope:.4f}",
+      }
 
   if verbose:
     stock_id = today["stock_id"]
