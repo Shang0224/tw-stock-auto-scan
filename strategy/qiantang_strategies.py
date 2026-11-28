@@ -1680,7 +1680,7 @@ def st_qiantang_f2_volume_breakout_1128(
     verbose: bool = DEBUG_VERBOSE,
     market_info: dict = None,  # 當日大盤秒查資料字典
 ) -> tuple[bool, dict]:
-  """【F2_出量上輕 (1128 T-2 動能精準純化版 - st_qiantang_f2_volume_breakout_1128)】
+  """【F2_出量上輕 (1128 T-2 動能精準純化修正版 - st_qiantang_f2_volume_breakout_1128)】
 
   修改自 st_qiantang_f2_volume_breakout
 
@@ -1689,12 +1689,14 @@ def st_qiantang_f2_volume_breakout_1128(
   2. 依據 0751 版全量回測資料分析，T-1 強勢跳空攻擊模式勝率極佳
   (64.3%~75.0%)，故 100% 完整保留未做任何改動。
   3. 針對 T-2 洗盤確認模式 (占全套 Cat3 深跌陷阱單高達 81.5%)
-  專向引入三大動能結構濾網：
-     - ★ 【量能預熱動能】：vol_ma5_slope_prior_pct > 0.0 (要求發動前 5
-     日成交量呈現溫和增加推升，排除無預熱急刺爆量陷阱)
-     - ★ 【MACD 動能張力】：osc >= 0.2 (要求快慢線開花且柱狀體具備動能張力，排除動能枯竭假沉澱)
-     - ★ 【年線長線趨勢】：ma240_slope >= 0.02
-     (要求年線呈現長線多頭陡升角度，保護個股處於主升段/多頭格局，排除空頭反彈陷阱)
+  專向引入三大動能結構濾網，並修復受測時間軸對齊至 T-2 發動日 (d2 =
+  df_single.iloc[-3])：
+     - ★ 【量能預熱動能】：d2['vol_ma5_slope_prior_pct'] > 0.0 (對齊 T-2
+     發動日，要求突破前 5 日成交量呈現溫和增加推升，排除無預熱急刺爆量陷阱)
+     - ★ 【MACD 動能張力】：d2['osc'] >= 0.2 (對齊 T-2
+     發動日，要求突破時快慢線開花且柱狀體具備動能張力，排除動能枯竭假沉澱)
+     - ★ 【年線長線趨勢】：d2['ma240_slope'] >= 0.0 或 d2['ma240_bias'] >= 0.0
+     (對齊 T-2 發動日，要求年線非下彎走勢，保護個股處於長線多頭/主升段格局，排除空頭反彈陷阱)
 
   雙軌觸發機制：
   1. T-1 模式 (Level 2 強勢跳空攻擊，delay_days = 1)：
@@ -1703,7 +1705,7 @@ def st_qiantang_f2_volume_breakout_1128(
         ★ 開盤跳空 >= 1.0% (Open_T >= Close_T-1 * 1.01)
         ★ 收實體紅 K (Close_T >= Open_T) 且 實質續漲 (Close_T > Close_T-1)
         ★ 上影線抑制 <= 25% 且 今日最低價不跌破昨日最低價 (min_T >= min_T-1)
-  2. T-2 模式 (紅 K 實體品質 + 兩日洗盤沉澱 + 三大動能過濾，delay_days = 2)：
+  2. T-2 模式 (紅 K 實體品質 + 兩日洗盤沉澱 + T-2 發動日動能過濾，delay_days = 2)：
       * 前日 (T-2) 觸發基礎 F2 出量上輕 (模式 A 或 模式 B)
       * 前日 (T-2) 滿足高品質紅 K 實體條件：
         ★ 實體漲幅 >= 2.5%
@@ -1712,10 +1714,10 @@ def st_qiantang_f2_volume_breakout_1128(
       * 兩日洗盤與今日 (T) 轉強確認：
         ★ T-1 與 T 日最低價均不跌破 T-2 發動日最低價 (洗盤不破底)
         ★ 今日 (T) 收實體紅 K 且 收盤價 >= T-2 實體下緣 (Close_T >= Open_T-2)
-      * T-2 專屬動能精準過濾：
-        ★ 前 5 日均量斜率 vol_ma5_slope_prior_pct > 0.0/日 (溫和預熱)
-        ★ MACD 柱狀體 osc >= 0.2 (動能張力)
-        ★ 年線斜率 ma240_slope >= 0.02 (長線多頭)
+      * T-2 專屬動能精準過濾 (受測點精準定錨至 T-2 發動日 d2)：
+        ★ T-2 前 5 日均量斜率 d2['vol_ma5_slope_prior_pct'] > 0.0/日 (溫和預熱)
+        ★ T-2 MACD 柱狀體 d2['osc'] >= 0.2 (動能張力)
+        ★ T-2 年線斜率 d2['ma240_slope'] >= 0.0 (長線非下彎)
   """
   func_name = sys._getframe().f_code.co_name
 
@@ -1878,7 +1880,7 @@ def st_qiantang_f2_volume_breakout_1128(
           ),
       )
 
-  # 模式二：T-2 模式 (前日爆量高純度紅 K + 兩日洗盤守住 + 今日轉強 + T-2 三大動能過濾)
+  # 模式二：T-2 模式 (前日爆量高純度紅 K + 兩日洗盤守住 + 今日轉強 + T-2 發動日動能過濾)
   # =============================================================
   hit_t2_base, info_t2 = _check_f2_base_signal(2)
   if hit_t2_base:
@@ -1906,14 +1908,21 @@ def st_qiantang_f2_volume_breakout_1128(
     # 3. 今日轉強：今日收實體紅 K 且收盤價守住 T-2 發動日實體下緣 (開盤價)
     cond_today_revive = (close_0 >= open_0) and (close_0 >= open_2)
 
-    # 4. T-2 專屬三大動能精準過濾關卡 (純英文欄位中括號直接存取，缺失原生拋出 KeyError)
-    vol_slope_5d = float(today["vol_ma5_slope_prior_pct"])
-    macd_osc = float(today["osc"])
-    ma240_slope = float(today["ma240_slope"])
+    # 4. T-2 專屬三大動能精準過濾關卡 (對齊至 T-2 發動日 d2 提取，純英文欄位直接存取)
+    vol_slope_5d = float(d2["vol_ma5_slope_prior_pct"])
+    macd_osc = float(d2["osc"])
 
-    cond_vol_warmup = vol_slope_5d > 0.0  # 1. 前 5 日均量斜率 > 0 (量能溫和預熱)
-    cond_macd_momentum = macd_osc >= 0.2  # 2. MACD 柱狀體 >= 0.2 (動能張力開花)
-    cond_ma240_trend = ma240_slope >= 0.02  # 3. 年線斜率 >= 0.02 (長線多頭主升段)
+    # 讀取 T-2 發動日之年線斜率 (若未滿 260 筆則相容讀取年線乖離率 ma240_bias)
+    raw_ma240_slope = d2.get("ma240_slope", np.nan)
+    if pd.isna(raw_ma240_slope):
+      ma240_slope = 0.0
+      cond_ma240_trend = float(d2["ma240_bias"]) >= 0.0
+    else:
+      ma240_slope = float(raw_ma240_slope)
+      cond_ma240_trend = ma240_slope >= 0.0  # 要求年線非下彎走勢 (>= 0.0)
+
+    cond_vol_warmup = vol_slope_5d > 0.0  # 1. T-2 發動前 5 日均量斜率 > 0 (溫和預熱)
+    cond_macd_momentum = macd_osc >= 0.2  # 2. T-2 發動時 MACD 柱狀體 >= 0.2 (動能張力開花)
 
     cond_t2_momentum_ok = (
         cond_vol_warmup and cond_macd_momentum and cond_ma240_trend
@@ -1952,9 +1961,9 @@ def st_qiantang_f2_volume_breakout_1128(
             f" 收 ${close_0:.2f} >= 開 ${open_0:.2f} 且 >= T-2發動開 ${open_2:.2f}"
         )
         print(
-            "   [✓] 4. T-2 動能精準過濾:"
+            "   [✓] 4. T-2 發動日動能過濾:"
             f" 均量斜率 {vol_slope_5d:.2f}%/日 (>0.0) | MACD柱狀體 {macd_osc:.2f}"
-            f" (>=0.2) | 年線斜率 {ma240_slope:.4f} (>=0.02)"
+            f" (>=0.2) | 年線斜率 {ma240_slope:.4f} (>=0.0)"
         )
         print("-" * 55)
         print("🎯 最終觸發結果: 🔥 [觸發 T-2 洗盤確認 (動能純化版)]")
