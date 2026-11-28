@@ -102,6 +102,266 @@ def is_valid(val):
 # =====================================================================
 # F1. 筆張現形
 # =====================================================================
+def st_qiantang_f1_spt_growth_20261125_tbase3(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    delay_days: int = 3,              # Tbase+3 右側觀察期天數 (預設 3 天)
+    threshold_pct: float = 0.01,      # Tbase+3 右側確認最低累積報酬率門檻 (>= 1.0%, 0.01)
+    market_info: dict = None          # 當日大盤秒查資料字典
+) -> tuple[bool, dict]:
+    """
+    ===========================================================================
+    【開發背景與優化緣由】：
+    1. 本策略修改自 st_qiantang_f1_spt_growth_20261125 (20261125 雙軌獨立優化旗艦版)。
+    2. 以 20261125 筆張現形雙軌獨立優化版為底座，純粹引入 Tbase+3 右側強勢續攻確認機制，
+       並未新增或更動任何額外的前置過濾條件。
+    3. 解決原 F1 策略在全體母體回測中 Cat3 深跌陷阱率高 (36.7%)、勝率低於 50% (49.5%) 且飆陷比偏低 (0.47倍) 之問題。
+    4. 引入【以 距52週高點 >= -15.0% 切分之雙軌獨立優化過濾架構】：
+       - 🌟 第一軌 (強勢高位突破軌：距 52 週高點 >= -15.0%)：
+         * 要求「主力 5 日累計買超 >= 100 張」且「投信 5 日累計買超 >= 100 張」（籌碼雙鎖碼）。
+         * 要求「上影線比例 <= 30.0%」且「實體 K 棒比例 >= 30.0%」（過濾高檔拉高倒貨避雷針）。
+         * 要求「輕鬆線 OLS 斜率 >= 0.02」（確認主升段右側發散動能）。
+       - 🌟 第二軌 (低位打底轉折軌：距 52 週高點 < -15.0%)：
+         * 要求「打底沉澱天數 >= 30 天」（確保沉澱充分，封殺築底失敗標的）。
+         * 要求「輕鬆線 OLS 斜率 >= 0.02」（確保低位轉折發散）。
+         * 🛡️ 【下限開放原則】：完全不設定爆量倍數與上影線上限，100% 完整保全如 3406 玉晶光 (+572.73%) 等低位暴量轉折之長線超級飆股基因。
+    5. 🌟 【Tbase+3 右側 Confirmation 續攻機制】：
+       - 時間軸定錨：Tbase 為觸發基礎選股訊號的發動日，Tbase+3 (delay_days=3) 為正式買進建倉日。
+       - 藉由二段式買進驗證，觀察 Tbase 觸發後第 3 個交易日之價格動能延續性，要求 Tbase+3 日收盤價
+         相較於 Tbase 日收盤價之累積漲幅 >= 1.0% (threshold_pct=0.01)，確保主力實質鎖碼與帶量突破後
+         短線未出現甩轎或假突破，精準過濾轉折失敗與震盪陷阱。
+
+    ===========================================================================
+    【開發規範依據 (嚴格對齊《策略程式開發規範.docx》)】：
+    - 100% 採用純英文欄位名稱，中括號直接索引存取，取消靜默補值與 if 'col' in 檢查！
+    - 基底量能採用 vol_ma5_prior (排除當日 T0 之歷史前 5 日均量，徹底封殺當日爆量自我稀釋)。
+    - 均線與技術指標直接存取 engine.py 預處理之英文欄位 (如 MA60)，絕不重複計算。
+    - 回傳訊息呼叫 make_info 標準工廠函式封裝。
+    ===========================================================================
+    """
+    func_name = sys._getframe().f_code.co_name
+
+    # 呼叫獨立大盤風控函數，未通過則立場中斷回傳
+    if not check_market_risk(market_info, check_market_trend, func_name, verbose=verbose, filter_key="taiex_EMA60"):
+        return False, {}
+
+    profile = profile or {}
+
+    # 1. 歷史 K 線筆數驗證與時間軸定位 (Tbase 與 Tbase+3)
+    if len(df_single) < 60 or len(df_single) <= delay_days:
+        if verbose:
+            print(f"❌ [{func_name}] K線資料筆數不足 (需>=60且>delay_days)")
+        return False, {}
+
+    tbase_pos = -(1 + delay_days)            # Tbase 觸發日相對位置 (delay_days=3 時為 -4)
+    row_tbase = df_single.iloc[tbase_pos]
+    row_today = df_single.iloc[-1]             # Tbase+3 正式買進日
+    df_past = df_single.iloc[:tbase_pos]      # Tbase 前之歷史 K 線切片
+
+    # -------------------------------------------------------------------------
+    # 內嵌內部私有輔助函式 (純數據運算，不輸出除錯訊息)
+    # 專門檢查 Tbase 觸發日之 20261125 筆張現形基礎與雙軌訊號 (100%承襲20261125條件)
+    # -------------------------------------------------------------------------
+    def _check_f1_20261125_tbase_signal(df_past_data: pd.DataFrame, target_row: pd.Series) -> tuple[bool, dict]:
+        if len(df_past_data) < 60:
+            return False, {}
+
+        # 確定純英文欄位直接中括號索引存取 (缺失即由 Python 原生拋出 KeyError)
+        close_tbase = float(target_row["close"])
+        easy_tbase = float(target_row["easy_line"])
+        vol_tbase = float(target_row["Trading_Volume"])
+        spt_tbase = float(target_row["shares_per_trans"])
+
+        # 歷史 Tbase-1 與 Tbase-2 單筆均張 (自 df_past_data 切片取得)
+        spt_1 = float(df_past_data["shares_per_trans"].iloc[-1])
+        spt_2 = float(df_past_data["shares_per_trans"].iloc[-2])
+
+        # 讀取系統前處理英文欄位
+        ma60_tbase = float(target_row["MA60"])
+        vol_ma5_prior = float(target_row["vol_ma5_prior"])  # 歷史前 5 日均量 (股，排除當日 T0)
+
+        # 歷史前 5 日單筆均張平均 (T-5 至 T-1，排除當日 T0)
+        spt_series_5 = df_past_data["shares_per_trans"].iloc[-5:]
+        spt_ma5_prior = float(spt_series_5.mean())
+
+        easy_slope_tbase = float(target_row["easy_line_slope"])
+        dist_52w_high_tbase = float(target_row["dist_to_52w_high_pct"])
+        consolidation_days_tbase = int(target_row["base_consolidation_days"])
+
+        # 籌碼指標 (單位: 股數，轉成張數除以 1000.0)
+        main_5d_shares = float(target_row["major_5d_shares_sum"]) / 1000.0
+        trust_5d_shares = float(target_row["trust_5d_shares_sum"]) / 1000.0
+        main_5d_lots = main_5d_shares
+        trust_5d_lots = trust_5d_shares
+
+        upper_shadow_tbase = float(target_row["upper_shadow_ratio"])
+        body_ratio_tbase = float(target_row["body_ratio"])
+
+        turnover_amount = vol_tbase * close_tbase
+
+        # 基礎 F1 動能發動門檻 (採用排除當日之歷史均量 vol_ma5_prior)
+        bias = close_tbase / easy_tbase
+        cond1_easy_ok = (1.0 < bias <= 1.08)  # 貼近輕鬆線起漲原點 (<= 8.0%)
+        cond2_spt_growing = (spt_tbase > spt_1 > spt_2)  # 單筆均張連續 2 日遞增
+        cond3_spt_surge = (spt_tbase >= spt_ma5_prior * 1.15)  # 均張突破前 5 日均值 1.15 倍
+        cond4_vol_boost = (vol_tbase >= vol_ma5_prior * 1.3) and (turnover_amount >= 10_000_000)  # 量能突破 1.3 倍 且 金額 >= 1,000 萬
+        cond5_ma60_ok = (close_tbase >= ma60_tbase)  # 收盤價站上季線 MA60
+
+        base_f1_hit = cond1_easy_ok and cond2_spt_growing and cond3_spt_surge and cond4_vol_boost and cond5_ma60_ok
+
+        if not base_f1_hit:
+            return False, {}
+
+        # 雙軌獨立優化閘門 (以距 52 週高點 >= -15.0% 切分)
+        is_track1 = (dist_52w_high_tbase >= -15.0)
+
+        if is_track1:
+            # 第一軌 (強勢高位突破): 主力/投信雙鎖碼 (>=100張) + K棒品質 (上影<=30%, 實體>=30%) + 輕鬆線斜率發散 (>=0.02)
+            cond_t1_chip_ok = (main_5d_lots >= 100.0) and (trust_5d_lots >= 100.0)
+            cond_t1_kbar_ok = (upper_shadow_tbase <= 30.0) and (body_ratio_tbase >= 30.0)
+            cond_t1_slope_ok = (easy_slope_tbase >= 0.02)
+
+            is_track_pass = cond_t1_chip_ok and cond_t1_kbar_ok and cond_t1_slope_ok
+            track_label = "第一軌 (強勢高位突破)"
+        else:
+            # 第二軌 (低位打底轉折): 打底天數 >= 30天 + 輕鬆線斜率發散 (>=0.02) (下限開放，不限制爆量與上影線)
+            cond_t2_base_ok = (consolidation_days_tbase >= 30)
+            cond_t2_slope_ok = (easy_slope_tbase >= 0.02)
+
+            is_track_pass = cond_t2_base_ok and cond_t2_slope_ok
+            track_label = "第二軌 (低位打底轉折)"
+
+        tbase_hit = base_f1_hit and is_track_pass
+
+        metrics = {
+            "close_tbase": close_tbase,
+            "easy_tbase": easy_tbase,
+            "vol_tbase": vol_tbase,
+            "vol_ma5_prior": vol_ma5_prior,
+            "spt_tbase": spt_tbase,
+            "spt_1": spt_1,
+            "spt_2": spt_2,
+            "spt_ma5_prior": spt_ma5_prior,
+            "ma60_tbase": ma60_tbase,
+            "easy_slope_tbase": easy_slope_tbase,
+            "dist_52w_high_tbase": dist_52w_high_tbase,
+            "consolidation_days_tbase": consolidation_days_tbase,
+            "main_5d_lots": main_5d_lots,
+            "trust_5d_lots": trust_5d_lots,
+            "upper_shadow_tbase": upper_shadow_tbase,
+            "body_ratio_tbase": body_ratio_tbase,
+            "is_track1": is_track1,
+            "track_label": track_label,
+            "cond1_easy_ok": cond1_easy_ok,
+            "cond2_spt_growing": cond2_spt_growing,
+            "cond3_spt_surge": cond3_spt_surge,
+            "cond4_vol_boost": cond4_vol_boost,
+            "cond5_ma60_ok": cond5_ma60_ok,
+            "is_track_pass": is_track_pass,
+            "tbase_hit": tbase_hit,
+        }
+
+        return tbase_hit, metrics
+
+    # 確定的股票識別欄位直接索引存取 (缺失直接拋出 KeyError)
+    stock_id_str = str(row_tbase["stock_id"])
+    date_tbase_str = str(row_tbase["date"])
+    date_confirm_str = str(row_today["date"])
+
+    # 2. 呼叫內嵌輔助函式進行 Tbase 底座訊號運算
+    tbase_hit, bm = _check_f1_20261125_tbase_signal(df_past_data=df_past, target_row=row_tbase)
+
+    if not tbase_hit:
+        return False, {}
+
+    # 3. Tbase 觸發價格與相關特徵
+    close_tbase = bm["close_tbase"]
+    active_track = bm["track_label"]
+    dist_52w_high_tbase = bm["dist_52w_high_tbase"]
+    consolidation_days_tbase = bm["consolidation_days_tbase"]
+    main_5d_lots = bm["main_5d_lots"]
+    trust_5d_lots = bm["trust_5d_lots"]
+    easy_slope_tbase = bm["easy_slope_tbase"]
+
+    # 4. Tbase+3 右側 Confirmation 觀察期價格確認 (累積報酬率 >= 1.0%)
+    close_confirm = float(row_today["close"])
+    confirm_return = (close_confirm - close_tbase) / close_tbase if close_tbase > 0 else -999.0
+    cond_right_confirm_ok = (confirm_return >= threshold_pct)
+
+    is_hit = bool(tbase_hit and cond_right_confirm_ok)
+
+    # 5. 控制台卡片樣式 Console Log 輸出
+    if verbose:
+        vol_lots = bm["vol_tbase"] / 1000.0
+        vol_ma5_lots = bm["vol_ma5_prior"] / 1000.0
+        actual_boost = (bm["vol_tbase"] / bm["vol_ma5_prior"]) if bm["vol_ma5_prior"] > 0 else 0.0
+
+        c_confirm_m = "✓" if cond_right_confirm_ok else "✕"
+
+        easy_tb = bm["easy_tbase"]
+        spt_tb = bm["spt_tbase"]
+        spt_1_val = bm["spt_1"]
+        spt_2_val = bm["spt_2"]
+        spt_m5 = bm["spt_ma5_prior"]
+        ma60_tb = bm["ma60_tbase"]
+        ush_tb = bm["upper_shadow_tbase"]
+        br_tb = bm["body_ratio_tbase"]
+
+        result_msg = "🔥 [觸發 F1_20261125_Tbase+3 右側優化旗艦版]" if is_hit else "⚪ [未通過 Tbase+3 右側確認]"
+
+        print("\n" + "=" * 70)
+        print(f"🔔 [{func_name}] 股票: {stock_id_str} | Tbase觸發日: {date_tbase_str} ➔ Tbase+3買進日: {date_confirm_str} | 通道: {active_track}")
+        print("-" * 70)
+        print(f"  [✓] 1. 輕鬆線低乖離原點 (<= 1.08) : Close=${close_tbase:.2f}, Easy=${easy_tb:.2f}")
+        print(f"  [✓] 2. 單筆均張連續2日遞增 : {spt_tb:.2f} > {spt_1_val:.2f} > {spt_2_val:.2f}")
+        print(f"  [✓] 3. 均張突破前5日均值 : {spt_tb:.2f} vs 前5日均值:{spt_m5:.2f}")
+        print(f"  [✓] 4. 量能突破前5日(排除當日) : {actual_boost:.2f}倍 (成交量:{vol_lots:,.0f}張 vs 前5日均量:{vol_ma5_lots:,.0f}張)")
+        print(f"  [✓] 5. 收盤價站上季線 MA60 : Close=${close_tbase:.2f} vs MA60:${ma60_tb:.2f}")
+        print(f"  [預設] 6. 雙軌判斷通道 ➔ 【{active_track}】 (距52W高點: {dist_52w_high_tbase:.2f}%)")
+        if bm["is_track1"]:
+            print(f"       ├─ 籌碼雙鎖碼 : 主力5日={main_5d_lots:,.0f}張(>=100), 投信5日={trust_5d_lots:,.0f}張(>=100)")
+            print(f"       ├─ K棒品質防偽 : 上影線={ush_tb:.1f}%(<=30%), 實體K={br_tb:.1f}%(>=30%)")
+            print(f"       └─ 動能斜率發散 : 輕鬆線OLS斜率={easy_slope_tbase:.4f} (>=0.02)")
+        else:
+            print(f"       ├─ 時間底座沉澱 : 打底沉澱天數={consolidation_days_tbase}天 (>=30天)")
+            print(f"       └─ 動能斜率發散 (下限開放): 輕鬆線OLS斜率={easy_slope_tbase:.4f} (>=0.02)")
+        print("-" * 70)
+        print(f"  [{c_confirm_m}] 7. 🌟 Tbase+{delay_days} 右側二次確認 (累積報酬率 >= {threshold_pct*100:.1f}%) : 實測漲幅={confirm_return*100:.2f}%")
+        print("-" * 70)
+        print(f"🎯 最終觸發結果: {result_msg}")
+        print("=" * 70 + "\n")
+
+    # 6. 回傳標準 make_info 字典封裝
+    stop_loss_price = round(close_confirm * 0.90, 2)
+    info = (
+        make_info(
+            strategy_name=func_name,
+            position="10% (標準倉位)",
+            stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
+            advice=(
+                f"通過 F1 20261125 策略 ({active_track}) 在 Tbase 日觸發訊號，"
+                f"且於 Tbase+{delay_days} 日價格漲幅 {confirm_return*100:.2f}% (>= {threshold_pct*100:.1f}%) 完成右側強勢續攻確認！"
+                f"請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。"
+            ),
+            doc_ref="F1_筆張現形_20261125_Tbase3右側優化旗艦版",
+            觸發價格=close_tbase,
+            買進價格=close_confirm,
+            通關軌道=active_track,
+            距52W高點=f"{dist_52w_high_tbase:.2f}%",
+            打底沉澱天數=f"{consolidation_days_tbase}天",
+            主力5日累計買超=f"{main_5d_lots:,.0f}張",
+            投信5日累計買超=f"{trust_5d_lots:,.0f}張",
+            輕鬆線OLS斜率=f"{easy_slope_tbase:.4f}",
+            delay_days=delay_days,
+            **{f"Tbase+{delay_days}觀察期報酬": f"{confirm_return * 100:.2f}%"},
+        )
+        if is_hit
+        else {}
+    )
+
+    return is_hit, info
+
 def st_qiantang_f1_spt_growth_20261125_tbase3_v2(
     df_single: pd.DataFrame,
     profile: dict = None,
@@ -1414,6 +1674,322 @@ def st_qiantang_f1_spt_growth_20260930(
 # =====================================================================
 # F2. 出量上輕
 # =====================================================================
+def st_qiantang_f2_volume_breakout_1128(
+    df_single: pd.DataFrame,
+    profile: dict = None,
+    verbose: bool = DEBUG_VERBOSE,
+    market_info: dict = None,  # 當日大盤秒查資料字典
+) -> tuple[bool, dict]:
+  """【F2_出量上輕 (1128 T-2 動能精準純化版 - st_qiantang_f2_volume_breakout_1128)】
+
+  修改自 st_qiantang_f2_volume_breakout
+
+  【修改緣由與優化內容】：
+  1. 本策略以 st_qiantang_f2_volume_breakout 為基礎進行重構。
+  2. 依據 0751 版全量回測資料分析，T-1 強勢跳空攻擊模式勝率極佳
+  (64.3%~75.0%)，故 100% 完整保留未做任何改動。
+  3. 針對 T-2 洗盤確認模式 (占全套 Cat3 深跌陷阱單高達 81.5%)
+  專向引入三大動能結構濾網：
+     - ★ 【量能預熱動能】：vol_ma5_slope_prior_pct > 0.0 (要求發動前 5
+     日成交量呈現溫和增加推升，排除無預熱急刺爆量陷阱)
+     - ★ 【MACD 動能張力】：osc >= 0.2 (要求快慢線開花且柱狀體具備動能張力，排除動能枯竭假沉澱)
+     - ★ 【年線長線趨勢】：ma240_slope >= 0.02
+     (要求年線呈現長線多頭陡升角度，保護個股處於主升段/多頭格局，排除空頭反彈陷阱)
+
+  雙軌觸發機制：
+  1. T-1 模式 (Level 2 強勢跳空攻擊，delay_days = 1)：
+      * 昨日 (T-1) 觸發基礎 F2 出量上輕 (模式 A 或 模式 B)
+      * 今日 (T) 滿足 Level 2 跳空強勢條件：
+        ★ 開盤跳空 >= 1.0% (Open_T >= Close_T-1 * 1.01)
+        ★ 收實體紅 K (Close_T >= Open_T) 且 實質續漲 (Close_T > Close_T-1)
+        ★ 上影線抑制 <= 25% 且 今日最低價不跌破昨日最低價 (min_T >= min_T-1)
+  2. T-2 模式 (紅 K 實體品質 + 兩日洗盤沉澱 + 三大動能過濾，delay_days = 2)：
+      * 前日 (T-2) 觸發基礎 F2 出量上輕 (模式 A 或 模式 B)
+      * 前日 (T-2) 滿足高品質紅 K 實體條件：
+        ★ 實體漲幅 >= 2.5%
+        ★ 買盤純度 Body Ratio >= 60% (實體佔總振幅 60% 以上)
+        ★ 上影線抑制比例 <= 20%
+      * 兩日洗盤與今日 (T) 轉強確認：
+        ★ T-1 與 T 日最低價均不跌破 T-2 發動日最低價 (洗盤不破底)
+        ★ 今日 (T) 收實體紅 K 且 收盤價 >= T-2 實體下緣 (Close_T >= Open_T-2)
+      * T-2 專屬動能精準過濾：
+        ★ 前 5 日均量斜率 vol_ma5_slope_prior_pct > 0.0/日 (溫和預熱)
+        ★ MACD 柱狀體 osc >= 0.2 (動能張力)
+        ★ 年線斜率 ma240_slope >= 0.02 (長線多頭)
+  """
+  func_name = sys._getframe().f_code.co_name
+
+  # 呼叫獨立大盤風控函數，未通過則立即中斷回傳
+  if not check_market_risk(
+      market_info,
+      check_market_trend,
+      func_name,
+      verbose=verbose,
+      filter_key="taiex_EMA60",
+  ):
+    return False, {}
+
+  profile = profile or {}
+
+  # 歷史資料至少需 4 筆以支援 T-2 與其前一日的突破判定 (T, T-1, T-2, T-3)
+  if len(df_single) < 4:
+    if verbose:
+      print(f"❌ [{func_name}] K線資料筆數不足 4 筆 (目前: {len(df_single)})")
+    return False, {}
+
+  today = df_single.iloc[-1]
+  d1 = df_single.iloc[-2]
+  d2 = df_single.iloc[-3]
+
+  # 內部工具函式：檢測延後 delay_days 天前 (pos = len(df_single) - 1 - delay_days) 是否符合基礎 F2 突破
+  # -------------------------------------------------------------
+  def _check_f2_base_signal(delay_days: int) -> tuple[bool, dict]:
+    pos = len(df_single) - 1 - delay_days
+    if pos < 1:
+      return False, {}
+
+    cur = df_single.iloc[pos]
+    prev = df_single.iloc[pos - 1]
+
+    # 直接索取欄位，若不存在則拋出 KeyError 異常
+    c0, c1 = cur["close"], prev["close"]
+    e0 = cur["easy_line"]
+    v0, v1 = cur["Trading_Volume"], prev["Trading_Volume"]
+
+    cond1_above_easy = c0 > e0
+    cond2_price_ok = c0 >= 5.0
+    cond3_base_vol = v0 >= 350 * 1000
+
+    turnover = c0 * v0 / 100_000_000
+    change_pct = (
+        (c0 - c1) / c1 * 100.0 if is_valid(c0) and is_valid(c1) and c1 > 0 else 0.0
+    )
+
+    # 輕鬆線趨勢檢查 (當前 > 5日前)
+    if pos >= 5:
+      d5 = df_single.iloc[pos - 5]
+      e5 = d5["easy_line"]
+      cond_easy_trend = e0 > e5
+    else:
+      cond_easy_trend = True
+
+    cond_strong_k_a = change_pct >= 2.5
+    cond_strong_k_b = change_pct >= 3.5
+
+    cond_vol_surge_a = v0 >= v1 * 2.5
+    cond_vol_surge_b = v0 >= v1 * 3.0
+
+    mode_a = (
+        cond_vol_surge_a
+        and (v0 >= 3000 * 1000)
+        and (turnover >= 5.0)
+        and cond_strong_k_a
+        and cond_easy_trend
+    )
+    mode_b = (
+        cond_vol_surge_b
+        and (v0 < 3000 * 1000)
+        and (turnover >= 1.5)
+        and cond_strong_k_b
+        and cond_easy_trend
+    )
+
+    is_hit = (
+        cond1_above_easy
+        and cond2_price_ok
+        and cond3_base_vol
+        and (mode_a or mode_b)
+    )
+    mode_name = (
+        "模式A(主流大中型)"
+        if mode_a
+        else ("模式B(中小型飆股)" if mode_b else "未觸發")
+    )
+
+    return is_hit, {
+        "mode": mode_name,
+        "delay_days": delay_days,
+        "turnover": turnover,
+        "change_pct": change_pct,
+        "vol": v0,
+        "close": c0,
+    }
+
+  # 模式一：T-1 模式 (昨日出訊號 + 今日 Level 2 強勢跳空攻擊)
+  # =============================================================
+  hit_t1_base, info_t1 = _check_f2_base_signal(1)
+  if hit_t1_base:
+    # 嚴格索取欄位：high 改為 max，low 改為 min
+    open_0, close_0 = today["open"], today["close"]
+    max_0, min_0 = today["max"], today["min"]
+    close_1, min_1 = d1["close"], d1["min"]
+
+    gap_pct = (open_0 - close_1) / close_1 * 100.0
+    cond_gap = gap_pct >= 1.0  # 1. Level 2 開盤跳空 >= 1.0%
+    cond_red_k = close_0 >= open_0  # 2. 當天收實體紅 K
+    cond_gain = close_0 > close_1  # 3. 實質續漲
+    range_0 = max_0 - min_0
+    upper_shadow_ratio = (max_0 - close_0) / range_0 if range_0 > 0 else 0.0
+    cond_shadow = upper_shadow_ratio <= 0.25  # 4. 上影線抑制 <= 25%
+    cond_low_def = min_0 >= min_1  # 5. 低點防守不破昨日最低價
+
+    if cond_gap and cond_red_k and cond_gain and cond_shadow and cond_low_def:
+      vol_0 = today["Trading_Volume"]
+      turnover_0 = close_0 * vol_0 / 100_000_000
+
+      if verbose:
+        stock_id = today["stock_id"]
+        date_str = str(today["date"])
+        print("\n" + "=" * 55)
+        print(
+            f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 觸發模式:"
+            " T-1 Level 2 攻擊"
+        )
+        print("-" * 55)
+        print(f"   [✓] T-1 發動模式 : {info_t1['mode']}")
+        print(f"   [✓] 1. 開盤跳空    : +{gap_pct:.2f}% (門檻 >= 1.0%)")
+        print(f"   [✓] 2. 實體紅 K    : 收 {close_0:.2f} >= 開 {open_0:.2f}")
+        print(
+            f"   [✓] 3. 實質續漲    : 今日收 {close_0:.2f} > 昨收 {close_1:.2f}"
+        )
+        print(
+            "   [✓] 4. 上影線抑制  :"
+            f" {upper_shadow_ratio*100:.1f}% (門檻 <= 25%)"
+        )
+        print(
+            f"   [✓] 5. 最低價防守  : 今日低 {min_0:.2f} >= 昨低 {min_1:.2f}"
+        )
+        print("-" * 55)
+        print("🎯 最終觸發結果: 🔥 [觸發 T-1 強勢攻擊]")
+        print("=" * 55 + "\n")
+
+      return True, make_info(
+          選股策略=func_name,
+          delay_days=info_t1["delay_days"],
+          操作建議=(
+              f"昨日突破 ({info_t1['mode']})，今日展現 Level 2 強勢跳空"
+              f" (+{gap_pct:.1f}%) 並收紅 K，主力買盤強烈，攻勢延續。"
+          ),
+          成交金額億=round(turnover_0, 2),
+          觸發模式=f"T-1強勢攻擊 [{info_t1['mode']}]",
+          跳空細節=(
+              f"跳空 +{gap_pct:.2f}%, 上影線佔比"
+              f" {upper_shadow_ratio*100:.1f}%"
+          ),
+      )
+
+  # 模式二：T-2 模式 (前日爆量高純度紅 K + 兩日洗盤守住 + 今日轉強 + T-2 三大動能過濾)
+  # =============================================================
+  hit_t2_base, info_t2 = _check_f2_base_signal(2)
+  if hit_t2_base:
+    # 嚴格索取欄位：high 改為 max，low 改為 min
+    open_2, close_2 = d2["open"], d2["close"]
+    max_2, min_2 = d2["max"], d2["min"]
+    min_1 = d1["min"]
+    open_0, close_0, min_0 = today["open"], today["close"], today["min"]
+
+    range_2 = max_2 - min_2
+    body_pct_2 = (close_2 - open_2) / open_2 * 100.0 if open_2 > 0 else 0.0
+    body_ratio_2 = (close_2 - open_2) / range_2 if range_2 > 0 else 0.0
+    upper_shadow_2 = (max_2 - close_2) / range_2 if range_2 > 0 else 0.0
+
+    # 1. T-2 紅 K 實體品質門檻
+    cond_t2_quality = (
+        (body_pct_2 >= 2.5)
+        and (body_ratio_2 >= 0.60)
+        and (upper_shadow_2 <= 0.20)
+    )
+
+    # 2. 洗盤防守：T-1 與 T 日最低價均不跌破 T-2 發動日最低價
+    cond_low_def = (min_1 >= min_2) and (min_0 >= min_2)
+
+    # 3. 今日轉強：今日收實體紅 K 且收盤價守住 T-2 發動日實體下緣 (開盤價)
+    cond_today_revive = (close_0 >= open_0) and (close_0 >= open_2)
+
+    # 4. T-2 專屬三大動能精準過濾關卡 (純英文欄位中括號直接存取，缺失原生拋出 KeyError)
+    vol_slope_5d = float(today["vol_ma5_slope_prior_pct"])
+    macd_osc = float(today["osc"])
+    ma240_slope = float(today["ma240_slope"])
+
+    cond_vol_warmup = vol_slope_5d > 0.0  # 1. 前 5 日均量斜率 > 0 (量能溫和預熱)
+    cond_macd_momentum = macd_osc >= 0.2  # 2. MACD 柱狀體 >= 0.2 (動能張力開花)
+    cond_ma240_trend = ma240_slope >= 0.02  # 3. 年線斜率 >= 0.02 (長線多頭主升段)
+
+    cond_t2_momentum_ok = (
+        cond_vol_warmup and cond_macd_momentum and cond_ma240_trend
+    )
+
+    if (
+        cond_t2_quality
+        and cond_low_def
+        and cond_today_revive
+        and cond_t2_momentum_ok
+    ):
+      vol_0 = today["Trading_Volume"]
+      turnover_0 = close_0 * vol_0 / 100_000_000
+
+      if verbose:
+        stock_id = today["stock_id"]
+        date_str = str(today["date"])
+        print("\n" + "=" * 55)
+        print(
+            f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str} | 觸發模式:"
+            " T-2 洗盤確認 (1128 動能精準純化版)"
+        )
+        print("-" * 55)
+        print(f"   [✓] T-2 發動模式 : {info_t2['mode']}")
+        print(
+            "   [✓] 1. T-2 紅K品質 :"
+            f" 漲幅 +{body_pct_2:.2f}% | 買盤純度 {body_ratio_2*100:.1f}%"
+            f" (>=60%) | 上影線 {upper_shadow_2*100:.1f}% (<=20%)"
+        )
+        print(
+            "   [✓] 2. 兩日洗盤防守:"
+            f" 昨低 ${min_1:.2f} & 今低 ${min_0:.2f} >= T-2發動低 ${min_2:.2f}"
+        )
+        print(
+            "   [✓] 3. 今日轉強復甦:"
+            f" 收 ${close_0:.2f} >= 開 ${open_0:.2f} 且 >= T-2發動開 ${open_2:.2f}"
+        )
+        print(
+            "   [✓] 4. T-2 動能精準過濾:"
+            f" 均量斜率 {vol_slope_5d:.2f}%/日 (>0.0) | MACD柱狀體 {macd_osc:.2f}"
+            f" (>=0.2) | 年線斜率 {ma240_slope:.4f} (>=0.02)"
+        )
+        print("-" * 55)
+        print("🎯 最終觸發結果: 🔥 [觸發 T-2 洗盤確認 (動能純化版)]")
+        print("=" * 55 + "\n")
+
+      return True, make_info(
+          選股策略=func_name,
+          delay_days=info_t2["delay_days"],
+          操作建議=(
+              f"前日突破 ({info_t2['mode']})，買盤純度達"
+              f" {body_ratio_2*100:.0f}%，經過兩日沉澱洗盤守住成本線並通過動能預熱與長線趨勢驗證，今日轉強紅"
+              " K 再次發動。"
+          ),
+          成交金額億=round(turnover_0, 2),
+          觸發模式=f"T-2洗盤確認 [{info_t2['mode']}]",
+          發動日品質=(
+              f"買盤純度 {body_ratio_2*100:.1f}%, 實體漲幅"
+              f" +{body_pct_2:.2f}%"
+          ),
+          均量斜率=f"{vol_slope_5d:.2f}%/日",
+          MACD柱狀體=f"{macd_osc:.2f}",
+          年線斜率=f"{ma240_slope:.4f}",
+      )
+
+  if verbose:
+    stock_id = today["stock_id"]
+    date_str = str(today["date"])
+    print("\n" + "=" * 55)
+    print(f"🔔 [{func_name}] 股票: {stock_id} | 日期: {date_str}")
+    print("-" * 55)
+    print("⚪ [未觸發] 不符合 T-1 Level 2 攻擊門檻 或 T-2 洗盤確認條件")
+    print("=" * 55 + "\n")
+
+  return False, {}
+
 def st_qiantang_f2_volume_breakout_1127(
     df_single: pd.DataFrame,
     profile: dict = None,
