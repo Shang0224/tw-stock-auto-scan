@@ -28,6 +28,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f1_spt_growth_20261125_tbase3, #Tbase+3右側確認
     st_qiantang_f1_spt_growth_20261125_tbase3_v2, #st_qiantang_f1_spt_growth_20261125策略用MID100股票池回測, 重新依照回測資料進行優化, 並增加Tbase+3右側確認機制, 
                                                 #直接由st_qiantang_f1_spt_growth_20261125策略直接進行優化
+    st_qiantang_f1_spt_growth_20261125_tbase3_v3, #st_qiantang_f1_spt_growth_20261125策略用MID100股票池回測, 重新依照回測資料進行優化, 單純增加Tbase+3右側確認機制
 
     st_qiantang_f2_volume_breakout, # 出量上輕
     st_qiantang_f2_volume_breakout_20260930_3,
@@ -35,6 +36,7 @@ from strategy.qiantang_strategies import (
     st_qiantang_f2_volume_breakout_20260930_1,
     st_qiantang_f2_volume_breakout_20260930,
     st_qiantang_f2_volume_breakout_1127,
+    st_qiantang_f2_volume_breakout_1128, #從st_qiantang_f2_volume_breakout重新優化
 
     st_qiantang_f3_after_shakeout,  # 洗盤後
 
@@ -118,12 +120,14 @@ TEST_QIANTANG_STRATEGY = [
     st_qiantang_f1_spt_growth_20261125_tbase3, #Tbase+3右側確認
     st_qiantang_f1_spt_growth_20261125_tbase3_v2, #st_qiantang_f1_spt_growth_20261125策略用MID100股票池回測, 重新依照回測資料進行優化, 並增加Tbase+3右側確認機制, 
                                                 #直接由st_qiantang_f1_spt_growth_20261125策略直接進行優化
+    st_qiantang_f1_spt_growth_20261125_tbase3_v3, #st_qiantang_f1_spt_growth_20261125策略用MID100股票池回測, 重新依照回測資料進行優化, 單純增加Tbase+3右側確認機制
     
     #st_qiantang_f1_spt_growth_20261121,
 
     
     st_qiantang_f2_volume_breakout, # F2: 出量上輕
-    st_qiantang_f2_volume_breakout_1127, #優化T-2, 刪除CAT 3股
+    st_qiantang_f2_volume_breakout_1127, #優化T-2, 刪除CAT 3股, 失敗
+    st_qiantang_f2_volume_breakout_1128, #從st_qiantang_f2_volume_breakout重新優化T-2, 刪除CAT 3股
     
     #st_qiantang_f2_volume_breakout_20260930_3,
     #st_qiantang_f2_volume_breakout_20260930_2,
