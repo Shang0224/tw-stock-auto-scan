@@ -102,7 +102,7 @@ def is_valid(val):
 # =====================================================================
 # F1. 筆張現形
 # =====================================================================
-def st_qiantang_f1_spt_growth_20261125_tbase3(
+def st_qiantang_f1_spt_growth_20261125_tbase3_v3(
     df_single: pd.DataFrame,
     profile: dict = None,
     verbose: bool = DEBUG_VERBOSE,
