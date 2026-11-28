@@ -626,14 +626,14 @@ def st_qiantang_f1_spt_growth_20261125_tbase3(
     info = (
         make_info(
             strategy_name=func_name,
-            position="10% (標準倉位)",
-            stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
-            advice=(
-                f"通過 F1 20261125 策略 ({active_track}) 在 Tbase 日觸發訊號，"
-                f"且於 Tbase+{delay_days} 日價格漲幅 {confirm_return*100:.2f}% (>= {threshold_pct*100:.1f}%) 完成右側強勢續攻確認！"
-                f"請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。"
-            ),
-            doc_ref="F1_筆張現形_20261125_Tbase3右側優化旗艦版",
+            #position="10% (標準倉位)",
+            #stop_loss=f"{stop_loss_price:.2f} 元 (-10.0% 硬停損)",
+            #advice=(
+            #    f"通過 F1 20261125 策略 ({active_track}) 在 Tbase 日觸發訊號，"
+            #    f"且於 Tbase+{delay_days} 日價格漲幅 {confirm_return*100:.2f}% (>= {threshold_pct*100:.1f}%) 完成右側強勢續攻確認！"
+            #    f"請掛緊 {stop_loss_price:.2f} 元 (-10.0%) 硬停損單表態卡位。"
+            #),
+            #doc_ref="F1_筆張現形_20261125_Tbase3右側優化旗艦版",
             觸發價格=close_tbase,
             買進價格=close_confirm,
             通關軌道=active_track,
